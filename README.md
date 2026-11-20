@@ -1,6 +1,6 @@
 # TMC with Classes (TMC++)
 
-**Desmos graphs as code, with classes.** TMC++ is a superset of [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels and slider shorthand, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
+**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels and slider shorthand, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
 
 The name is a nod to C++, which started life as "C with Classes".
 
@@ -20,7 +20,7 @@ folder "Curves" {
 }
 ```
 
-The same graph in plain TMC needs a nested `@{ }` style block on almost every line. Anything you already know from TMC still works: TMC++ only adds syntax, so a raw `@{ ... }` is always accepted.
+The same graph in plain TMC needs a nested `@{ }` style block on almost every line. If you already know TMC, most of it works as is, and a raw `@{ ... }` is always accepted. The exceptions come from TMC++'s line rules: put each statement on its own line (no one-line folders like `folder "A" { y = x; }`), and start a style block on the same line as its math.
 
 ## Quick start
 

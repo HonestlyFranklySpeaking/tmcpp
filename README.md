@@ -25,7 +25,8 @@ folder "Curves" {
 | M1 line compiler (statements, notes, folders, sliders, continuation) | done |
 | M2 classes and inline styles, labels, settings, slider playback | done |
 | M3a browser extension: live compile panel in desmos.com | done |
-| M3b ids and metadata note (round trip) | next |
+| M3b ids and metadata note | done |
+| M4 decompile and diff (graph back to TMC++) | next |
 | M4 decompile and diff | |
 | M5 editor panel | |
 
@@ -46,7 +47,7 @@ Paste the output into DesModder's Text Mode (the T button above the expression l
 1. `npm install` then `npm run build:ext` (writes `extension/dist/tmcpp.js`).
 2. Chrome: `chrome://extensions`, turn on Developer mode, **Load unpacked**, pick the `extension` folder.
 3. Open desmos.com/calculator and click **TMC++** (bottom right) or press Alt+T.
-4. Write TMC++ and press Ctrl+Enter. The graph is replaced; Ctrl+Z in Desmos undoes it. Your source is saved per graph in the browser.
+4. Write TMC++ and press Ctrl+Enter. The graph is replaced; Ctrl+Z in Desmos undoes it. Your source is saved per graph in the browser, and the graph itself carries a hidden TMC++ metadata note (classes, tags, tails, comments, hashes) for the round trip.
 
 After changing the compiler, run `npm run build:ext` again and click the reload icon on the extension card.
 

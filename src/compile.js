@@ -369,6 +369,13 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
   }
 
   const out = [], lineMap = [];
+  // One entry per graph item, in emission order: what the metadata note remembers about it.
+  const items = [];
+  const record = (item) => {
+    const table = folderStack.at(-1)?.kind === "table" ? folderStack.at(-1).item : null;
+    if (table && item.kind === "expr") table.columns.push(item);
+    else items.push(item);
+  };
   const push = (text, line) => { out.push(text); lineMap.push(line); };
   const folderStack = [];
   let settings = defaultSettings;
@@ -391,7 +398,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
         if (f === "collapsed" || f === "hidden") style[f] = "true";
         else errors.push({ line, message: `Unknown folder flag '${f}' (use collapsed, hidden)` });
       }
-      folderStack.push({ line, style, kind: "folder" });
+      const item = { kind: "folder", line, comments: st.comments };
+      items.push(item);
+      folderStack.push({ line, style, kind: "folder", item });
       push(`folder ${fm[1]} {`, line);
       continue;
     }
@@ -405,7 +414,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
         if (f === "pinned" || f === "secret") style[f] = "true";
         else errors.push({ line, message: `Unknown table flag '${f}' (use pinned, secret)` });
       }
-      folderStack.push({ line, style, kind: "table" });
+      const item = { kind: "table", line, comments: st.comments, columns: [] };
+      items.push(item);
+      folderStack.push({ line, style, kind: "table", item });
       push("table {", line);
       continue;
     }
@@ -428,6 +439,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
 
     // Note: a line that is only a string literal
     if (/^"(?:[^"\\]|\\.)*"$/.test(text)) {
+      record({ kind: "note", line, comments: st.comments });
       push(`${text};`, line);
       continue;
     }
@@ -461,6 +473,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
 
     // Images are passed through as plain TMC in v1
     if (/^image\b/.test(text)) {
+      record({ kind: "image", line, comments: st.comments });
       push(text.endsWith(";") ? text : `${text};`, line);
       continue;
     }
@@ -469,11 +482,14 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     let math = text, tail = "";
     const ts = findTailStart(text);
     if (ts !== -1) { math = text.slice(0, ts).trim(); tail = text.slice(ts).trim(); }
+    const tags = tokenizeTail(tail).filter((t) => /^\.[A-Za-z_]/.test(t)).map((t) => t.slice(1));
 
     const style = {};
+    let mathWritten = math;
     const sm = math.match(/^(.*\S)\s+\[([^\[\],]*:[^\[\],]*)\]$/);
     if (sm) {
       math = sm[1];
+      mathWritten = sm[1];
       const parts = sm[2].split(":").map((p) => p.trim());
       if (parts.length < 2 || parts.length > 3 || parts.some((p) => p === "")) {
         errors.push({ line, message: "Slider bounds must be [min : max] or [min : max : step]" });
@@ -499,6 +515,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     let styled = "";
     try { styled = styleToTmc(style, rawInner); }
     catch (e) { errors.push({ line, message: e.message }); }
+    record({ kind: "expr", line, comments: st.comments, tags, tail: text.slice(mathWritten.length).trim() });
     push(`${math}${styled};`, line);
   }
 
@@ -511,5 +528,5 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
   if (header) { out.unshift(`settings ${header};`, ""); lineMap.unshift(0, 0); }
 
   errors.sort((a, b) => a.line - b.line);
-  return { tmc: out.join("\n"), errors, warnings, lineMap, classes };
+  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, items };
 }

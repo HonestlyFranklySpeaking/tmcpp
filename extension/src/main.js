@@ -1,6 +1,7 @@
 // TMC++ panel for desmos.com/calculator. Runs in the page (MAIN world) so it can use Calc and Desmos.
 import { buildConfigFromGlobals, textToRaw } from "@desmodder/text-mode-core";
 import { compile } from "../../src/compile.js";
+import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
 import STARTER from "../../examples/hello.tmcpp";
@@ -114,9 +115,22 @@ function mount(Calc, Desmos) {
       report([...tmcErrors, ...notes], "");
       return;
     }
+    // Stable ids + a placeholder metadata note, then load the graph.
+    const pairs = assignIds(state, r.items);
+    if (pairs) state.expressions.list.unshift(metaItem({ v: 1 }));
+    else notes.push({ line: 1, kind: "warn", message: "Could not match graph items to source lines; metadata note skipped" });
     Calc.setState(state, { allowUndo: true });
-    const n = state.expressions?.list?.length ?? 0;
-    report([...tmcErrors, ...notes], `Compiled ${n} item(s) into the graph.`);
+
+    // Hash what Desmos actually holds (it drops defaults on load), then fill in the note.
+    let saved = "";
+    if (pairs) {
+      const list = Calc.getState().expressions.list.filter((e) => e.id !== META_ID);
+      const text = metaText(buildMeta(r, list));
+      Calc.setExpression({ id: META_ID, type: "text", text });
+      saved = ` Metadata note saved (${(text.length / 1024).toFixed(1)} KB).`;
+    }
+    const n = state.expressions.list.length - (pairs ? 1 : 0);
+    report([...tmcErrors, ...notes], `Compiled ${n} item(s) into the graph.${saved}`);
   }
 
   panel.querySelector("#tmcpp-run").onclick = run;
@@ -140,6 +154,16 @@ function mount(Calc, Desmos) {
     e.stopPropagation(); // keep Desmos shortcuts out of the editor
   });
   src.addEventListener("input", () => localStorage.setItem(STORE(), src.value));
+
+  // Tell the user when the open graph carries TMC++ metadata.
+  const found = readMeta(Calc.getState().expressions.list);
+  if (found?.meta) {
+    const tagged = Object.values(found.meta.exprs ?? {}).filter((e) => e.tags?.length).length;
+    const classes = Object.keys(found.meta.classes ?? {});
+    report([], `This graph was made with TMC++: ${classes.length} class(es)${classes.length ? ` (${classes.join(", ")})` : ""}, ${tagged} tagged item(s).`);
+  } else if (found?.error) {
+    report([{ line: 1, kind: "warn", message: `TMC++ metadata note: ${found.error}` }], "");
+  }
 }
 
 whenReady(mount);

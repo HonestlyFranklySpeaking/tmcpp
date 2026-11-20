@@ -3,14 +3,7 @@ import { buildConfigFromGlobals, textToRaw } from "@desmodder/text-mode-core";
 import { compile } from "../../src/compile.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
-const STARTER = `// TMC++: Ctrl+Enter to compile into this graph (Ctrl+Z in Desmos undoes it)
-class curve { #c74440 dashed width 3 }
-
-"Hello from TMC++"
-
-a = 2  [0 : 5 : 0.1]
-y = a sin(x)  .curve
-`;
+import STARTER from "../../examples/hello.tmcpp";
 
 function whenReady(fn) {
   const t = setInterval(() => {
@@ -48,6 +41,7 @@ function mount(Calc, Desmos) {
   panel.id = "tmcpp-panel";
   panel.innerHTML = `
     <div id="tmcpp-head"><b>TMC++</b>
+      <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
       <button class="ghost" id="tmcpp-tmc" title="Copy the compiled TMC">Copy TMC</button>
       <button id="tmcpp-run" title="Ctrl+Enter">Compile</button></div>
     <textarea id="tmcpp-src" spellcheck="false"></textarea>
@@ -126,6 +120,11 @@ function mount(Calc, Desmos) {
   }
 
   panel.querySelector("#tmcpp-run").onclick = run;
+  panel.querySelector("#tmcpp-example").onclick = () => {
+    src.value = STARTER;
+    localStorage.setItem(STORE(), src.value);
+    run();
+  };
   panel.querySelector("#tmcpp-tmc").onclick = async () => {
     const r = compile(src.value);
     await navigator.clipboard.writeText(r.tmc);

@@ -7,5 +7,6 @@ await build({
   target: "chrome111",
   outfile: "extension/dist/tmcpp.js",
   legalComments: "eof",
+  loader: { ".tmcpp": "text" },
 });
 console.log("built extension/dist/tmcpp.js");

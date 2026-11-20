@@ -1,0 +1,14 @@
+settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 } }
+
+"Parabola demo: drag the point to move the focus";
+folder "Controls" {
+p = 2 @{ slider: @{ min: 0.1, max: 10, step: 0.1 } };
+k = 1 @{ slider: @{ min: -5, max: 5, step: 1 } };
+} @{ collapsed: true };
+folder "Curves" {
+y = x^2 / (4 * p) @{ color: "#c74440", lines: @{ style: "DASHED", width: 3 } };
+(0, p) @{ color: BLUE, points: @{ size: 12, drag: "Y" }, label: @{ text: "focus (0, ${p})", orientation: "right" } };
+y < k * sin(x) @{ color: "#c74440", lines: @{ style: "DASHED", width: 3 }, fill: 0.3 };
+f(x) = abs(x - k);
+y = f(x) @{ lines: @{ style: "DOTTED" } };
+};

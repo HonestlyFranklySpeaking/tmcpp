@@ -1,0 +1,16 @@
+class curve { #c74440 dashed width 3 }
+
+"Parabola demo: drag the point to move the focus"
+
+folder "Controls" collapsed {
+  p = 2  [0.1 : 10 : 0.1]            // focus distance
+  k = 1  [-5 : 5 : 1]
+}
+
+folder "Curves" {
+  y = x^2 / (4p)   .curve
+  (0, p)           #blue point 12 drag y label "focus (0, ${p})" right
+  y < k sin(x)     .curve fill 0.3
+  f(x) = abs(x - k)
+  y = f(x)         . dotted
+}

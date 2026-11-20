@@ -1,0 +1,39 @@
+settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7, ymax: 9 } }
+
+"A day over the sea: press play on t (hours, 0 to 24)";
+folder "Clock" {
+t = 6.5 @{ slider: @{ min: 0, max: 24, step: 0.05, playing: true, loopMode: "LOOP_FORWARD", period: 40000 } };
+a = pi * (t - 6) / 12;
+P = (-10 * cos(a), 8 * sin(a));
+M = (10 * cos(a), -8 * sin(a));
+d = min(1, max(0, 1.4 * sin(a) + 0.2));
+g = max(0, 1 - 3 * abs(sin(a)));
+(-11.5, 8.3) @{ points: @{ size: 0 }, label: @{ text: "hour ${t}", orientation: "right" } };
+};
+folder "Sky" {
+y > -20 @{ color: "#6cb4ee", fill: 1, lines: @{ opacity: 0 } };
+y < [0, 0.5 ... 4] @{ color: "#fa7e19", lines: @{ opacity: 0 }, fill: 0.1*g };
+} @{ collapsed: true };
+folder "Sun" {
+(x - P.x)^2 + (y - P.y)^2 < 5 @{ color: "#fa7e19", lines: @{ opacity: 0 }, fill: 0.25 };
+(x - P.x)^2 + (y - P.y)^2 < 1.7 @{ color: "#fa7e19", lines: @{ opacity: 0 }, fill: 1 };
+} @{ collapsed: true };
+folder "Land" {
+y < 1.6 + 1.1 * sin(0.4 * x + 1) + 0.5 * sin(1.3 * x) @{ color: "#6042a6", fill: 0.55, lines: @{ opacity: 0 } };
+y < 0.3 + 3 * exp(-(x - 7)^2 / 5) @{ color: "#2b2140", fill: 1, lines: @{ opacity: 0 } };
+} @{ collapsed: true };
+folder "Sea" {
+y < 0 @{ color: "#2d70b3", fill: 1, lines: @{ opacity: 0 } };
+((x - P.x) / 1.6)^2 + ((y + 0.5) / 0.22)^2 < 1 @{ color: "#fa7e19", lines: @{ opacity: 0 }, fill: 0.6*g };
+((x - P.x) / 0.9)^2 + ((y + 1.3) / 0.15)^2 < 1 @{ color: "#fa7e19", lines: @{ opacity: 0 }, fill: 0.4*g };
+y = -1 + 0.08 * sin(3 * x) @{ color: "#ffffff", lines: @{ opacity: 0.35, width: 1.5 } };
+y = -2.6 + 0.1 * sin(2 * x + 1) @{ color: "#ffffff", lines: @{ opacity: 0.35, width: 1.5 } };
+y = -4.5 + 0.12 * sin(1.5 * x) @{ color: "#ffffff", lines: @{ opacity: 0.35, width: 1.5 } };
+} @{ collapsed: true };
+folder "Night" {
+y > -20 @{ color: "#1b1b3a", fill: 0.8*(1-d)^2, lines: @{ opacity: 0 } };
+S = [1 ... 60];
+(0.4 * mod(37 * S, 61) - 12, 2 + 0.12 * mod(23 * S, 59)) @{ color: "#ffffff", points: @{ size: 3, opacity: 1 - d } };
+(x - M.x)^2 + (y - M.y)^2 < {y > 0: 0.9, -1} @{ color: "#ffffff", fill: 1, lines: @{ opacity: 0 } };
+((x - M.x) / 0.7)^2 + ((y + 0.7) / 0.12)^2 < 1 @{ color: "#ffffff", fill: 0.3*max(0,sin(-a)), lines: @{ opacity: 0 } };
+} @{ collapsed: true };

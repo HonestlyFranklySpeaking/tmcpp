@@ -26,6 +26,8 @@ const css = `
 #tmcpp-head button.ghost { background: #fff; color: #2d70b3; }
 #tmcpp-src { flex: 1; resize: none; border: 0; outline: 0; padding: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace;
   tab-size: 2; white-space: pre; }
+#tmcpp-info { padding: 6px 10px; border-bottom: 1px solid #eee; color: #555; font-size: 12px; }
+#tmcpp-info:empty { display: none; }
 #tmcpp-out { max-height: 30%; overflow: auto; border-top: 1px solid #eee; padding: 6px 10px; }
 #tmcpp-out .ok { color: #388c46; }
 #tmcpp-out .err { color: #c74440; cursor: pointer; }
@@ -45,18 +47,36 @@ function mount(Calc, Desmos) {
       <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
       <button class="ghost" id="tmcpp-tmc" title="Copy the compiled TMC">Copy TMC</button>
       <button id="tmcpp-run" title="Ctrl+Enter">Compile</button></div>
+    <div id="tmcpp-info"></div>
     <textarea id="tmcpp-src" spellcheck="false"></textarea>
     <div id="tmcpp-out"></div>`;
   document.body.append(toggle, panel);
 
   const src = panel.querySelector("#tmcpp-src");
   const out = panel.querySelector("#tmcpp-out");
+  const info = panel.querySelector("#tmcpp-info");
+
+  // What the open graph says about itself. Checked whenever the panel opens or a compile finishes,
+  // because Desmos loads saved graphs after Calc exists and swaps graphs without reloading the page.
+  const showGraphInfo = () => {
+    const found = readMeta(Calc.getState().expressions.list);
+    if (found?.meta) {
+      const tagged = Object.values(found.meta.exprs ?? {}).filter((e) => e.tags?.length).length;
+      const classes = Object.keys(found.meta.classes ?? {});
+      info.textContent = `This graph was made with TMC++: ${classes.length} class(es)` +
+        `${classes.length ? ` (${classes.join(", ")})` : ""}, ${tagged} tagged item(s).`;
+    } else if (found?.error) {
+      info.textContent = `TMC++ metadata note found but unreadable: ${found.error}`;
+    } else {
+      info.textContent = "This graph has no TMC++ metadata yet. Compile to add it.";
+    }
+  };
   src.value = localStorage.getItem(STORE()) ?? STARTER;
   let lastTmc = "";
 
   const open = (v = !panel.classList.contains("open")) => {
     panel.classList.toggle("open", v);
-    if (v) src.focus();
+    if (v) { showGraphInfo(); src.focus(); }
   };
   toggle.onclick = () => open();
   document.addEventListener("keydown", (e) => {
@@ -131,6 +151,7 @@ function mount(Calc, Desmos) {
     }
     const n = state.expressions.list.length - (pairs ? 1 : 0);
     report([...tmcErrors, ...notes], `Compiled ${n} item(s) into the graph.${saved}`);
+    showGraphInfo();
   }
 
   panel.querySelector("#tmcpp-run").onclick = run;
@@ -155,15 +176,6 @@ function mount(Calc, Desmos) {
   });
   src.addEventListener("input", () => localStorage.setItem(STORE(), src.value));
 
-  // Tell the user when the open graph carries TMC++ metadata.
-  const found = readMeta(Calc.getState().expressions.list);
-  if (found?.meta) {
-    const tagged = Object.values(found.meta.exprs ?? {}).filter((e) => e.tags?.length).length;
-    const classes = Object.keys(found.meta.classes ?? {});
-    report([], `This graph was made with TMC++: ${classes.length} class(es)${classes.length ? ` (${classes.join(", ")})` : ""}, ${tagged} tagged item(s).`);
-  } else if (found?.error) {
-    report([{ line: 1, kind: "warn", message: `TMC++ metadata note: ${found.error}` }], "");
-  }
 }
 
 whenReady(mount);

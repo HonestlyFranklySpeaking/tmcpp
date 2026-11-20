@@ -1,4 +1,4 @@
-# TMC++
+# TMC with Classes (TMC++)
 
 A preprocessor for [DesModder](https://www.desmodder.com/) Text Mode (TMC). It adds CSS-style classes, one-word styles and short slider syntax, then compiles to plain TMC.
 

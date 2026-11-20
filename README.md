@@ -91,4 +91,4 @@ A tail starts at the first whitespace-preceded `.name`, `#`, lone `.` or `@{`. O
 
 Spec: see the TMC++ v1 Spec doc.
 
-License: MIT.
+License: MIT, see [LICENSE](LICENSE). Uses DesModder's [text-mode-core](https://www.npmjs.com/package/@desmodder/text-mode-core) (MIT).

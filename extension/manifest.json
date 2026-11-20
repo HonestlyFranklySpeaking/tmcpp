@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "TMC with Classes (TMC++)",
+  "version": "0.1.0",
+  "description": "Write Desmos graphs in TMC++ (DesModder Text Mode with classes) and compile them live.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.desmos.com/calculator*"],
+      "js": ["dist/tmcpp.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    }
+  ]
+}

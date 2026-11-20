@@ -45,6 +45,7 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 The panel:
 
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
+- **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
 - saves your source per graph in the browser and follows you when you switch graphs
 - writes a hidden metadata note into the graph (classes, tags, tails, comments, hashes) so the graph remembers it was made with TMC++, and pops the panel open when you open such a graph

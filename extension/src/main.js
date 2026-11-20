@@ -24,6 +24,7 @@ const css = `
 #tmcpp-head button { font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 6px; border: 1px solid #2d70b3;
   background: #2d70b3; color: #fff; cursor: pointer; }
 #tmcpp-head button.ghost { background: #fff; color: #2d70b3; }
+#tmcpp-src.drop { outline: 2px dashed #2d70b3; outline-offset: -6px; background: #f3f8fd; }
 #tmcpp-src { flex: 1; resize: none; border: 0; outline: 0; padding: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace;
   tab-size: 2; white-space: pre; }
 #tmcpp-info { padding: 6px 10px; border-bottom: 1px solid #eee; color: #555; font-size: 12px; }
@@ -44,7 +45,10 @@ function mount(Calc, Desmos) {
   panel.id = "tmcpp-panel";
   panel.innerHTML = `
     <div id="tmcpp-head"><b>TMC++</b>
+      <button class="ghost" id="tmcpp-open" title="Open a .tmcpp file (or drop one on the editor)">Open</button>
+      <button class="ghost" id="tmcpp-save" title="Download the editor text as a .tmcpp file">Save</button>
       <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
+      <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden>
       <button class="ghost" id="tmcpp-tmc" title="Copy the compiled TMC">Copy TMC</button>
       <button id="tmcpp-run" title="Ctrl+Enter">Compile</button></div>
     <div id="tmcpp-info"></div>
@@ -157,6 +161,45 @@ function mount(Calc, Desmos) {
   }
 
   panel.querySelector("#tmcpp-run").onclick = run;
+  // ---- .tmcpp files: open (button or drag-and-drop) and save ----
+  const fileInput = panel.querySelector("#tmcpp-file");
+  const loadFile = async (file) => {
+    if (!file) return;
+    if (!/\.(tmcpp|txt)$/i.test(file.name)) {
+      report([{ line: 1, kind: "err", message: `${file.name} is not a .tmcpp file` }], "");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      report([{ line: 1, kind: "err", message: `${file.name} is over 2 MB; that's too big for a graph source` }], "");
+      return;
+    }
+    src.value = (await file.text()).replace(/\r\n/g, "\n");
+    localStorage.setItem(STORE(), src.value);
+    hasLocalSource = true;
+    run();
+    if (!out.querySelector(".err")) report([], `Opened ${file.name} and compiled it into the graph.`);
+  };
+  panel.querySelector("#tmcpp-open").onclick = () => fileInput.click();
+  fileInput.onchange = () => { loadFile(fileInput.files[0]); fileInput.value = ""; };
+
+  src.addEventListener("dragover", (e) => { e.preventDefault(); src.classList.add("drop"); });
+  src.addEventListener("dragleave", () => src.classList.remove("drop"));
+  src.addEventListener("drop", (e) => {
+    e.preventDefault();
+    src.classList.remove("drop");
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  panel.querySelector("#tmcpp-save").onclick = () => {
+    const title = document.title.replace(/\s*\|\s*Desmos.*$/i, "").trim() || "graph";
+    const name = title.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "-").toLowerCase() + ".tmcpp";
+    const url = URL.createObjectURL(new Blob([src.value], { type: "text/plain" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    a.click();
+    URL.revokeObjectURL(url);
+    report([], `Saved ${name} to your downloads.`);
+  };
+
   panel.querySelector("#tmcpp-example").onclick = () => {
     src.value = STARTER;
     localStorage.setItem(STORE(), src.value);

@@ -1,7 +1,7 @@
 // Hello world, written stroke by stroke with one parametric expression.
 // Each letter is a list of line segments; s draws them in order.
 
-settings x [-10 : 10] y [-6 : 7]
+settings x [-10 : 10] y [-6 : 7] no-grid @{showXAxis: false, showYAxis: false}
 
 class ink { #2d70b3 width 5 }
 

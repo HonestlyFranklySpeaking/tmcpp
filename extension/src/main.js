@@ -186,7 +186,12 @@ function mount(Calc, Desmos) {
 
   const onGraphMaybeChanged = () => {
     if (location.pathname !== lastPath) {
+      const from = lastPath;
       lastPath = location.pathname;
+      // Saving a new graph moves it from /calculator to /calculator/<hash>: keep its source.
+      if (from === "/calculator" && localStorage.getItem(STORE()) === null) {
+        localStorage.setItem(STORE(), src.value);
+      }
       const saved = localStorage.getItem(STORE());
       hasLocalSource = saved !== null;
       src.value = saved ?? STARTER;

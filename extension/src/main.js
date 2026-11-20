@@ -74,9 +74,10 @@ function mount(Calc, Desmos) {
   src.value = localStorage.getItem(STORE()) ?? STARTER;
   let lastTmc = "";
 
-  const open = (v = !panel.classList.contains("open")) => {
+  const isOpen = () => panel.classList.contains("open");
+  const open = (v = !isOpen(), focus = true) => {
     panel.classList.toggle("open", v);
-    if (v) { showGraphInfo(); src.focus(); }
+    if (v) { showGraphInfo(); if (focus) src.focus(); }
   };
   toggle.onclick = () => open();
   document.addEventListener("keydown", (e) => {
@@ -107,6 +108,7 @@ function mount(Calc, Desmos) {
 
   function run() {
     localStorage.setItem(STORE(), src.value);
+    hasLocalSource = true;
     const r = compile(src.value);
     const notes = r.warnings.map((w) => ({ ...w, kind: "warn" }));
     if (r.errors.length) {
@@ -174,7 +176,39 @@ function mount(Calc, Desmos) {
     }
     e.stopPropagation(); // keep Desmos shortcuts out of the editor
   });
-  src.addEventListener("input", () => localStorage.setItem(STORE(), src.value));
+  src.addEventListener("input", () => { localStorage.setItem(STORE(), src.value); hasLocalSource = true; });
+
+  // Follow the graph. Desmos switches graphs without reloading the page (the URL path changes)
+  // and loads saved graphs after Calc exists, so watch both the path and graph changes.
+  let lastPath = location.pathname;
+  const autoOpened = new Set(); // graphs we already popped the panel open for
+  let hasLocalSource = localStorage.getItem(STORE()) !== null;
+
+  const onGraphMaybeChanged = () => {
+    if (location.pathname !== lastPath) {
+      lastPath = location.pathname;
+      const saved = localStorage.getItem(STORE());
+      hasLocalSource = saved !== null;
+      src.value = saved ?? STARTER;
+      out.replaceChildren();
+    }
+    const found = readMeta(Calc.getState().expressions.list);
+    if (isOpen()) showGraphInfo();
+    if (found?.meta && !autoOpened.has(lastPath)) {
+      autoOpened.add(lastPath);
+      if (!isOpen()) open(true, false);
+      if (!hasLocalSource) {
+        report([{ line: 1, kind: "warn",
+          message: "This graph's TMC++ source isn't saved in this browser. Rebuilding it from the graph comes in M4; compiling now replaces the graph with the editor text." }], "");
+      }
+    }
+  };
+
+  let pending = null;
+  const soon = () => { clearTimeout(pending); pending = setTimeout(onGraphMaybeChanged, 300); };
+  Calc.observeEvent("change.tmcpp", soon);
+  setInterval(() => { if (location.pathname !== lastPath) soon(); }, 500);
+  soon(); // the graph that is loading right now
 
 }
 

@@ -1,6 +1,26 @@
 {
   "name": "tmcpp",
   "version": "0.1.0",
+  "description": "TMC with Classes: a superset of DesModder's Text Mode for Desmos, with CSS-style classes, one-word styles, labels and slider shorthand, compiled live by a browser extension.",
+  "keywords": [
+    "desmos",
+    "desmodder",
+    "text-mode",
+    "compiler",
+    "transpiler",
+    "dsl",
+    "graphing",
+    "browser-extension"
+  ],
+  "author": "Gordon Ji (https://github.com/IkeaSourPatches)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IkeaSourPatches/tmcpp.git"
+  },
+  "homepage": "https://github.com/IkeaSourPatches/tmcpp#readme",
+  "bugs": {
+    "url": "https://github.com/IkeaSourPatches/tmcpp/issues"
+  },
   "type": "module",
   "license": "MIT",
   "scripts": {

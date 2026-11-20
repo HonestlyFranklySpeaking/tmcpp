@@ -5,10 +5,15 @@
   "description": "Write Desmos graphs in TMC++ (DesModder Text Mode with classes) and compile them live.",
   "content_scripts": [
     {
-      "matches": ["https://www.desmos.com/calculator*"],
-      "js": ["dist/tmcpp.js"],
+      "matches": [
+        "https://www.desmos.com/calculator*"
+      ],
+      "js": [
+        "dist/tmcpp.js"
+      ],
       "world": "MAIN",
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "homepage_url": "https://github.com/IkeaSourPatches/tmcpp"
 }

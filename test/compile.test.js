@@ -182,7 +182,7 @@ test("folders close with a semicolon", () => {
 test("default settings header is added", () => {
   assert.equal(
     ok("y = x", {}),
-    "settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 } }\n\ny = x;",
+    "settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 } };\n\ny = x;",
   );
 });
 
@@ -279,4 +279,40 @@ test("playback settings in a class", () => {
 
 test("a forgotten tail before play is caught", () => {
   assert.match(errs("t = 0 [0 : 1] play"), /Style word 'play' is inside the math/);
+});
+
+test("tables compile as blocks", () => {
+  assert.equal(ok('table {\n  X = [1, 2, 3]\n  Y = [4, 5, 6] . drag xy open\n}'),
+    'table {\nX = [1, 2, 3];\nY = [4, 5, 6] @{ points: @{ drag: "XY", style: "OPEN" } };\n};');
+});
+
+test("table flags, table inside folder, and nesting errors", () => {
+  assert.equal(ok('table pinned {\n  x1 = [1]\n}'), 'table {\nx1 = [1];\n} @{ pinned: true };');
+  assert.equal(ok('folder "F" {\ntable {\nx1 = [1]\n}\n}'), 'folder "F" {\ntable {\nx1 = [1];\n};\n};');
+  assert.match(errs('table {\nfolder "F" {\n}\n}'), /cannot go inside a table/);
+  assert.match(errs('table {\nx1 = [1]'), /Table is never closed/);
+});
+
+test("ticker with play and step time", () => {
+  assert.equal(ok("ticker a -> a + 1 . play 2s"), "ticker a -> a + 1 @{ playing: true, minStep: 2000 };");
+  assert.equal(ok("ticker a -> 2a"), "ticker a -> 2 * a;");
+  assert.match(errs("ticker a -> a + 1 . loop"), /Unknown ticker token 'loop'/);
+});
+
+test("image lines get their semicolon", () => {
+  assert.equal(ok('image "pic" @{ width: 5 }'), 'image "pic" @{ width: 5 };');
+});
+
+test("regression parameter block is not a colour", () => {
+  assert.equal(ok("y1 ~ m * x1 + b # { m = 2 }"), "y1 ~ m * x1 + b # { m = 2 };");
+});
+
+test("point style, point opacity and item flags", () => {
+  assert.equal(ok("(1, 2) . cross point-opacity 0.5 pinned secret"),
+    '(1, 2) @{ points: @{ style: "CROSS", opacity: 0.5 }, pinned: true, secret: true };');
+  assert.equal(ok("1 + 7/2 . fraction"), "1 + 7/2 @{ displayEvaluationAsFraction: true };");
+});
+
+test("settings no-grid and lock", () => {
+  assert.match(ok("settings no-grid lock\ny = x", {}), /showGrid: false, lockViewport: true \};/);
 });

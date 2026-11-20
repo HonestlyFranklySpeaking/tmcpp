@@ -25,6 +25,7 @@ const VOCAB = [
   "point", "drag", "hidden", "label", "label-size", "label-angle",
   "no-outline", "hover", ...Object.keys(EDITABLE), ...ORIENTATIONS,
   "play", "reverse", ...Object.keys(LOOP_MODES),
+  "open", "cross", "point-opacity", "pinned", "secret", "fraction",
 ];
 const OPEN = "([{", CLOSE = ")]}";
 
@@ -78,7 +79,7 @@ function closest(word, list) {
   return bestD <= 2 ? best : null;
 }
 
-const isHeader = (s) => /^(folder|class)\b/.test(s);
+const isHeader = (s) => /^(folder|class|table)\b/.test(s);
 const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
 
 // ---------- pass 1: join physical lines into logical statements ----------
@@ -136,7 +137,7 @@ function toStatements(source) {
     t = t.replace(/;+\s*$/, "").trimEnd(); // optional CSS-style semicolon
     cur.text = t;
 
-    const folderOpen = /^folder\b/.test(t) && t.endsWith("{");
+    const folderOpen = /^(folder|table)\b/.test(t) && t.endsWith("{");
     const classUnclosed = /^class\b/.test(t) && bracketDepth(t) > 0;
     const exprUnclosed = !isHeader(t) && bracketDepth(t) > 0;
     cur.open = explicit || classUnclosed ||
@@ -163,7 +164,7 @@ function findTailStart(s) {
     else if (CLOSE.includes(c)) depth--;
     if (depth !== 0 || i === 0 || !/\s/.test(s[i - 1])) continue;
     const next = s[i + 1] ?? "";
-    if (c === "#") return i;
+    if (c === "#" && !/^#\s*\{/.test(s.slice(i))) return i;
     if (c === "." && (/[A-Za-z]/.test(next) || next === "" || /\s/.test(next))) return i;
     if (c === "@" && next === "{") return i;
     if (/^label\s+"/.test(s.slice(i))) return i;
@@ -267,6 +268,12 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "no-outline") { set(["label", "outline"], "false", "no-outline"); continue; }
     if (lower === "hover") { set(["label", "showOnHover"], "true", "hover"); continue; }
     if (EDITABLE[lower]) { set(["label", "editableMode"], `"${EDITABLE[lower]}"`, "editable"); continue; }
+    // Point style and opacity
+    if (lower === "open" || lower === "cross") { set(["points", "style"], `"${lower.toUpperCase()}"`, "point style"); continue; }
+    if (lower === "point-opacity") { const n = num(i, "point-opacity"); if (n !== null) { set(["points", "opacity"], n, "point-opacity"); i++; } continue; }
+    // Common item flags
+    if (lower === "pinned" || lower === "secret") { set([lower], "true", lower); continue; }
+    if (lower === "fraction") { set(["displayEvaluationAsFraction"], "true", "fraction"); continue; }
     // Slider playback
     if (lower === "play") { set(["slider", "playing"], "true", "play"); continue; }
     if (lower === "reverse") { set(["slider", "reversed"], "true", "reverse"); continue; }
@@ -310,10 +317,14 @@ function applySettings(text, settings, errors, line) {
   while ((m = re.exec(rest))) {
     if (m[1]) {
       settings = mergeTmc(settings, { viewport: { [m[1] + "min"]: m[2], [m[1] + "max"]: m[3] } });
+    } else if (m[4] === "no-grid") {
+      settings = mergeTmc(settings, { showGrid: "false" });
+    } else if (m[4] === "lock") {
+      settings = mergeTmc(settings, { lockViewport: "true" });
     } else if (m[4] === "degrees" || m[4] === "radians") {
       settings = mergeTmc(settings, { degreeMode: m[4] === "degrees" ? "true" : "false" });
     } else {
-      errors.push({ line, message: `Unknown settings token '${m[4]}' (use x [min : max], y [min : max], degrees, radians, or @{ })` });
+      errors.push({ line, message: `Unknown settings token '${m[4]}' (use x [min : max], y [min : max], degrees, radians, no-grid, lock, or @{ })` });
     }
   }
   if (raw !== null) {
@@ -370,7 +381,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     const fm = text.match(/^folder\s+("(?:[^"\\]|\\.)*")\s*([\w\s]*?)\s*\{$/);
     if (fm) {
       if (folderStack.length) {
-        errors.push({ line, message: "Folders cannot be nested (Desmos has no folders inside folders)" });
+        errors.push({ line, message: folderStack.at(-1).kind === "table"
+          ? "A folder cannot go inside a table"
+          : "Folders cannot be nested (Desmos has no folders inside folders)" });
       }
       const flags = fm[2].split(/\s+/).filter(Boolean);
       const style = {};
@@ -378,8 +391,26 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
         if (f === "collapsed" || f === "hidden") style[f] = "true";
         else errors.push({ line, message: `Unknown folder flag '${f}' (use collapsed, hidden)` });
       }
-      folderStack.push({ line, style });
+      folderStack.push({ line, style, kind: "folder" });
       push(`folder ${fm[1]} {`, line);
+      continue;
+    }
+
+    // Table open: table [pinned] [secret] {
+    const tm = text.match(/^table\s*([\w\s]*?)\s*\{$/);
+    if (tm) {
+      if (folderStack.some((f) => f.kind === "table")) errors.push({ line, message: "Tables cannot be nested" });
+      const style = {};
+      for (const f of tm[1].split(/\s+/).filter(Boolean)) {
+        if (f === "pinned" || f === "secret") style[f] = "true";
+        else errors.push({ line, message: `Unknown table flag '${f}' (use pinned, secret)` });
+      }
+      folderStack.push({ line, style, kind: "table" });
+      push("table {", line);
+      continue;
+    }
+    if (/^table\b/.test(text)) {
+      errors.push({ line, message: "Malformed table; expected: table [pinned] [secret] {" });
       continue;
     }
     if (/^folder\b/.test(text)) {
@@ -407,9 +438,30 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
       continue;
     }
 
-    // Plain-TMC passthrough for blocks TMC++ does not restyle in v1
-    if (/^(table|ticker|image)\b/.test(text)) {
-      push(text, line);
+    // Ticker: ticker <action> [play] [2s] [@{ }]
+    if (/^ticker\b/.test(text)) {
+      let body = text.replace(/^ticker\b/, "").trim(), tail = "";
+      const tts = findTailStart(" " + body);
+      if (tts !== -1) { tail = body.slice(tts - 1).trim(); body = body.slice(0, tts - 1).trim(); }
+      let raw = null;
+      try { [tail, raw] = splitRaw(tail); } catch (e) { errors.push({ line, message: e.message }); }
+      const style = {};
+      for (const t of tokenizeTail(tail)) {
+        const d = t.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
+        if (t === ".") continue;
+        if (t === "play") style.playing = "true";
+        else if (d) style.minStep = Math.round(Number(d[1]) * (d[2] === "s" ? 1000 : 1));
+        else errors.push({ line, message: `Unknown ticker token '${t}' (use play, a step time like 2s or 500ms, or @{ })` });
+      }
+      let styled = "";
+      try { styled = styleToTmc(style, raw); } catch (e) { errors.push({ line, message: e.message }); }
+      push(`ticker ${implicitMultiply(body)}${styled};`, line);
+      continue;
+    }
+
+    // Images are passed through as plain TMC in v1
+    if (/^image\b/.test(text)) {
+      push(text.endsWith(";") ? text : `${text};`, line);
       continue;
     }
 
@@ -450,13 +502,13 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     push(`${math}${styled};`, line);
   }
 
-  for (const f of folderStack) errors.push({ line: f.line, message: "Folder is never closed" });
+  for (const f of folderStack) errors.push({ line: f.line, message: `${f.kind === "table" ? "Table" : "Folder"} is never closed` });
   for (const st of statements) {
     if (st.orphan) warnings.push({ line: st.line, message: "Comments at the end of the file are not attached to any statement" });
   }
 
   const header = writeTmcObject(settings);
-  if (header) { out.unshift(`settings ${header}`, ""); lineMap.unshift(0, 0); }
+  if (header) { out.unshift(`settings ${header};`, ""); lineMap.unshift(0, 0); }
 
   errors.sort((a, b) => a.line - b.line);
   return { tmc: out.join("\n"), errors, warnings, lineMap, classes };

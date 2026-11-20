@@ -59,6 +59,21 @@ Paste the output into DesModder's Text Mode (the T button above the expression l
 | `loop` `bounce` `once` `forever` | slider loop mode |
 | `reverse` | slider runs backwards |
 | `40s`, `500ms` | slider period |
+| `open` `cross` | point style |
+| `point-opacity N` | point opacity |
+| `pinned` `secret` `fraction` | pin, hide from viewers, show result as a fraction |
+
+## Blocks and items
+
+| Syntax | Notes |
+| --- | --- |
+| `"text"` | note |
+| `folder "Name" [collapsed] [hidden] { ... }` | no folders inside folders |
+| `table [pinned] [secret] { ... }` | columns take style tails (`Y = [4, 5, 6] . drag xy`); tables can sit inside folders |
+| `ticker a -> a + 1 . play 2s` | `play` and a step time (`minStep`) |
+| `image "name" @{ ... }` | plain TMC |
+| `settings x [-10 : 10] y [-6 : 6] degrees no-grid lock` | merged over the default viewport; a raw `settings @{ }` works too |
+| `// comment` | not sent to TMC |
 | `@{ ... }` | raw TMC style, passed through last |
 
 A tail starts at the first whitespace-preceded `.name`, `#`, lone `.` or `@{`. Order: classes left to right, then inline tokens, then raw `@{ }`; later wins.

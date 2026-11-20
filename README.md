@@ -23,7 +23,7 @@ folder "Curves" {
 | Milestone | State |
 | --- | --- |
 | M1 line compiler (statements, notes, folders, sliders, continuation) | done |
-| M2 classes and inline styles | done |
+| M2 classes and inline styles, labels, settings, slider playback | done |
 | M3 live compile in desmos.com (`textToRaw`, ids, metadata note) | next |
 | M4 decompile and diff | |
 | M5 editor panel | |
@@ -34,7 +34,8 @@ Requires Node 22+.
 
 ```sh
 npm test                          # run the test suite
-node src/cli.js examples/demo.tmcpp   # print TMC, or errors with line numbers
+node src/cli.js examples/demo.tmcpp     # print TMC, or errors with line numbers
+node tools/check.js examples/demo.tmcpp # validate with DesModder's real parser
 ```
 
 Paste the output into DesModder's Text Mode (the T button above the expression list).
@@ -51,6 +52,13 @@ Paste the output into DesModder's Text Mode (the T button above the expression l
 | `point N` | point size |
 | `drag x\|y\|xy\|none\|auto` | point drag mode |
 | `hidden` | hide the graph |
+| `label "text"` | label (also starts a tail by itself); `${p}` interpolation passes through |
+| `above` `below-left` `right` ... | label position (all 16 Desmos orientations) |
+| `label-size N`, `label-angle N`, `no-outline`, `hover`, `editable`, `editable-math` | label options |
+| `play` | slider plays |
+| `loop` `bounce` `once` `forever` | slider loop mode |
+| `reverse` | slider runs backwards |
+| `40s`, `500ms` | slider period |
 | `@{ ... }` | raw TMC style, passed through last |
 
 A tail starts at the first whitespace-preceded `.name`, `#`, lone `.` or `@{`. Order: classes left to right, then inline tokens, then raw `@{ }`; later wins.

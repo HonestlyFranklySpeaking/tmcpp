@@ -10,7 +10,7 @@ class wave  { #ffffff opacity 0.35 width 1.5 }
 "A day over the sea: press play on t (hours, 0 to 24)"
 
 folder "Clock" {
-  t = 6.5  [0 : 24 : 0.05]  @{ slider: @{ playing: true, loopMode: "LOOP_FORWARD", period: 40000 } }
+  t = 6.5  [0 : 24 : 0.05]  . play loop 40s
   a = pi * (t - 6) / 12                     // sun angle: 0 at 6:00, pi at 18:00
   P = (-10 cos(a), 8 sin(a))                // sun, moving left to right
   M = (10 cos(a), -8 sin(a))                // moon, opposite the sun

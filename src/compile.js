@@ -16,10 +16,15 @@ const ORIENTATIONS = [
   "left", "auto-left", "right", "auto-right",
 ];
 const EDITABLE = { editable: "TEXT", "editable-math": "MATH" };
+const LOOP_MODES = {
+  loop: "LOOP_FORWARD", bounce: "LOOP_FORWARD_REVERSE",
+  once: "PLAY_ONCE", forever: "PLAY_INDEFINITELY",
+};
 const VOCAB = [
   "solid", "dashed", "dotted", "width", "opacity", "fill",
   "point", "drag", "hidden", "label", "label-size", "label-angle",
   "no-outline", "hover", ...Object.keys(EDITABLE), ...ORIENTATIONS,
+  "play", "reverse", ...Object.keys(LOOP_MODES),
 ];
 const OPEN = "([{", CLOSE = ")]}";
 
@@ -262,6 +267,12 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "no-outline") { set(["label", "outline"], "false", "no-outline"); continue; }
     if (lower === "hover") { set(["label", "showOnHover"], "true", "hover"); continue; }
     if (EDITABLE[lower]) { set(["label", "editableMode"], `"${EDITABLE[lower]}"`, "editable"); continue; }
+    // Slider playback
+    if (lower === "play") { set(["slider", "playing"], "true", "play"); continue; }
+    if (lower === "reverse") { set(["slider", "reversed"], "true", "reverse"); continue; }
+    if (LOOP_MODES[lower]) { set(["slider", "loopMode"], `"${LOOP_MODES[lower]}"`, "loop mode"); continue; }
+    const dur = lower.match(/^(\d+(?:\.\d+)?)(ms|s)$/);
+    if (dur) { set(["slider", "period"], Math.round(Number(dur[1]) * (dur[2] === "s" ? 1000 : 1)), "duration"); continue; }
     const hint = closest(lower, VOCAB);
     errors.push({ line, message: `Unknown style token '${t}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
   }

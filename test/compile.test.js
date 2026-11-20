@@ -260,3 +260,23 @@ test("piecewise passes through", () => {
 test("multi-letter variable names are not mistaken for style words", () => {
   assert.equal(ok("total = width * 2"), "total = width * 2;");
 });
+
+test("slider playback tokens merge with bounds", () => {
+  assert.equal(ok("t = 0 [0 : 24 : 0.05] . play loop 40s"),
+    't = 0 @{ slider: @{ min: 0, max: 24, step: 0.05, playing: true, loopMode: "LOOP_FORWARD", period: 40000 } };');
+});
+
+test("other loop modes, reverse and ms durations", () => {
+  assert.equal(ok("a = 1 [0 : 5] . bounce reverse 500ms"),
+    'a = 1 @{ slider: @{ min: 0, max: 5, step: 0, loopMode: "LOOP_FORWARD_REVERSE", reversed: true, period: 500 } };');
+  assert.match(ok("a = 1 . once 1.5s"), /loopMode: "PLAY_ONCE", period: 1500/);
+  assert.match(ok("a = 1 . forever"), /PLAY_INDEFINITELY/);
+});
+
+test("playback settings in a class", () => {
+  assert.match(ok("class anim { play loop 10s }\nt = 0 [0 : 1] .anim"), /playing: true, loopMode: "LOOP_FORWARD", period: 10000/);
+});
+
+test("a forgotten tail before play is caught", () => {
+  assert.match(errs("t = 0 [0 : 1] play"), /Style word 'play' is inside the math/);
+});

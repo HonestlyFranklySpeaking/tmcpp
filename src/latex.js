@@ -47,7 +47,11 @@ export function latexToTmc(src) {
       const a = arg(), b = arg();
       const frac = `${wrap(a.trim())} / ${wrap(b.trim())}`;
       let j = i; while (src[j] === " ") j++;
-      return src[j] === "^" ? `(${frac})` : frac; // \frac{a}{b}^{2} squares the whole fraction
+      // Bracket the fraction when something follows that would bind to the denominator:
+      // \frac{a}{b}^{2} squares the whole fraction, and \frac{1}{\pi}\left(y\right) multiplies it.
+      const rest = src.slice(j);
+      const ends = rest === "" || /^([+\-=<>,:)\]}]|\\(cdot|times|div|le|ge|leq|geq|to|right|ldots|cdots)\b|\\[,;: !])/.test(rest);
+      return ends ? frac : `(${frac})`;
     }
     if (name === "sqrt") {
       if (peek() === "[") { i++; const n = seq("]"); i++; const a = arg(); return `nthroot(${a}, ${n})`; }

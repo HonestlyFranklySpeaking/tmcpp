@@ -66,3 +66,9 @@ test("converted math compiles back to the same LaTeX Desmos had", () => {
     assert.equal(state.expressions.list[0].latex, latex);
   }
 });
+
+test("a fraction followed by a factor keeps its own brackets", () => {
+  assert.equal(latexToTmc("x\\le\\frac{1}{\\pi}\\left(y-a\\right)+\\frac{\\pi}{2.5}"), "x <= (1 / pi)(y - a) + pi / 2.5");
+  assert.equal(latexToTmc("y=\\frac{1}{2}x"), "y = (1 / 2)x");
+  assert.equal(latexToTmc("y=\\frac{1}{2}\\cdot x"), "y = 1 / 2 * x");
+});

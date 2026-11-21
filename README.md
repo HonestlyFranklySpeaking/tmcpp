@@ -6,7 +6,7 @@ The name is a nod to C++, which started life as "C with Classes".
 
 [![EVENT HORIZON: a black hole poster drawn entirely with equations in TMC++, embers orbiting the disk](docs/event-horizon.gif)](docs/event-horizon.png)
 
-*`examples/event-horizon.tmcpp`: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines of TMC++, 71 Desmos items. Click for the full-resolution still.*
+*`examples/event-horizon.tmcpp`: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines of TMC++, 71 Desmos items. Click for the full-resolution still.* [See Desmos graph.](https://www.desmos.com/calculator/91wpdzmsmn)
 
 ```js
 class curve { #c74440 dashed width 3 }
@@ -58,6 +58,8 @@ The panel:
 After changing the compiler, run `npm run build:ext` again and click reload on the extension card.
 
 ## Language
+
+**Full reference: [docs/syntax.md](docs/syntax.md)**, covering every TMC++ addition, with links to DesModder's docs for plain TMC. The summary below covers the essentials.
 
 ### Statements
 

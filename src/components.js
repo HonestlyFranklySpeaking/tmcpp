@@ -13,8 +13,12 @@
 import { desmosName } from "./implicit.js";
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
-// x, y and r on the left of `=` draw a curve (y = x^2, r = 1 + cos(θ)); they are never locals.
-const CURVE_VARS = new Set(["x", "y", "r"]);
+// x and y on the left of `=` draw a curve (y = x^2); they are never locals. r is a polar curve
+// only when its right side uses θ (r = 1 + cos(θ)); otherwise `r = s` is a local, a radius.
+const CURVE_VARS = new Set(["x", "y"]);
+const isCurve = (a, text) => CURVE_VARS.has(a.name) ||
+  (a.name === "r" && !a.args.length && /θ|\btheta\b/.test(text.slice(text.indexOf("=") + 1)));
+const MISSPELT = /^(compoment|componet|compnent|componnet|comp)\s+[A-Za-z]/;
 const FORBIDDEN_IN_BODY = /^(component|folder|table|class|color|settings|ticker|image)\b/;
 
 function matchClose(s, open) {
@@ -138,9 +142,12 @@ export function expandComponents(statements, errors, warnings) {
   // 1. Collect and hoist definitions.
   for (let i = 0; i < statements.length; i++) {
     const st = statements[i];
-    if (!/^component\b/.test(st.text)) continue;
+    if (!/^component\b/.test(st.text) && !MISSPELT.test(st.text)) continue;
     defLines.add(i);
-    const m = st.text.match(/^component\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*\{$/);
+    if (MISSPELT.test(st.text)) {
+      errors.push({ line: st.line, message: `Unknown keyword '${st.text.split(/\s/)[0]}' (did you mean 'component'?)` });
+    }
+    const m = st.text.match(/^[A-Za-z]+\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*\{$/);
     const body = [];
     let j = i + 1;
     for (; j < statements.length && statements[j].text !== "}"; j++) {
@@ -180,7 +187,7 @@ export function expandComponents(statements, errors, warnings) {
         continue;
       }
       const a = assigned(b.text);
-      if (!a || CURVE_VARS.has(a.name)) continue;
+      if (!a || isCurve(a, b.text)) continue;
       if (params.some((p) => p.name === a.name)) {
         errors.push({ line: b.line, message: `'${a.name}' is a parameter of ${name}; give the local another name` });
         continue;
@@ -341,7 +348,7 @@ export function expandComponents(statements, errors, warnings) {
       out.push({ text, line: b.line, comments: [...b.comments], instance: inst.key });
       inst.body.push(text);
       const a = assigned(b.text);
-      if (!a || CURVE_VARS.has(a.name)) {
+      if (!a || isCurve(a, b.text)) {
         const key = `${inst.comp.name}#${k}`;
         if (!seenDrawn.has(key)) seenDrawn.set(key, new Map());
         const prev = seenDrawn.get(key).get(text);

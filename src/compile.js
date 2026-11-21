@@ -99,7 +99,10 @@ function splitTopLevelCommas(s) {
   return out.map((x) => x.trim()).filter(Boolean);
 }
 
-const isHeader = (s) => /^(folder|class|table|component)\b/.test(s);
+// `component` and near-misses of it (compoment, componet) open a block; the misspelling is
+// reported by the component pass rather than gluing the whole body into one statement.
+const COMPONENT_HEAD = /^(component|compoment|componet|compnent|componnet|comp)\s+[A-Za-z]\w*\s*\(/;
+const isHeader = (s) => /^(folder|class|table)\b/.test(s) || COMPONENT_HEAD.test(s);
 const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
 
 // ---------- pass 1: join physical lines into logical statements ----------
@@ -157,7 +160,7 @@ function toStatements(source) {
     t = t.replace(/;+\s*$/, "").trimEnd(); // optional CSS-style semicolon
     cur.text = t;
 
-    const folderOpen = /^(folder|table|component)\b/.test(t) && t.endsWith("{");
+    const folderOpen = (/^(folder|table)\b/.test(t) || COMPONENT_HEAD.test(t)) && t.endsWith("{");
     const classUnclosed = /^class\b/.test(t) && bracketDepth(t) > 0;
     const exprUnclosed = !isHeader(t) && bracketDepth(t) > 0;
     cur.open = explicit || classUnclosed ||

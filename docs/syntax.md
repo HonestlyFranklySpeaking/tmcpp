@@ -199,7 +199,7 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 
 - **Parameters** are pasted in as text (bracketed when needed), so they cost no Desmos variables. A string argument works where a string goes: `P . label text`.
 - **Locals** are the names a body defines (`d = ...`, `f(u) = ...`). Each instance gets its own copy under a Desmos name the compiler picks, such as `d_s1`. The name never clashes with anything else in the file; if `d_s1` is taken, it becomes `d_s1x`. Write `s1.d` and let the compiler worry about the spelling.
-- `x =`, `y =` and `r =` lines draw curves, as everywhere else, so they are not locals.
+- `x =` and `y =` lines draw curves, as everywhere else, so they are not locals. `r =` is a polar curve only when its right side uses `theta` (`r = 1 + cos(theta)`); otherwise `r = s` is a local, such as a radius.
 - Sliders and click actions inside a body belong to each instance: `k = 1 [0 : 5]` gives every instance its own slider, and `click(n -> n + 1)` updates that instance's `n`.
 - An instance inside a folder puts its lines straight into that folder (Desmos has no folders in folders).
 - Convention, not rule: component names start uppercase (`Spring`), class names lowercase (`.spring`). Breaking either gives a warning.

@@ -73,7 +73,7 @@ test("multi-letter locals get a Desmos-legal name", () => {
   assert.match(tmc, /^y = c_oilr1;/m);
 });
 
-test("x, y and r on the left draw curves; they are not locals", () => {
+test("x and y on the left draw curves; they are not locals", () => {
   const tmc = ok(`component Wave(a) {\n  y = a * sin(x)\n}\nnew Wave(2) as w1\nnew Wave(3) as w2`);
   assert.match(tmc, /^y = 2 \* sin\(x\);/m);
   assert.match(tmc, /^y = 3 \* sin\(x\);/m);
@@ -161,4 +161,16 @@ test("warnings: case conventions are only warnings", () => {
 test("warning: two instances drawing the same thing on top of each other", () => {
   assert.match(warns(`component W(a) {\n  y = sin(x)\n}\nnew W(1) as p\nnew W(2) as q`), /draw this line identically/);
   assert.equal(warns(`component C(i) {\n  m = 0\n  y = i\n}\nnew C(1) as p\nnew C(2) as q`), "");
+});
+
+test("r is a local (a radius) unless its right side uses θ", () => {
+  const tmc = ok(`component Ring(s) {\n  r = s\n  x^2 + y^2 = r^2\n}\nnew Ring(1) as inner\nnew Ring(2) as outer`);
+  assert.match(tmc, /^r_inner = 1;\nx\^2 \+ y\^2 = r_inner\^2;/m);
+  assert.match(tmc, /^r_outer = 2;/m);
+  assert.match(ok(`component Rose(k) {\n  r = cos(k * theta)\n}\nnew Rose(3) as a`), /^r = cos\(3 \* theta\);/m);
+});
+
+test("a misspelt keyword is reported, and the body still parses as a component", () => {
+  const r = run(`compoment Ring(s) {\n  r = s\n}\nnew Ring(1) as a`);
+  assert.deepEqual(r.errors.map((e) => e.message), ["Unknown keyword 'compoment' (did you mean 'component'?)"]);
 });

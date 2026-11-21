@@ -68,3 +68,54 @@ export function rewriteRedefinition(math, line, defs) {
     note: `${m[1]} is defined on line ${defs.get(m[1])}, so this is drawn as the curve ${m[1]}(${m[2]}) = ... instead of redefining it`,
   };
 }
+
+/** Split a call's argument text on top-level commas. */
+function splitArgs(s) {
+  const out = [];
+  let depth = 0, inStr = false, start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "\\" && inStr) { i++; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (OPEN.includes(c)) depth++;
+    else if (CLOSE.includes(c)) depth--;
+    else if (c === "," && depth === 0) { out.push(s.slice(start, i).trim()); start = i + 1; }
+  }
+  out.push(s.slice(start).trim());
+  return out.filter((a) => a !== "");
+}
+
+/** If `s` is exactly name(...), return the inside of the parentheses. */
+function callBody(s, name) {
+  if (!s.startsWith(name + "(") || !s.endsWith(")")) return null;
+  let depth = 0;
+  for (let i = name.length; i < s.length; i++) {
+    if (OPEN.includes(s[i])) depth++;
+    else if (CLOSE.includes(s[i])) depth--;
+    if (depth === 0 && i < s.length - 1) return null; // the call closes before the end
+  }
+  return s.slice(name.length + 1, -1);
+}
+
+/**
+ * Desmos's graphing calculator has no segment() (only the Geometry calculator does), so:
+ *   segment(A, B)  ->  (1 - t) * (A) + t * (B)          A, B: points or lists of points
+ *   path(P)        ->  segments joining P's points in order
+ * Returns { math } or { error }.
+ */
+export function rewriteSegments(math) {
+  const seg = callBody(math, "segment");
+  const path = seg === null ? callBody(math, "path") : null;
+  if (seg === null && path === null) return { math };
+  const args = splitArgs(seg ?? path);
+  const usesT = args.some((a) => /(^|[^A-Za-z0-9_.])t([^A-Za-z0-9_]|$)/.test(a));
+  if (usesT) return { error: `${seg !== null ? "segment" : "path"}() uses t to draw the line, so its points can't use t` };
+  if (seg !== null) {
+    if (args.length !== 2) return { error: "segment() takes two points (or two lists of points): segment(A, B)" };
+    return { math: `(1 - t) * (${args[0]}) + t * (${args[1]})` };
+  }
+  if (args.length !== 1) return { error: "path() takes one list of points: path([(0,0), (1,2), (2,0)])" };
+  const P = /^[A-Za-z][A-Za-z0-9_]*$/.test(args[0]) ? args[0] : `(${args[0]})`;
+  return { math: `(1 - t) * (${P}[1...length(${P}) - 1]) + t * (${P}[2...length(${P})])` };
+}

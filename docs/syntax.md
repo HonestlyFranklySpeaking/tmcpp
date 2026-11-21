@@ -77,6 +77,21 @@ q(x,y) = x^2 + 4y^2
 q(x,y) = [1, 4, 9]
 ```
 
+**Segments and paths.** Desmos's graphing calculator has no `segment()` (only its Geometry calculator does). TMC++ adds two helpers, used as a whole statement:
+
+```js
+segment((0, 0), (3, 2))  #red width 4
+segment([(0, 0), (1, 1)],
+        [(2, 0), (2, 2)])                  // pairs of start and end points: one line each
+C = [(-10, 2), (-8, 3), (-6, 2.5), (-5, 1)]
+path(C)  #blue width 3                     // joins the points in order
+```
+
+- `segment(A, B)` compiles to `(1 - t) * (A) + t * (B)`. `A` and `B` can be points or equal-length lists of points, and can move with sliders.
+- `path(P)` draws a segment between each pair of neighbouring points in `P` (a name or a literal list).
+- The line is drawn with the parameter `t`, so the points themselves can't use `t`.
+- Use them for anything drawn as strokes: lettering, branches, constellations, rigging.
+
 **Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number or an expression written without spaces (`fill 0.8*(1-t)^2`).
 
 ## Style tails
@@ -266,6 +281,7 @@ Every message names the TMC++ line. Common ones:
 | `Style word 'point' is inside the math` | add a `.` before the first style word |
 | `Folders cannot be nested` | Desmos has no folders in folders |
 | `A double inequality must point one way` | `a < f > b` |
+| `segment() takes two points` / `path() takes one list of points` | wrong number of arguments |
 | `'label' needs a string` | write `label "text"` |
 | `q is defined on line N, so this is drawn as the curve ...` (warning) | the level-curve rewrite happened |
 | `TMC: ...` (extension) | DesModder's parser rejected the compiled line |
@@ -288,4 +304,5 @@ folder "Controls" collapsed {
 y = k sin(x + a)          .ink
 1 < x^2 + y^2 < 4         .glow
 (0, k) #red point 10 drag y label "k = ${k}" above
+segment((0, 0), (0, k))   . dotted
 ```

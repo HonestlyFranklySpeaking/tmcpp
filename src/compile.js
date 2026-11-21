@@ -3,7 +3,7 @@
 
 import { implicitMultiply } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
-import { rewriteDoubleInequality, rewriteRedefinition, functionDefs } from "./rewrite.js";
+import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
 
 const NAMED_COLORS = {
@@ -542,6 +542,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     if (stray) {
       errors.push({ line, message: `Style word '${stray[1]}' is inside the math; start the style tail with '.' (e.g. '. ${stray[1]} ...')` });
     }
+    const segs = rewriteSegments(math);
+    if (segs.error) errors.push({ line, message: segs.error });
+    else math = segs.math;
     const dbl = rewriteDoubleInequality(math);
     if (dbl.error) errors.push({ line, message: dbl.error });
     else math = dbl.math;

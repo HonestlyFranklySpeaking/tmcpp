@@ -397,3 +397,25 @@ test("named colour errors", () => {
 test("a variable called color is still math", () => {
   assert.equal(ok("color = 5"), "color = 5;");
 });
+
+test("segment(A, B) draws a line, also between lists of points", () => {
+  assert.equal(ok("segment((0,0), (3,2)) #red width 4"), '(1 - t) * ((0,0)) + t * ((3,2)) @{ color: RED, lines: @{ width: 4 } };');
+  assert.equal(ok("segment(P, Q)"), "(1 - t) * (P) + t * (Q);");
+  assert.equal(ok("segment([(0,0), (1,1)], [(2,0), (2,2)])"), "(1 - t) * ([(0,0), (1,1)]) + t * ([(2,0), (2,2)]);");
+});
+
+test("path(P) joins a list of points in order", () => {
+  assert.equal(ok("path(C)"), "(1 - t) * (C[1...length(C) - 1]) + t * (C[2...length(C)]);");
+  assert.equal(ok("path([(0,0), (1,2), (2,0)])"),
+    "(1 - t) * (([(0,0), (1,2), (2,0)])[1...length(([(0,0), (1,2), (2,0)])) - 1]) + t * (([(0,0), (1,2), (2,0)])[2...length(([(0,0), (1,2), (2,0)]))]);");
+});
+
+test("segment and path errors", () => {
+  assert.match(errs("segment((0,0))"), /takes two points/);
+  assert.match(errs("segment((t,0), (1,1))"), /can't use t/);
+  assert.match(errs("path(A, B)"), /takes one list/);
+});
+
+test("segment only rewrites a whole statement", () => {
+  assert.equal(ok("y = segmentation(x)"), "y = segmentation(x);");
+});

@@ -70,6 +70,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 - Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
 - Double inequalities work on anything: Desmos only draws `a < f < b` when `f` is `x` or `y`, so TMC++ rewrites the rest to `max(a - f, f - b) < 0`. `2.49 < r(x,y) < 2.98` draws a ring, and the bounds can be piecewise.
 - Drawing level curves of a function you defined just works: `q(x,y) = [0.5, 0.6]` after `q(x,y) = ...` would redefine `q` in Desmos, so it becomes `q(x,y) - ([0.5, 0.6]) = 0` (with a warning saying so).
+- `segment(A, B)` and `path(P)` draw straight lines between points or lists of points (Desmos's graphing calculator has no `segment()`).
 - Files can be UTF-8 or UTF-16 (what Windows PowerShell's `>` writes).
 
 ### Style tails
@@ -123,7 +124,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 
 | File | What it shows |
 | --- | --- |
-| `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette and one list inequality for 24 water bands (232 items) |
+| `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette, one list inequality for 24 water bands, and `segment()` for the coral (232 items) |
 | `examples/event-horizon.tmcpp` | EVENT HORIZON (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
 | `examples/hello.tmcpp` | HELLO WORLD written stroke by stroke from 46 segments and one parametric expression (the extension's starter) |
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |

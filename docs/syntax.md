@@ -12,7 +12,7 @@ This page covers only what TMC++ adds to or changes in DesModder's Text Mode (TM
 
 A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without a TMC++ word is still one line away.
 
-Contents: [Lines](#lines) · [Math](#math) · [Style tails](#style-tails) · [Classes](#classes) · [Named colours](#named-colours) · [Token reference](#token-reference) · [Blocks](#blocks) · [What the compiler adds](#what-the-compiler-adds) · [Errors and warnings](#errors-and-warnings) · [Cheat sheet](#cheat-sheet)
+Contents: [Lines](#lines) · [Math](#math) · [Style tails](#style-tails) · [Classes](#classes) · [Named colours](#named-colours) · [Components](#components) · [Token reference](#token-reference) · [Blocks](#blocks) · [What the compiler adds](#what-the-compiler-adds) · [Errors and warnings](#errors-and-warnings) · [Cheat sheet](#cheat-sheet)
 
 ## Lines
 
@@ -165,6 +165,45 @@ x^2 + y^2 < 4  .glow
 - Names are case-insensitive, hoisted like classes, and can't shadow a built-in (`#red`) or look like a hex code (`#abc`).
 - Use them for a palette instead of one-colour classes: `#water .wash` reads better than `.water .wash`, and colours stay separate from styles.
 - A line like `color = 5` is still math: only `color name #hex` defines a colour.
+
+## Components
+
+A component is a group of lines written once, with parameters, and stamped out with `new`. Each instance becomes its own Desmos folder.
+
+```js
+color steel #6b7b8c
+class spring { #steel width 2 }
+
+component Spring(A, B, coils = 8) {
+  d = B - A  . hidden                          // local: one per instance
+  w = (-d.y, d.x) / distance(A, B) * 0.3  . hidden
+  (1 - t) * A + t * B + sin(2 * pi * coils * t) * w  .spring
+  A  . point 6
+  B  . point 6
+}
+
+Q = (5, 3)  . drag xy
+new Spring((0, 0), (4, 1)) as s1
+new Spring((0, 2), Q, coils = 12) as s2  . #red
+stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
+```
+
+| Form | Meaning |
+| --- | --- |
+| `component Name(a, b, c = 3) { ... }` | Definition. Draws nothing by itself. Hoisted, like classes. |
+| `new Name(1, P) as name` | Instance, in a folder titled `name`. |
+| `new Name(1, P)` | Anonymous instance, in a folder titled `Name 1`, `Name 2` and so on. |
+| `new Name(1, c = 5)` | Named arguments come after positional ones. Missing ones use their defaults. |
+| `new Name(...) as name . #red` | Instance tail: added to every line inside, and it wins over the line's own tokens. |
+| `name.local`, `name.param` | Reach into an instance from anywhere in the file. |
+
+- **Parameters** are pasted in as text (bracketed when needed), so they cost no Desmos variables. A string argument works where a string goes: `P . label text`.
+- **Locals** are the names a body defines (`d = ...`, `f(u) = ...`). Each instance gets its own copy under a Desmos name the compiler picks, such as `d_s1`. The name never clashes with anything else in the file; if `d_s1` is taken, it becomes `d_s1x`. Write `s1.d` and let the compiler worry about the spelling.
+- `x =`, `y =` and `r =` lines draw curves, as everywhere else, so they are not locals.
+- Sliders and click actions inside a body belong to each instance: `k = 1 [0 : 5]` gives every instance its own slider, and `click(n -> n + 1)` updates that instance's `n`.
+- An instance inside a folder puts its lines straight into that folder (Desmos has no folders in folders).
+- Convention, not rule: component names start uppercase (`Spring`), class names lowercase (`.spring`). Breaking either gives a warning.
+- Not yet: components inside components, list instances (`new ... for ...`), and "From graph" giving back `new` lines instead of the expanded folders. These are milestones M6 to M8.
 
 ## Token reference
 

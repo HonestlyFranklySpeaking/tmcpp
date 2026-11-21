@@ -5,6 +5,7 @@ import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
+import { expandComponents } from "./components.js";
 
 const NAMED_COLORS = {
   red: "RED", blue: "BLUE", green: "GREEN",
@@ -98,7 +99,7 @@ function splitTopLevelCommas(s) {
   return out.map((x) => x.trim()).filter(Boolean);
 }
 
-const isHeader = (s) => /^(folder|class|table)\b/.test(s);
+const isHeader = (s) => /^(folder|class|table|component)\b/.test(s);
 const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
 
 // ---------- pass 1: join physical lines into logical statements ----------
@@ -156,7 +157,7 @@ function toStatements(source) {
     t = t.replace(/;+\s*$/, "").trimEnd(); // optional CSS-style semicolon
     cur.text = t;
 
-    const folderOpen = /^(folder|table)\b/.test(t) && t.endsWith("{");
+    const folderOpen = /^(folder|table|component)\b/.test(t) && t.endsWith("{");
     const classUnclosed = /^class\b/.test(t) && bracketDepth(t) > 0;
     const exprUnclosed = !isHeader(t) && bracketDepth(t) > 0;
     cur.open = explicit || classUnclosed ||
@@ -425,7 +426,8 @@ function applySettings(text, settings, errors, line) {
 export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true } = {}) {
   renamed = new Map();
   const errors = [], warnings = [];
-  const statements = toStatements(source);
+  const expanded = expandComponents(toStatements(source), errors, warnings);
+  const statements = expanded.statements;
   const classes = new Map();
 
   // Hoist colour definitions: color water #092635  ->  #water anywhere a colour goes.
@@ -452,6 +454,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     }
     if (!m) continue;
     st.skip = true;
+    if (/^[A-Z]/.test(m[1])) warnings.push({ line: st.line, message: `Class names usually start with a lowercase letter ('${m[1][0].toLowerCase() + m[1].slice(1)}')` });
     if (classes.has(m[1])) {
       errors.push({ line: st.line, message: `Class '${m[1]}' is already defined on line ${classes.get(m[1]).line}` });
       continue;
@@ -647,5 +650,6 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     }
   }
   errors.sort((a, b) => a.line - b.line);
-  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource };
+  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource,
+    components: expanded.components, instances: expanded.instances };
 }

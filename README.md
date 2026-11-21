@@ -174,8 +174,10 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M2 classes, inline styles, labels, settings, playback, tables, tickers | done |
 | M3 browser extension with live compile, stable ids and the metadata note | done |
 | M4 decompile: rebuild TMC++ from a graph, with Desmos UI edits as inline overrides | done |
-| v2 components, e.g. `Spring(m, c)` expanding to several expressions | planned |
-| v2 `if` statements that compile to piecewise | planned |
+| M5 components: `component Spring(A, B) { ... }` and `new Spring(...) as s1` | done |
+| M6 to M8 component members and nesting, list instances, round trip | planned |
+| M9, M10 `if` statements to piecewise, merged ticker actions | planned |
+| M11 ship v2 (Tritime and Minesweeper showcases); M12 libraries | planned |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |
 
 ## License

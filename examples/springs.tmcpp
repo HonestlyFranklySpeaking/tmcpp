@@ -1,0 +1,18 @@
+// Springs: the v2 components example. Drag Q to stretch the red spring.
+settings x [-2 : 8] y [-2 : 5]
+
+color steel #6b7b8c
+class spring { #steel width 2 }
+
+component Spring(A, B, coils = 8) {
+  d = B - A  . hidden                          // local: one per instance
+  w = (-d.y, d.x) / distance(A, B) * 0.3  . hidden
+  (1 - t) * A + t * B + sin(2 * pi * coils * t) * w  .spring
+  A  . point 6
+  B  . point 6
+}
+
+Q = (5, 3)  . drag xy
+new Spring((0, 0), (4, 1)) as s1
+new Spring((0, 2), Q, coils = 12) as s2  . #red    // the tail wins: s2 is red
+stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)

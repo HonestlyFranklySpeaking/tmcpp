@@ -599,11 +599,12 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
       math = sm[1];
       mathWritten = sm[1];
       const parts = sm[2].split(":").map((p) => p.trim());
-      if (parts.length < 2 || parts.length > 3 || parts.some((p) => p === "")) {
+      // One bound may be left empty, [ : 10], to keep Desmos's default for it.
+      if (parts.length < 2 || parts.length > 3 || (parts[0] === "" && parts[1] === "") || parts[2] === "") {
         errors.push({ line, message: "Slider bounds must be [min : max] or [min : max : step]" });
       } else {
-        const [lo, hi, step = "0"] = parts.map((p) => implicitMultiply(p));
-        style.slider = { min: lo, max: hi, step };
+        const [lo, hi, step = "0"] = parts.map((p) => (p === "" ? "" : implicitMultiply(p)));
+        style.slider = { ...(lo !== "" && { min: lo }), ...(hi !== "" && { max: hi }), step };
       }
     }
 

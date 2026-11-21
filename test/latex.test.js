@@ -79,3 +79,9 @@ test("sqrt, fractions and |x| don't glue onto a letter in front", () => {
   assert.equal(latexToTmc("y=x\\frac{1}{2}"), "y = x 1 / 2");
   assert.equal(latexToTmc("y=x\\left|y\\right|"), "y = x abs(y)");
 });
+
+test("adjacent letters are separate variables, except in subscripts and names", () => {
+  assert.equal(latexToTmc("B\\left(P_{10},t\\right)=\\left(1-t\\right)P_{10}+tP_{11}"), "B(P_10, t) = (1 - t)P_10 + t P_11");
+  assert.equal(latexToTmc("a_{nim}=1"), "a_nim = 1");
+  assert.equal(latexToTmc("\\frac{m}{1.2a}"), "m / (1.2a)");
+});

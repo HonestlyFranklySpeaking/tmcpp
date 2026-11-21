@@ -142,6 +142,7 @@ function overrideTokens(from, to, ctx) {
     t.push(`click(${action})`);
   }
   if (diff("clickDescription") && to.clickDescription) t.push("click-label", JSON.stringify(to.clickDescription));
+  raw.push(...(ctx.extraRaw ?? []));
   if (raw.length) t.push(`@{ ${raw.join(", ")} }`);
   return t;
 }
@@ -149,12 +150,14 @@ function overrideTokens(from, to, ctx) {
 /** Slider bounds and playback from a raw item, as TMC++ (or "" when it isn't a bounded slider). */
 function sliderText(item, latexToText) {
   const s = item.slider;
-  if (!s || s.min === undefined || s.max === undefined) return "";
+  if (!s) return "";
   // Desmos keeps old slider settings on expressions that are no longer sliders: only `name = number` is one.
   if (!/^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?=-?\d*\.?\d+$/.test(item.latex ?? "")) return "";
   const v = (x) => (x === undefined || x === "" ? "" : latexToText(String(x)).trim());
   const step = v(s.step);
-  let out = `[${v(s.min)} : ${v(s.max)}${step && step !== "0" ? ` : ${step}` : ""}]`;
+  // Desmos may keep only one bound (a max with the default min): write [ : 3532.91].
+  const bounded = s.min !== undefined || s.max !== undefined;
+  let out = bounded ? `[${v(s.min)} : ${v(s.max)}${step && step !== "0" ? ` : ${step}` : ""}]` : "";
   const play = [];
   if (s.isPlaying) play.push("play");
   const mode = { LOOP_FORWARD: "loop", LOOP_FORWARD_REVERSE: "bounce", PLAY_ONCE: "once", PLAY_INDEFINITELY: "forever" }[s.loopMode];
@@ -164,7 +167,7 @@ function sliderText(item, latexToText) {
     const ms = s.animationPeriod;
     play.push(ms % 1000 === 0 ? `${ms / 1000}s` : `${ms}ms`);
   }
-  return play.length ? `${out} . ${play.join(" ")}` : out;
+  return play.length ? `${out} . ${play.join(" ")}`.trim() : out;
 }
 
 const q = (s) => JSON.stringify(s);
@@ -227,6 +230,11 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
 
   const exprLine = (item, indent) => {
     const e = exprs[item.id];
+    // A parametric's t range (0 to 360 in a degree-mode graph, say) has no token: write it raw.
+    const pd = item.parametricDomain;
+    const val = (x) => valueText(x, latexToText);
+    ctx.extraRaw = pd && (String(pd.min ?? "0") !== "0" || String(pd.max ?? "1") !== "1")
+      ? [`domain: @{ t: @{ min: ${val(pd.min ?? "0")}, max: ${val(pd.max ?? "1")} } }`] : [];
     const { math } = mathOf(item);
     const actual = styleView(item);
     const join = (tail) => `${indent}${math}${tail ? "  " + tail : ""}`;

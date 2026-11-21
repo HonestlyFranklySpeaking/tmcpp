@@ -13,6 +13,7 @@ const SYMBOLS = { cdot: " * ", times: " * ", le: " <= ", ge: " >= ", leq: " <= "
 
 export function latexToTmc(src) {
   let i = 0;
+  let glue = 0; // > 0 inside a subscript or \operatorname, where letters form one name
   const peek = () => src[i];
   const eof = () => i >= src.length;
   const fail = (m) => { throw new Error(`${m} at ${i} in ${src}`); };
@@ -43,7 +44,8 @@ export function latexToTmc(src) {
       return c === "." ? "" : c;
     }
     if (name === "frac") {
-      const wrap = (x) => (/^[\w.^]+$/.test(x) || /^\w+\([^()]*\)$/.test(x) ? x : `(${x})`);
+      // Only a single number, name (P_1) or call keeps no brackets: "1.2a" in a denominator does not.
+      const wrap = (x) => (/^(-?\d*\.?\d+|[A-Za-z]+(_[A-Za-z0-9]+)?)(\^[\w.]+)?$/.test(x) || /^\w+\([^()]*\)$/.test(x) ? x : `(${x})`);
       const a = arg(), b = arg();
       const frac = `${wrap(a.trim())} / ${wrap(b.trim())}`;
       let j = i; while (src[j] === " ") j++;
@@ -95,10 +97,10 @@ export function latexToTmc(src) {
       return exp === null ? ` ${n}(${inner})` : ` ${n}(${inner})^(${exp})`;
     };
     if (name === "operatorname") {
-      const word = arg().trim();
+      glue++; const word = arg().trim(); glue--;
       return KEYWORDS.has(word) ? ` ${word} ` : fn(word);
     }
-    if (name === "mathrm" || name === "text") return arg();
+    if (name === "mathrm" || name === "text") { glue++; const w = arg(); glue--; return w; }
     if (FUNCS.has(name)) return fn(name);
     if (GREEK.has(name)) return ` ${name} `;
     if (name in SYMBOLS) return SYMBOLS[name];
@@ -111,14 +113,17 @@ export function latexToTmc(src) {
       const c = peek();
       if (c === "\\") out += command();
       else if (c === "^") { i++; const a = arg().trim(); out += /^[\w.]+$/.test(a) ? `^${a}` : `^(${a})`; }
-      else if (c === "_") { i++; const a = arg().trim(); out += `_${a}`; }
+      else if (c === "_") { i++; glue++; const a = arg().trim(); glue--; out += `_${a}`; }
       else if (c === "{") { i++; out += seq("}"); i++; }
       else if (c === "}") { fail("unbalanced }"); }
       else if (c === "=" || c === "<" || c === ">" || c === "+" || c === "~") { i++; out += ` ${c} `; }
       else if (c === "-") { i++; out += /[\w)\]}]\s*$/.test(out) ? " - " : "-"; }
       else if (c === ",") { i++; out += ", "; }
       else if (c === ":") { i++; out += ": "; }
-      else { out += c; i++; }
+      else {
+        if (/[A-Za-z]/.test(c) && !glue && /[A-Za-z]$/.test(out)) out += " ";
+        out += c; i++;
+      }
     }
     return out;
   }

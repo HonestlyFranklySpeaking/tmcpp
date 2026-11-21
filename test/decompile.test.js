@@ -212,3 +212,10 @@ test("a table inside a folder converts without its folder id; a failing item is 
   assert.match(source, /folder "F" \{\n  table \{\n  \}\n  \/\/ \(left out: image i, which couldn't be converted\)\n\}/);
   assert.match(warnings.join(" "), /couldn't convert image i/);
 });
+
+test("style values keep word spaces by bracketing, instead of gluing words together", async () => {
+  const { oneToken } = await import("../src/decompile.js");
+  assert.equal(oneToken("0.5 * sqrt(x)"), "0.5*sqrt(x)");
+  assert.equal(oneToken("a pi"), "(a pi)");
+  assert.equal(oneToken("x for i = [1...3]"), "(x for i=[1...3])");
+});

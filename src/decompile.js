@@ -79,11 +79,20 @@ function sliderView(s) {
   return JSON.stringify([v.min, v.max, v.step ?? "", v.loopMode, v.animationPeriod, v.playDirection]);
 }
 
-/** A value as a token argument: numbers as-is, LaTeX expressions as no-space TMC text. */
+/**
+ * Math as one tail token. Spaces next to symbols can go (a + b -> a+b), but a space between two
+ * words is meaningful (2 pi, x for i), so then the whole value is bracketed instead: (a pi).
+ */
+export function oneToken(text) {
+  const t = text.trim().replace(/\s*([^\w\s.])\s*/g, "$1");
+  return /\s/.test(t) ? `(${t.replace(/\s+/g, " ")})` : t;
+}
+
+/** A value as a token argument: numbers as-is, LaTeX expressions as one token. */
 function valueText(v, latexToText) {
   const s = String(v);
   if (/^-?\d*\.?\d+$/.test(s)) return s.replace(/^(-?)\./, "$10"); // .95 -> 0.95
-  try { return latexToText(s).replace(/\s+/g, ""); } catch { return s; }
+  try { return oneToken(latexToText(s)); } catch { return s; }
 }
 
 const balanced = (s) => {
@@ -143,7 +152,7 @@ function sliderText(item, latexToText) {
   if (!s || s.min === undefined || s.max === undefined) return "";
   // Desmos keeps old slider settings on expressions that are no longer sliders: only `name = number` is one.
   if (!/^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?=-?\d*\.?\d+$/.test(item.latex ?? "")) return "";
-  const v = (x) => (x === undefined || x === "" ? "" : latexToText(String(x)).replace(/\s+/g, ""));
+  const v = (x) => (x === undefined || x === "" ? "" : latexToText(String(x)).trim());
   const step = v(s.step);
   let out = `[${v(s.min)} : ${v(s.max)}${step && step !== "0" ? ` : ${step}` : ""}]`;
   const play = [];

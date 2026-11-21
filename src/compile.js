@@ -212,7 +212,8 @@ function tokenizeTail(tail) {
   let i = 0;
   while (i < tail.length) {
     if (/[\s;]/.test(tail[i])) { i++; continue; }
-    if (tail.startsWith("#(", i) || tail.startsWith("click(", i)) { // #(c_1), click(a -> a + 1, b -> 0)
+    // #(c_1), click(a -> a + 1, b -> 0), and a bracketed value with spaces: opacity (a pi)
+    if (tail.startsWith("#(", i) || tail.startsWith("click(", i) || tail[i] === "(") {
       let depth = 0, j = tail.indexOf("(", i);
       for (; j < tail.length; j++) { if (tail[j] === "(") depth++; else if (tail[j] === ")" && --depth === 0) break; }
       out.push(tail.slice(i, j + 1));
@@ -334,7 +335,7 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "label-size" || lower === "label-angle") {
       const v = tokens[i + 1];
       if (v === undefined) errors.push({ line, message: `'${lower}' needs a value` });
-      else { set(["label", lower === "label-size" ? "size" : "angle"], v, lower); i++; }
+      else { set(["label", lower === "label-size" ? "size" : "angle"], isNaN(Number(v)) ? implicitMultiply(v) : v, lower); i++; }
       continue;
     }
     if (ORIENTATIONS.includes(lower)) { set(["label", "orientation"], `"${lower.replace(/-/g, "_")}"`, "label position"); continue; }

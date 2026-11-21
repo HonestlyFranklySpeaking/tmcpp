@@ -482,3 +482,8 @@ test("list comprehensions without brackets get them", () => {
   assert.equal(ok("L = join(g(a) for a = [1, 2], b = [3])"), "L = join([g(a) for a = [1, 2], b = [3]]);");
   assert.equal(ok("L = [i for i = [1...3]]"), "L = [i for i = [1...3]];");
 });
+
+test("a bracketed style value may contain spaces: opacity (a pi)", () => {
+  assert.equal(ok("y = x . opacity (a pi) label \"A\" label-size (2 pi)"),
+    'y = x @{ lines: @{ opacity: (a * pi) }, label: @{ text: "A", size: (2 * pi) } };');
+});

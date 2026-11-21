@@ -122,6 +122,8 @@ function overrideTokens(from, to, ctx) {
 function sliderText(item, latexToText) {
   const s = item.slider;
   if (!s || s.min === undefined || s.max === undefined) return "";
+  // Desmos keeps old slider settings on expressions that are no longer sliders: only `name = number` is one.
+  if (!/^[A-Za-z](_\{?[A-Za-z0-9]+\}?)?=-?\d*\.?\d+$/.test(item.latex ?? "")) return "";
   const v = (x) => (x === undefined || x === "" ? "" : latexToText(String(x)).replace(/\s+/g, ""));
   const step = v(s.step);
   let out = `[${v(s.min)} : ${v(s.max)}${step && step !== "0" ? ` : ${step}` : ""}]`;
@@ -226,7 +228,10 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
   const itemLines = (item, indent) => {
     const out = comments(item.id, indent);
     if (item.type === "text") out.push(`${indent}${q(item.text ?? "")}`);
-    else if (item.type === "expression") out.push(exprLine(item, indent));
+    else if (item.type === "expression") {
+      if (!(item.latex ?? "").trim()) return out; // an empty row in the Desmos list
+      out.push(exprLine(item, indent));
+    }
     else if (itemToTmc) out.push(...itemToTmc(item).split("\n").map((l) => indent + l));
     else warnings.push(`skipped a ${item.type} (no converter)`);
     return out;

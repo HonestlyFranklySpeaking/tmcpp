@@ -137,3 +137,23 @@ for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
     assert.equal(strip(again.tmc), strip(compile(src).tmc));
   });
 }
+
+test("empty rows in the Desmos list are skipped", () => {
+  const state = { version: 11, graph: {}, expressions: { list: [
+    { id: "1", type: "expression", latex: "y=x" },
+    { id: "2", type: "expression", latex: "", color: "#000000", lineStyle: "SOLID" },
+    { id: "3", type: "expression", color: "#2d70b3" },
+  ] } };
+  const { source } = decompile(state, { latexToText: latexToTmc });
+  assert.equal(source.trim(), "y = x");
+});
+
+test("old slider settings on non-sliders are ignored", () => {
+  const state = { version: 11, graph: {}, expressions: { list: [
+    { id: "1", type: "expression", latex: "R_{1}=h\\to5", slider: { hardMin: true, hardMax: true, min: "0", max: "5", step: "0.5" } },
+    { id: "2", type: "expression", latex: "C=0", slider: { hardMin: true, hardMax: true, min: "0", max: "1" } },
+  ] } };
+  const { source } = decompile(state, { latexToText: latexToTmc });
+  assert.match(source, /^R_1 = h -> 5$/m);
+  assert.match(source, /^C = 0  \[0 : 1\]$/m);
+});

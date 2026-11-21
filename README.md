@@ -6,7 +6,7 @@ The name is a nod to C++, which started life as "C with Classes".
 
 [![EVENT HORIZON: a black hole poster drawn entirely with equations in TMC++, embers orbiting the disk](docs/event-horizon.gif)](docs/event-horizon.png)
 
-*`examples/event-horizon.tmcpp`: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines of TMC++, 71 Desmos items. Click for the full-resolution still.* [See Desmos graph.](https://www.desmos.com/calculator/91wpdzmsmn)
+*`examples/event-horizon.tmcpp`, written by ChatGPT in TMC++: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines, 71 Desmos items. Click for the full-resolution still.* [See Desmos graph.](https://www.desmos.com/calculator/91wpdzmsmn)
 
 ```js
 class curve { #c74440 dashed width 3 }
@@ -79,6 +79,7 @@ A tail starts at the first whitespace-preceded `.name`, `#`, `label "`, lone `.`
 ```js
 class curve { #c74440 dashed width 3 }   // define once (hoisted; ; separators allowed)
 class thick { width 5 }
+color sea #2d70b3                         // a named colour, used as #sea
 y = sin(x)  .curve .thick opacity 0.5     // stack classes, then override inline
 y = cos(x)  . dotted                      // a lone . starts a tail with no class
 ```
@@ -88,6 +89,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | Token | Meaning |
 | --- | --- |
 | `.name` | apply a class |
+| `#name` | a colour you defined with `color name #rrggbb` |
 | `#c74440`, `#red` `#blue` `#green` `#purple` `#orange` `#black` | colour |
 | `solid` `dashed` `dotted` | line style |
 | `width N`, `opacity N` | line width and opacity |
@@ -121,7 +123,8 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 
 | File | What it shows |
 | --- | --- |
-| `examples/event-horizon.tmcpp` | EVENT HORIZON: a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
+| `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette and one list inequality for 24 water bands (232 items) |
+| `examples/event-horizon.tmcpp` | EVENT HORIZON (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
 | `examples/hello.tmcpp` | HELLO WORLD written stroke by stroke from 46 segments and one parametric expression (the extension's starter) |
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |
 | `examples/sunset.tmcpp` | a sunset scene driven by one time-of-day slider |

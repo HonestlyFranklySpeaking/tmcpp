@@ -235,9 +235,15 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     }
     if (t.startsWith("#")) {
       const v = t.slice(1);
-      if (/^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{3}$/.test(v)) set(["color"], `"#${v.toLowerCase()}"`, "color");
+      const named = ctx.colors?.get(v.toLowerCase());
+      if (named) set(["color"], `"${named.hex}"`, "color");
+      else if (/^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{3}$/.test(v)) set(["color"], `"#${v.toLowerCase()}"`, "color");
       else if (NAMED_COLORS[v.toLowerCase()]) set(["color"], NAMED_COLORS[v.toLowerCase()], "color");
-      else errors.push({ line, message: `Unknown color '${t}' (use #rrggbb or one of ${Object.keys(NAMED_COLORS).map((c) => "#" + c).join(", ")})` });
+      else {
+        const known = [...Object.keys(NAMED_COLORS), ...(ctx.colors?.keys() ?? [])];
+        const hint = closest(v.toLowerCase(), known);
+        errors.push({ line, message: `Unknown color '${t}'` + (hint ? ` (did you mean '#${hint}'?)` : ` (use #rrggbb, a built-in like #red, or define one: color name #rrggbb)`) });
+      }
       continue;
     }
     const lower = t.toLowerCase();
@@ -361,6 +367,20 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const statements = toStatements(source);
   const classes = new Map();
 
+  // Hoist colour definitions: color water #092635  ->  #water anywhere a colour goes.
+  const colors = new Map();
+  for (const st of statements) {
+    if (!/^color\s+[A-Za-z_]/.test(st.text)) continue;
+    st.skip = true;
+    const m = st.text.match(/^color\s+([A-Za-z_][\w-]*)\s+#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
+    if (!m) { errors.push({ line: st.line, message: "Malformed color; expected: color name #rrggbb" }); continue; }
+    const name = m[1].toLowerCase();
+    if (NAMED_COLORS[name]) { errors.push({ line: st.line, message: `'${m[1]}' is a built-in colour; pick another name` }); continue; }
+    if (/^([0-9a-f]{3}|[0-9a-f]{6})$/.test(name)) { errors.push({ line: st.line, message: `'${m[1]}' looks like a hex code; pick a name that isn't one` }); continue; }
+    if (colors.has(name)) { errors.push({ line: st.line, message: `Color '${m[1]}' is already defined on line ${colors.get(name).line}` }); continue; }
+    colors.set(name, { hex: "#" + m[2].toLowerCase(), line: st.line });
+  }
+
   // Hoist class definitions.
   for (const st of statements) {
     const m = st.text.match(/^class\s+([A-Za-z_][\w-]*)\s*\{([\s\S]*)\}$/);
@@ -379,7 +399,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   }
   // Validate class bodies once, at their definition.
   for (const [, def] of classes) {
-    applyTokens(def.tokens, {}, { classes, errors, warnings: [], line: def.line });
+    applyTokens(def.tokens, {}, { classes, colors, errors, warnings: [], line: def.line });
   }
 
   const fnDefs = functionDefs(statements.filter((st) => !st.skip));
@@ -533,7 +553,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     try { [tail, rawInner] = splitRaw(tail); }
     catch (e) { errors.push({ line, message: e.message }); }
 
-    applyTokens(tokenizeTail(tail), style, { classes, errors, warnings, line, localKeys: new Set() });
+    applyTokens(tokenizeTail(tail), style, { classes, colors, errors, warnings, line, localKeys: new Set() });
     let styled = "";
     try { styled = styleToTmc(style, rawInner); }
     catch (e) { errors.push({ line, message: e.message }); }

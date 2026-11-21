@@ -1,4 +1,5 @@
 // EVENT HORIZON — an animated mathematical space poster.
+// Written by ChatGPT in TMC++.
 // Paste this entire file into the TMC++ panel, then Ctrl+Enter.
 // Stylised gravitational lensing, not a relativistic simulation.
 // a = orbital phase; b = disk tilt. Pause a for a still image.

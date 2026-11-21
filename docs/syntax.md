@@ -12,7 +12,7 @@ This page covers only what TMC++ adds to or changes in DesModder's Text Mode (TM
 
 A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without a TMC++ word is still one line away.
 
-Contents: [Lines](#lines) · [Math](#math) · [Style tails](#style-tails) · [Classes](#classes) · [Token reference](#token-reference) · [Blocks](#blocks) · [What the compiler adds](#what-the-compiler-adds) · [Errors and warnings](#errors-and-warnings) · [Cheat sheet](#cheat-sheet)
+Contents: [Lines](#lines) · [Math](#math) · [Style tails](#style-tails) · [Classes](#classes) · [Named colours](#named-colours) · [Token reference](#token-reference) · [Blocks](#blocks) · [What the compiler adds](#what-the-compiler-adds) · [Errors and warnings](#errors-and-warnings) · [Cheat sheet](#cheat-sheet)
 
 ## Lines
 
@@ -123,6 +123,21 @@ x^2 + y^2 < 4 .glow
 - Defining a name twice or using an undefined class is an error (with a "did you mean" hint).
 - Classes exist only in TMC++. The extension records them in the graph's metadata note.
 
+## Named colours
+
+```js
+color water #092635
+color honey #ffd588
+class glow { #honey opacity 0 fill 0.4 }
+y > -100  #water fill 1
+x^2 + y^2 < 4  .glow
+```
+
+- `color name #rrggbb` (or `#rgb`) defines a colour; `#name` then works anywhere a colour does, including inside classes.
+- Names are case-insensitive, hoisted like classes, and can't shadow a built-in (`#red`) or look like a hex code (`#abc`).
+- Use them for a palette instead of one-colour classes: `#water .wash` reads better than `.water .wash`, and colours stay separate from styles.
+- A line like `color = 5` is still math: only `color name #hex` defines a colour.
+
 ## Token reference
 
 ### Colour
@@ -131,6 +146,7 @@ x^2 + y^2 < 4 .glow
 | --- | --- |
 | `#c74440` or `#abc` | `color: "#c74440"` |
 | `#red` `#blue` `#green` `#purple` `#orange` `#black` | `color: RED` etc. |
+| `#name` after `color name #rrggbb` | `color: "#rrggbb"` |
 
 ### Lines and fill
 
@@ -228,6 +244,8 @@ settings x [-12 : 12] y [-7.5 : 7.5] degrees no-grid lock @{ showXAxis: false }
 | `lock` | `lockViewport: true` |
 | `@{ ... }` | any [TMC setting](https://www.desmodder.com/text-mode/settings/) |
 
+Stacked fills are often better as one list: `y < [-4.85, -4.3 ... 7.8] #deep fill 0.05` draws 24 bands as one graph item.
+
 Every `settings` line merges over the previous ones, key by key, starting from a default viewport of -10 to 10 on both axes.
 
 ## What the compiler adds
@@ -243,6 +261,7 @@ Every message names the TMC++ line. Common ones:
 | Message | Meaning |
 | --- | --- |
 | `Unknown class '.curv' (did you mean '.curve'?)` | class not defined |
+| `Unknown color '#watr' (did you mean '#water'?)` | colour not defined |
 | `Unknown style token 'dashd' (did you mean 'dashed'?)` | not in the token reference |
 | `Style word 'point' is inside the math` | add a `.` before the first style word |
 | `Folders cannot be nested` | Desmos has no folders in folders |

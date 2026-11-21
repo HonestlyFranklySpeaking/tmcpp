@@ -379,3 +379,21 @@ test("watermark goes into settings unless the source sets a seed", () => {
   const kept = compile("y = x", { defaultSettings: {}, randomSeed: "544d432b2b01aaaaaaaaaaaaaaaaaaaa" });
   assert.match(kept.tmc, /randomSeed: "544d432b2b01aaaaaaaaaaaaaaaaaaaa"/);
 });
+
+test("named colours: define once, use as #name in tails and classes", () => {
+  assert.equal(ok("color water #092635\ny > 0 #water"), 'y > 0 @{ color: "#092635" };');
+  assert.equal(ok("y > 0 #Water .wash\nclass wash { fill 1 }\ncolor water #092635"), 'y > 0 @{ color: "#092635", fill: 1 };');
+  assert.equal(ok("color gold #ffd28a\nclass glow { #gold opacity 0 }\ny = x .glow"), 'y = x @{ color: "#ffd28a", lines: @{ opacity: 0 } };');
+});
+
+test("named colour errors", () => {
+  assert.match(errs("color red #ff0000"), /built-in colour/);
+  assert.match(errs("color abc #ff0000"), /looks like a hex code/);
+  assert.match(errs("color sea #000\ncolor sea #111"), /already defined on line 1/);
+  assert.match(errs("color sea blue"), /Malformed color/);
+  assert.match(errs("color water #092635\ny = x #watr"), /did you mean '#water'/);
+});
+
+test("a variable called color is still math", () => {
+  assert.equal(ok("color = 5"), "color = 5;");
+});

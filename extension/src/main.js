@@ -32,7 +32,8 @@ const css = `
   tab-size: 2; white-space: pre; }
 #tmcpp-info { padding: 6px 10px; border-bottom: 1px solid #eee; color: #555; font-size: 12px; }
 #tmcpp-info:empty { display: none; }
-#tmcpp-out { max-height: 30%; overflow: auto; border-top: 1px solid #eee; padding: 6px 10px; }
+#tmcpp-out { max-height: 30%; overflow: auto; border-top: 1px solid #eee; padding: 6px 10px; user-select: text; -webkit-user-select: text; }
+#tmcpp-out .copy { float: right; font-size: 11px; color: #2d70b3; cursor: pointer; user-select: none; }
 #tmcpp-out .ok { color: #388c46; }
 #tmcpp-out .err { color: #c74440; cursor: pointer; }
 #tmcpp-out .warn { color: #b06d00; cursor: pointer; }
@@ -109,11 +110,23 @@ function mount(Calc, Desmos) {
       out.append(Object.assign(document.createElement("div"), { className: "ok", textContent: okText }));
       return;
     }
+    // Errors can be selected and copied, or all copied at once (with each line's source text).
+    const srcLines = src.value.split("\n");
+    const all = items.map((it) => `line ${it.line}: ${it.message}` +
+      (srcLines[it.line - 1]?.trim() ? `\n    ${srcLines[it.line - 1].trim()}` : "")).join("\n");
+    const copy = Object.assign(document.createElement("span"), { className: "copy", textContent: "Copy all" });
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(all); copy.textContent = "Copied"; }
+      catch { copy.textContent = "Couldn't copy"; }
+      setTimeout(() => (copy.textContent = "Copy all"), 1500);
+    };
+    out.append(copy);
     for (const it of items) {
       const div = document.createElement("div");
       div.className = it.kind;
       div.textContent = `line ${it.line}: ${it.message}`;
-      div.onclick = () => goToLine(it.line);
+      // A click jumps to the line, unless you were selecting text to copy.
+      div.onclick = () => { if (!String(window.getSelection())) goToLine(it.line); };
       out.append(div);
     }
   };

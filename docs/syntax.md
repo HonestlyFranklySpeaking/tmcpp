@@ -228,6 +228,23 @@ t = 0 [0 : 24 : 0.05] . play loop 40s
 a = 0.7 [0 : 2pi] . bounce 8s
 ```
 
+### Click actions
+
+| Token | TMC |
+| --- | --- |
+| `click(action)` | `onClick: action`: clicking the shape runs it |
+| `click(a -> 1, b -> 0)` | several actions at once (bracketed for TMC) |
+| `click-label "text"` | `clickDescription: "text"` (read by screen readers) |
+
+```js
+s = 0
+restart = s -> 0
+polygon((0, 0), (2, 0), (0, 2))  #blue fill 0.8 click(s -> s + 1)
+(x - 5)^2 + y^2 <= 1  #red click(restart) click-label "Restart"
+```
+
+`click(` also starts a tail by itself, like `label "`.
+
 ### Item flags
 
 | Token | TMC |

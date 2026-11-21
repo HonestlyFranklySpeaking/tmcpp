@@ -173,3 +173,24 @@ test("hand-made graphs keep every colour, including variable colours", () => {
   const r = compile(source, { defaultSettings: {}, watermark: false });
   assert.match(r.tmc, /polygon\(x_4, y_4\) @\{ color: c_1, fill: 1 \}/);
 });
+
+test("click actions survive decompiling (game buttons)", () => {
+  const state = { version: 11, graph: {}, expressions: { list: [
+    { id: "1", type: "expression", latex: "\\operatorname{polygon}\\left(x_{4},y_{4}\\right)", color: "#c74440", colorLatex: "c_{1}",
+      clickableInfo: { enabled: true, description: "", latex: "s\\to 1.75" } },
+    { id: "2", type: "expression", latex: "\\operatorname{polygon}\\left(x_{2},y_{2}\\right)", color: "#2d70b3", hidden: true,
+      clickableInfo: { enabled: true, description: "Up", latex: "U\\left(1\\right)" } },
+    { id: "3", type: "expression", latex: "\\operatorname{polygon}\\left(x_{3},y_{3}\\right)", color: "#2d70b3",
+      clickableInfo: { enabled: true, description: "", latex: "\\left(a\\to 1,b\\to 2\\right)" } },
+  ] } };
+  const { source } = decompile(state, { latexToText: latexToTmc });
+  assert.match(source, /^polygon\(x_4, y_4\)  \. #\(c_1\) click\(s -> 1\.75\)$/m);
+  assert.match(source, /^polygon\(x_2, y_2\)  \. #blue hidden click\(U\(1\)\) click-label "Up"$/m);
+  assert.match(source, /^polygon\(x_3, y_3\)  \. #blue click\(a -> 1, b -> 2\)$/m);
+  const r = compile(source, { defaultSettings: {}, watermark: false });
+  assert.deepEqual(r.errors, []);
+  const [{ diagnostics }, back] = textToRaw(buildConfig({}), r.tmc);
+  assert.deepEqual(diagnostics, []);
+  assert.deepEqual(back.expressions.list.map((e) => e.clickableInfo?.latex),
+    ["s\\to 1.75", "U\\left(1\\right)", "\\left(a\\to 1,b\\to 2\\right)"]);
+});

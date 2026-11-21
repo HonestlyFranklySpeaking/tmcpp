@@ -105,6 +105,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `.name` | apply a class |
 | `#name` | a colour you defined with `color name #rrggbb` |
 | `#(c_1)`, `#(rgb(100, 136, 234))` | a colour expression |
+| `click(s -> s + 1)`, `click-label "text"` | run an action when the shape is clicked |
 | `#c74440`, `#red` `#blue` `#green` `#purple` `#orange` `#black` | colour |
 | `solid` `dashed` `dotted` | line style |
 | `width N`, `opacity N` | line width and opacity |

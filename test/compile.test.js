@@ -455,3 +455,11 @@ test("colour expressions: #(variable) and #(rgb(...))", () => {
   assert.equal(ok("y = x #(rgb(100, 136, 234)) width 3"), "y = x @{ color: rgb(100, 136, 234), lines: @{ width: 3 } };");
   assert.equal(ok("y = x #(tone)"), "y = x @{ color: t_one };");
 });
+
+test("click actions: click(...) and click-label", () => {
+  assert.equal(ok("polygon(A) #(c_1) click(s -> 1.75)"), "polygon(A) @{ color: c_1, onClick: s -> 1.75 };");
+  assert.equal(ok('(x - 30)^2 + (y - 50)^2 <= 50 click(restart) click-label "Restart"'),
+    '(x - 30)^2 + (y - 50)^2 <= 50 @{ onClick: r_estart, clickDescription: "Restart" };');
+  assert.equal(ok("polygon(B) . click(a -> a + 1, b -> 0)"), "polygon(B) @{ onClick: (a -> a + 1, b -> 0) };");
+  assert.match(errs("polygon(B) . click(a -> 1"), /Unclosed click action/);
+});

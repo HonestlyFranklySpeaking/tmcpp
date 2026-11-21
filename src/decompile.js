@@ -40,6 +40,10 @@ export function styleView(item) {
   if (v.fill === false) delete v.fillOpacity;
   if (!v.showLabel) { delete v.labelSize; delete v.labelOrientation; delete v.labelAngle; delete v.suppressTextOutline; delete v.interactiveLabel; delete v.editableLabelMode; if (!v.label) delete v.label; delete v.showLabel; }
   if (v.points === false) { delete v.pointSize; delete v.pointOpacity; delete v.pointStyle; }
+  if (item.clickableInfo?.enabled && item.clickableInfo.latex) {
+    v.onClick = item.clickableInfo.latex;
+    if (item.clickableInfo.description) v.clickDescription = item.clickableInfo.description;
+  }
   return v;
 }
 
@@ -82,6 +86,12 @@ function valueText(v, latexToText) {
   try { return latexToText(s).replace(/\s+/g, ""); } catch { return s; }
 }
 
+const balanced = (s) => {
+  let d = 0;
+  for (const c of s) { if (c === "(") d++; else if (c === ")" && --d < 0) return false; }
+  return d === 0;
+};
+
 /** Tokens that turn `from` (style view) into `to`, for the keys where they differ. */
 function overrideTokens(from, to, ctx) {
   const t = [], raw = [];
@@ -117,6 +127,12 @@ function overrideTokens(from, to, ctx) {
     if (diff("interactiveLabel") && to.interactiveLabel) t.push("hover");
     if (diff("editableLabelMode") && to.editableLabelMode) t.push(to.editableLabelMode === "MATH" ? "editable-math" : "editable");
   }
+  if (diff("onClick") && to.onClick) {
+    let action = ctx.latexToText(to.onClick).trim();
+    if (/^\(.*\)$/.test(action) && balanced(action.slice(1, -1))) action = action.slice(1, -1); // (a -> 1, b -> 2)
+    t.push(`click(${action})`);
+  }
+  if (diff("clickDescription") && to.clickDescription) t.push("click-label", JSON.stringify(to.clickDescription));
   if (raw.length) t.push(`@{ ${raw.join(", ")} }`);
   return t;
 }

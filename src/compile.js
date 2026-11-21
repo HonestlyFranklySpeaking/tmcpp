@@ -27,7 +27,7 @@ const VOCAB = [
   "point", "drag", "hidden", "label", "label-size", "label-angle",
   "no-outline", "hover", ...Object.keys(EDITABLE), ...ORIENTATIONS,
   "play", "reverse", ...Object.keys(LOOP_MODES),
-  "open", "cross", "point-opacity", "pinned", "secret", "fraction",
+  "open", "cross", "point-opacity", "pinned", "secret", "fraction", "click-label",
 ];
 const OPEN = "([{", CLOSE = ")]}";
 
@@ -83,6 +83,19 @@ function closest(word, list) {
     if (d < bestD) { bestD = d; best = w; }
   }
   return bestD <= 2 ? best : null;
+}
+
+function splitTopLevelCommas(s) {
+  const out = [];
+  let depth = 0, start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+    else if (c === "," && depth === 0) { out.push(s.slice(start, i)); start = i + 1; }
+  }
+  out.push(s.slice(start));
+  return out.map((x) => x.trim()).filter(Boolean);
 }
 
 const isHeader = (s) => /^(folder|class|table)\b/.test(s);
@@ -174,6 +187,7 @@ function findTailStart(s) {
     if (c === "." && (/[A-Za-z]/.test(next) || next === "" || /\s/.test(next))) return i;
     if (c === "@" && next === "{") return i;
     if (/^label\s+"/.test(s.slice(i))) return i;
+    if (/^click\(/.test(s.slice(i))) return i;
   }
   return -1;
 }
@@ -194,8 +208,8 @@ function tokenizeTail(tail) {
   let i = 0;
   while (i < tail.length) {
     if (/[\s;]/.test(tail[i])) { i++; continue; }
-    if (tail.startsWith("#(", i)) {                 // colour expression: #(c_1), #(rgb(1, 2, 3))
-      let depth = 0, j = i + 1;
+    if (tail.startsWith("#(", i) || tail.startsWith("click(", i)) { // #(c_1), click(a -> a + 1, b -> 0)
+      let depth = 0, j = tail.indexOf("(", i);
       for (; j < tail.length; j++) { if (tail[j] === "(") depth++; else if (tail[j] === ")" && --depth === 0) break; }
       out.push(tail.slice(i, j + 1));
       i = j + 1;
@@ -251,6 +265,20 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
       ctx.localKeys = null; // duplicates across classes are normal overrides
       applyTokens(classes.get(name).tokens, style, ctx, new Set([...seen, name]));
       ctx.localKeys = saved;
+      continue;
+    }
+    if (t.startsWith("click(")) {
+      if (!t.endsWith(")") || t.length < 8) { errors.push({ line, message: `Unclosed click action '${t}'` }); continue; }
+      const action = implicitMultiply(t.slice(6, -1).trim());
+      // Several actions need brackets inside a TMC style mapping: (a -> 1, b -> 2).
+      const many = splitTopLevelCommas(action).length > 1;
+      set(["onClick"], many ? `(${action})` : action, "click");
+      continue;
+    }
+    if (t.toLowerCase() === "click-label") {
+      const v = tokens[i + 1];
+      if (!v || !v.startsWith('"')) errors.push({ line, message: "'click-label' needs a string" });
+      else { set(["clickDescription"], v, "click-label"); i++; }
       continue;
     }
     if (t.startsWith("#(")) {

@@ -229,10 +229,13 @@ test("a slider with only a max, and a parametric's t range, survive From graph",
   ] } };
   const { source } = decompile(state, { latexToText: latexToTmc });
   assert.match(source, /^a_nim = 56\.595  \[ : 3532\.91\] \. forever/m);
-  assert.match(source, /domain: @\{ t: @\{ min: 0, max: 360 \} \}/);
+  assert.match(source, /domain: @\{ min: 0, max: 360 \}/);
   const r = compile(source, { defaultSettings: {}, watermark: false });
   assert.deepEqual(r.errors, []);
   assert.match(r.tmc, /slider: @\{ max: 3532\.91/);
   assert.match(r.tmc, /loopMode: "PLAY_INDEFINITELY"/);
-  assert.match(r.tmc, /domain: @\{ t: @\{ min: 0, max: 360 \} \}/);
+  assert.match(r.tmc, /domain: @\{ min: 0, max: 360 \}/);
+  const [{ diagnostics }, st] = textToRaw(buildConfig({}), r.tmc);
+  assert.deepEqual(diagnostics.map((d) => d.message), []);
+  assert.deepEqual(st.expressions.list[1].parametricDomain, { min: "0", max: "360" });
 });

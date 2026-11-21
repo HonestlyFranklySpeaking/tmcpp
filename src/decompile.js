@@ -230,12 +230,15 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
 
   const exprLine = (item, indent) => {
     const e = exprs[item.id];
-    // A parametric's t range (0 to 360 in a degree-mode graph, say) has no token: write it raw.
-    const pd = item.parametricDomain;
-    // Desmos stores an untouched bound as "" (not missing): that means its default, 0 or 1.
+    // A parametric's t range (0 to 360 in a degree-mode graph, say) or a polar θ range has no
+    // token: write it raw, in the shape the bundled Text Mode reads: domain: @{ min, max }.
+    // Desmos stores an untouched bound as "" (not missing): that means its default.
+    const polar = !item.parametricDomain && item.polarDomain;
+    const pd = item.parametricDomain ?? item.polarDomain;
+    const [d0, d1] = polar ? ["0", "12 * pi"] : ["0", "1"];
     const bound = (x, d) => (x === undefined || x === null || String(x).trim() === "" ? d : valueText(x, latexToText));
-    const lo = pd ? bound(pd.min, "0") : "0", hi = pd ? bound(pd.max, "1") : "1";
-    ctx.extraRaw = lo !== "0" || hi !== "1" ? [`domain: @{ t: @{ min: ${lo}, max: ${hi} } }`] : [];
+    const lo = pd ? bound(pd.min, d0) : d0, hi = pd ? bound(pd.max, d1) : d1;
+    ctx.extraRaw = lo !== d0 || hi !== d1 ? [`domain: @{ min: ${lo}, max: ${hi} }`] : [];
     const { math } = mathOf(item);
     const actual = styleView(item);
     const join = (tail) => `${indent}${math}${tail ? "  " + tail : ""}`;

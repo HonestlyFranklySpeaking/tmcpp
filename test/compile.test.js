@@ -449,3 +449,9 @@ test("names that collide in Desmos get a warning", () => {
 test("label interpolation already in Desmos form is left alone", () => {
   assert.equal(ok('(0, 0) label "Score ${s_{core}} / ${best}"'), '(0, 0) @{ label: @{ text: "Score ${s_{core}} / ${b_est}" } };');
 });
+
+test("colour expressions: #(variable) and #(rgb(...))", () => {
+  assert.equal(ok("polygon(A) #(c_1) fill 1"), "polygon(A) @{ color: c_1, fill: 1 };");
+  assert.equal(ok("y = x #(rgb(100, 136, 234)) width 3"), "y = x @{ color: rgb(100, 136, 234), lines: @{ width: 3 } };");
+  assert.equal(ok("y = x #(tone)"), "y = x @{ color: t_one };");
+});

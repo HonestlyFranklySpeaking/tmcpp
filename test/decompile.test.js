@@ -117,7 +117,7 @@ test("a graph without TMC++ metadata still decompiles", () => {
   const { source, fromMeta } = decompile(state, { latexToText: (l) => l.replace("=", " = ") });
   assert.equal(fromMeta, false);
   assert.match(source, /^settings x \[-5 : 5\] y \[-3 : 3\] no-grid$/m);
-  assert.match(source, /^y = x  \. dashed$/m);
+  assert.match(source, /^y = x  \. #red dashed$/m);
 });
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -156,4 +156,20 @@ test("old slider settings on non-sliders are ignored", () => {
   const { source } = decompile(state, { latexToText: latexToTmc });
   assert.match(source, /^R_1 = h -> 5$/m);
   assert.match(source, /^C = 0  \[0 : 1\]$/m);
+});
+
+test("hand-made graphs keep every colour, including variable colours", () => {
+  const state = { version: 11, graph: {}, expressions: { list: [
+    { id: "1", type: "expression", latex: "c_{1}=\\operatorname{rgb}\\left(100,136,234\\right)" },
+    { id: "2", type: "expression", latex: "\\operatorname{polygon}\\left(x_{4},y_{4}\\right)", color: "#c74440", colorLatex: "c_{1}", fill: true, fillOpacity: "1" },
+    { id: "3", type: "expression", latex: "\\operatorname{polygon}\\left(x_{5},y_{5}\\right)", color: "#c74440", fill: true, fillOpacity: "0.8" },
+    { id: "4", type: "expression", latex: "y=x", color: "#2d70b3" },
+  ] } };
+  const { source } = decompile(state, { latexToText: latexToTmc });
+  assert.match(source, /^polygon\(x_4, y_4\)  \. #\(c_1\) fill 1$/m);
+  assert.match(source, /^polygon\(x_5, y_5\)  \. #red fill 0\.8$/m);
+  assert.match(source, /^y = x  \. #blue$/m);
+  // ...and the rebuilt source compiles back to the same colours
+  const r = compile(source, { defaultSettings: {}, watermark: false });
+  assert.match(r.tmc, /polygon\(x_4, y_4\) @\{ color: c_1, fill: 1 \}/);
 });

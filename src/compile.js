@@ -190,7 +190,23 @@ function splitRaw(tail) {
 }
 
 function tokenizeTail(tail) {
-  return tail.match(/"(?:[^"\\]|\\.)*"|[^\s;"]+/g) ?? [];
+  const out = [];
+  let i = 0;
+  while (i < tail.length) {
+    if (/[\s;]/.test(tail[i])) { i++; continue; }
+    if (tail.startsWith("#(", i)) {                 // colour expression: #(c_1), #(rgb(1, 2, 3))
+      let depth = 0, j = i + 1;
+      for (; j < tail.length; j++) { if (tail[j] === "(") depth++; else if (tail[j] === ")" && --depth === 0) break; }
+      out.push(tail.slice(i, j + 1));
+      i = j + 1;
+      continue;
+    }
+    const m = tail.slice(i).match(/^"(?:[^"\\]|\\.)*"|^[^\s;"]+/);
+    if (!m) { out.push(tail[i]); i++; continue; }
+    out.push(m[0]);
+    i += m[0].length;
+  }
+  return out;
 }
 
 /**
@@ -235,6 +251,11 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
       ctx.localKeys = null; // duplicates across classes are normal overrides
       applyTokens(classes.get(name).tokens, style, ctx, new Set([...seen, name]));
       ctx.localKeys = saved;
+      continue;
+    }
+    if (t.startsWith("#(")) {
+      if (!t.endsWith(")") || t.length < 4) errors.push({ line, message: `Unclosed colour expression '${t}'` });
+      else set(["color"], implicitMultiply(t.slice(2, -1).trim()), "color");
       continue;
     }
     if (t.startsWith("#")) {

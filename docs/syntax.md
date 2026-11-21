@@ -175,6 +175,7 @@ x^2 + y^2 < 4  .glow
 | `#c74440` or `#abc` | `color: "#c74440"` |
 | `#red` `#blue` `#green` `#purple` `#orange` `#black` | `color: RED` etc. |
 | `#name` after `color name #rrggbb` | `color: "#rrggbb"` |
+| `#(expression)`, e.g. `#(c_1)`, `#(rgb(100, 136, 234))` | `color: c_1`: a colour computed by Desmos, which can change with sliders |
 
 ### Lines and fill
 
@@ -293,6 +294,7 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 | math you edited in Desmos | the new math converted to TMC, with your tail |
 | a slider whose bounds you changed | regenerated `[min : max : step]` and playback tokens |
 | an item you added in Desmos | its math and any styling, without Desmos's automatic colour |
+| a graph made without TMC++ | every item with its colours (including colour variables, as `#(c_1)`), fills and other styling |
 | a deleted item that had comments | the comments, at the end under `// orphaned comments` |
 
 `settings` lines come back as written, so panning or zooming in Desmos doesn't change your source. Comments are placed above the item they belonged to.

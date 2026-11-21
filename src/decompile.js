@@ -17,7 +17,7 @@ const ORIENT = (o) => o.replace(/_/g, "-");
 
 // Style keys we compare and turn back into tokens. Everything else is identity, content or slider.
 const STYLE_KEYS = [
-  "color", "hidden", "secret", "lines", "lineStyle", "lineWidth", "lineOpacity", "fill", "fillOpacity",
+  "color", "colorLatex", "hidden", "secret", "lines", "lineStyle", "lineWidth", "lineOpacity", "fill", "fillOpacity",
   "points", "pointSize", "pointOpacity", "pointStyle", "dragMode",
   "label", "showLabel", "labelSize", "labelOrientation", "labelAngle", "suppressTextOutline",
   "interactiveLabel", "editableLabelMode", "displayEvaluationAsFraction",
@@ -87,7 +87,10 @@ function overrideTokens(from, to, ctx) {
   const t = [], raw = [];
   const diff = (k) => JSON.stringify(from[k]) !== JSON.stringify(to[k]);
   const hexName = (hex) => ctx.colorNames.get(hex) ?? BUILTIN[hex] ?? null;
-  if (diff("color") && to.color) { const n = hexName(to.color.toLowerCase()); t.push(n ? `#${n}` : to.color.toLowerCase()); }
+  if (to.colorLatex) {
+    // A colour set by an expression (c_1, rgb(...)) wins over the plain colour in Desmos.
+    if (diff("colorLatex")) t.push(`#(${ctx.latexToText(to.colorLatex)})`);
+  } else if (diff("color") && to.color) { const n = hexName(to.color.toLowerCase()); t.push(n ? `#${n}` : to.color.toLowerCase()); }
   if (diff("lines") && to.lines === false) t.push("opacity", "0");
   if (to.lines !== false) {
     if (diff("lineStyle") && to.lineStyle) t.push(to.lineStyle.toLowerCase());
@@ -217,10 +220,12 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
       return join([sliderText(item, latexToText), style].filter(Boolean).join(" "));
     }
 
-    // No metadata (added in the Desmos UI): math plus what differs from TMC's defaults.
+    // No metadata: math plus what differs from TMC's defaults. On a TMC++ graph this item was added
+    // in Desmos, so an automatic colour is noise; on a hand-made graph every colour was chosen.
     const base = probe("", math);
     const from = base ? styleView(base.item) : {};
-    if (AUTO_COLORS.has((actual.color ?? "").toLowerCase())) { delete from.color; delete actual.color; }
+    if (meta && AUTO_COLORS.has((actual.color ?? "").toLowerCase())) { delete from.color; delete actual.color; }
+    else delete from.color; // always state the colour of a hand-made item
     const over = overrideTokens(from, actual, ctx);
     return join([sliderText(item, latexToText), over.length ? ". " + over.join(" ") : ""].filter(Boolean).join(" "));
   };

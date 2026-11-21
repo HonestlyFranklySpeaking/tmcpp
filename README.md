@@ -147,7 +147,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |
 | `examples/sunset.tmcpp` | a sunset scene driven by one time-of-day slider |
 | `examples/demo.tmcpp` | a parabola with a draggable focus |
-| `examples/prism-post.tmcpp` | PRISM POST, a playable game: rotate the mirrors to get the laser to the finish |
+| `examples/prism-post.tmcpp` | PRISM POST, a three-level laser-routing puzzle. Rotate eight mirrors to send a pulse through both diamond stamps and into the cyan mail slot. Each Mirror instance handles its own clicks, draws its current angle, and redirects the beam. |
 
 ## How it works
 

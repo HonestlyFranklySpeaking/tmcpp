@@ -10,6 +10,8 @@ import { greekPlaceholder } from "./greek.js";
 
 const BIG_OPS = new Set(["sum", "product", "integral"]);
 const BIG_OPS_SET = BIG_OPS;
+// Desmos's own variables: index is the item clicked in a clickable list.
+const BUILTIN_VARS = new Set(["index"]);
 const KEYWORDS = new Set(["for", "with", "in", "else", "if", "and", "or", "from", "to", "of", "true", "false"]);
 
 // Desmos only accepts one-letter names, optionally with a subscript (s_core, X_1). Its built-in
@@ -28,7 +30,7 @@ export function desmosName(name, isCall = false) {
   if (name.length === 1) return name;
   const greek = greekPlaceholder(name); // gamma -> z_ZGRgamma, turned into \gamma after parsing
   if (greek) return greek;
-  if (KEYWORDS.has(name) || BIG_OPS_SET.has(name)) return name;
+  if (KEYWORDS.has(name) || BIG_OPS_SET.has(name) || BUILTIN_VARS.has(name)) return name;
   if (greekHead(name) && /^[A-Za-z]+(_[A-Za-z0-9]+)?$/.test(name)) return name;
   if (isCall && BUILTIN.has(name)) return name;
   if (/^[A-Za-z]_[A-Za-z0-9]+$/.test(name)) return name;       // already a subscript: X_1, s_core

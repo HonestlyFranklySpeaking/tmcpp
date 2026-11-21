@@ -247,3 +247,42 @@ test("errors: recursion, nested names, nested arguments", () => {
   assert.deepEqual(r.errors.map((e) => e.message), ["Missing argument 'P' for Dot"]);
   assert.match(errs(`${PAIR}\nnew Pair(1, 2) as p\nk = p.a.zz`), /p\.a \(a Dot\) has no member 'zz'/);
 });
+
+// ---------- M7: list instances ----------
+
+const CELL = `component Cell(i, j) {
+  m = 0
+  polygon((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)) . click(m -> 1)
+}`;
+
+test("a list instance is one folder of lists, not one folder per copy", () => {
+  const tmc = ok(`${CELL}\nnew Cell(i, j) for i = [1...9], j = [1...9] as cells\nmines = total(cells.m)`);
+  assert.equal((tmc.match(/folder/g) ?? []).length, 1);
+  assert.match(tmc, /^i_cells = \[i for i = \[1\.\.\.9\], j = \[1\.\.\.9\]\] @\{ hidden: true \};/m);
+  assert.match(tmc, /^j_cells = \[j for i = \[1\.\.\.9\], j = \[1\.\.\.9\]\] @\{ hidden: true \};/m);
+  assert.match(tmc, /^m_cells = \[0 for i = \[1\.\.\.9\], j = \[1\.\.\.9\]\];/m); // one flag per cell
+  assert.match(tmc, /^polygon\(\(i_cells, j_cells\)/m);
+  assert.match(tmc, /^m_ines = total\(m_cells\);/m);
+});
+
+test("a click changes only the clicked copy, through Desmos's index", () => {
+  const tmc = ok(`${CELL}\nnew Cell(i, j) for i = [1...3], j = [1...3] as cells`);
+  assert.match(tmc, /onClick: m_cells -> \[\{k_cellsi = index: 1, m_cells\[k_cellsi\]\} for k_cellsi = \[1\.\.\.length\(m_cells\)\]\]/);
+  // ...and an action that reads list locals reads the clicked copy's value
+  const t2 = ok(`component C(i) {\n  m = 0\n  (i, 0) . point 9 click(m -> m + i)\n}\nnew C(i) for i = [1...5] as cs`);
+  assert.match(t2, /m_cs -> \[\{k_csi = index: m_cs\[index\] \+ i_cs\[index\], m_cs\[k_csi\]\}/);
+});
+
+test("arguments that don't use the loop stay as they are; locals built from lists stay lists", () => {
+  const tmc = ok(`component D(i, r) {\n  c = (i, 0)\n  (x - c.x)^2 + y^2 < r^2\n}\nnew D(i, 0.4) for i = [1...5] as ds`);
+  assert.match(tmc, /^i_ds = \[i for i = \[1\.\.\.5\]\] @\{ hidden: true \};/m);
+  assert.doesNotMatch(tmc, /r_ds/);                     // r = 0.4 is the same for every copy
+  assert.match(tmc, /^c_ds = \(i_ds, 0\);/m);           // already a list: not wrapped again
+});
+
+test("errors: list instances inside components, of nesting components, and list locals", () => {
+  assert.match(errs(`${CELL}\ncomponent G(n) {\n  new Cell(i, 1) for i = [1...n]\n}`), /can't go inside a component yet/);
+  assert.match(errs(`${CELL}\ncomponent P(i) {\n  new Cell(i, 0) as c\n}\nnew P(i) for i = [1...3]`), /uses other components, so it can't be a list instance yet/);
+  assert.match(errs(`component L(i) {\n  q = [1, 2, 3]\n  y = i\n}\nnew L(i) for i = [1...3]`), /no lists of lists/);
+  assert.match(errs(`${CELL}\nnew Cell(1, 2) for as c`), /Expected 'for name = \[list\]'/);
+});

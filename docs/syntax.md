@@ -238,7 +238,21 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 - Paths reach as deep as you like: `p.b.n`, `p.b.P.x`. Inside a body, `a.P` means the nested instance `a`.
 - Tails stack from the inside out: a line's own tokens, then its instance's tail, then each enclosing instance's tail. The outermost instance has the last word, so `p . #red` above makes both dots red.
 - A component can't contain itself, directly or through others; that is an error at the definition.
-- Not yet: list instances (`new ... for ...`), and "From graph" giving back `new` lines instead of the expanded folders. These are milestones M7 and M8.
+- **List instances.** `new Name(...) for ...` stamps out many copies as **one** folder of Desmos lists, instead of one folder per copy:
+
+  ```js
+  component Cell(i, j) {
+    m = 0                                          // one flag per cell
+    polygon((i, j), (i + 0.9, j), (i + 0.9, j + 0.9), (i, j + 0.9))  .cell click(m -> 1)
+  }
+  class cell { #2d70b3 fill 0.3 }
+  new Cell(i, j) for i = [1...9], j = [1...9] as cells
+  mines = total(cells.m)
+  ```
+
+  Arguments that use a loop variable become hidden lists (`i_cells`, `j_cells`), and each body line is written once; Desmos repeats it for every copy. A local that doesn't depend on the lists (`m = 0`) becomes one entry per copy. A click changes only the clicked copy, through Desmos's `index`. `cells.m` is the whole list and `cells.m[k]` one copy.
+  Limits: Desmos has no lists of lists, so a local that is itself a list can't be part of a list instance; a list instance can't go inside a component, and a component that uses other components can't be one, yet.
+- Not yet: "From graph" giving back `new` lines instead of the expanded folders (milestone M8).
 
 ## Token reference
 

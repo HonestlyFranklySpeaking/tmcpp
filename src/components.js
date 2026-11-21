@@ -145,12 +145,43 @@ function parseNew(text) {
   const close = matchClose(text, open);
   if (close === -1) return { error: "Unclosed '(' in instance" };
   let after = text.slice(close + 1).trim();
+  // A list instance: new Cell(i, j) for i = [1...9], j = [1...9] as cells
+  let forText = null;
+  if (/^for\s/.test(after)) {
+    let depth = 0, end = after.length;
+    for (let k = 4; k < after.length; k++) {
+      const c = after[k];
+      if ("([{".includes(c)) depth++;
+      else if (")]}".includes(c)) depth--;
+      else if (depth === 0 && /\s/.test(c) && /^\s+(as\b|\.[\sA-Za-z]|#|@\{|label\b|click\()/.test(after.slice(k))) { end = k; break; }
+    }
+    forText = after.slice(4, end).trim();
+    after = after.slice(end).trim();
+    if (!/^[A-Za-z][A-Za-z0-9_]*\s*=/.test(forText)) return { error: "Expected 'for name = [list]' after the instance" };
+  }
   let name = null;
   const am = after.match(/^as\s+([A-Za-z][A-Za-z0-9_]*)\b\s*/);
   if (am) { name = am[1]; after = after.slice(am[0].length).trim(); }
   else if (/^as\b/.test(after)) return { error: "Expected a name after 'as'" };
   if (!isTail(after)) return { error: `Unexpected '${after.split(/\s/)[0]}' after the instance; a style tail starts with '.'` };
-  return { comp: m[1], args: splitArgs(text.slice(open + 1, close)), name, tail: after };
+  return { comp: m[1], args: splitArgs(text.slice(open + 1, close)), name, tail: after, forText };
+}
+
+/** Split a line into math and style tail (the tail starts at " . ", " .class", " #", " @{", label, click). */
+function splitTail(text) {
+  let depth = 0, inStr = false;
+  for (let k = 0; k < text.length; k++) {
+    const c = text[k];
+    if (inStr) { if (c === "\\") k++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') { inStr = true; continue; }
+    if ("([{".includes(c)) depth++;
+    else if (")]}".includes(c)) depth--;
+    else if (depth === 0 && k > 0 && /\s/.test(text[k - 1]) &&
+      (/^\.(\s|[A-Za-z]|$)/.test(text.slice(k)) || /^(#|@\{|label\s|click\()/.test(text.slice(k)))) {
+      return [text.slice(0, k).trimEnd(), text.slice(k)];
+    }
+  }
+  return [text, ""];
 }
 
 /** Bind arguments: positional, then named, then defaults. Returns a Map, or null after errors. */
@@ -240,6 +271,7 @@ export function expandComponents(statements, errors, warnings) {
       if (/^new\b/.test(b.text)) {
         const n = parseNew(b.text);
         if (n.error) { errors.push({ line: b.line, message: n.error }); b.bad = true; continue; }
+        if (n.forText) { errors.push({ line: b.line, message: "A list instance (new ... for ...) can't go inside a component yet" }); b.bad = true; continue; }
         if (n.name && owned(n.name)) { errors.push({ line: b.line, message: `'${n.name}' is already ${owned(n.name)} in ${name}` }); b.bad = true; continue; }
         b.nested = n;
         if (n.name) children.set(n.name, b.line);
@@ -350,9 +382,22 @@ export function expandComponents(statements, errors, warnings) {
     return undefined;
   }, memberFor(inst, null));
 
-  const plan = (comp, bound, key, title, tail, line) => {
+  const plan = (comp, bound, key, title, tail, line, forText = null) => {
     const inst = { comp, name: null, title, key, bound, tail, line, names: new Map(), children: new Map(), nested: new Map() };
     const suffix = key.replace(/[^A-Za-z0-9]/g, "");
+    if (forText) {
+      // List instance: every argument that uses a loop variable becomes one hidden list, and every
+      // local becomes a list too (one entry per copy), so each copy has its own state.
+      const loopVars = splitArgs(forText).map((b) => b.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=/)?.[1]).filter(Boolean);
+      inst.list = { forText, defs: [], names: new Set() };
+      for (const [p, arg] of bound) {
+        if (!identifiers(arg).some((id) => loopVars.includes(id))) continue;
+        const name = allocate(p, suffix);
+        inst.names.set(p, name);
+        inst.list.names.add(name);
+        inst.list.defs.push(`${name} = [${arg} for ${forText}]`);
+      }
+    }
     for (const local of comp.locals.keys()) inst.names.set(local, allocate(local, suffix));
     const anon = new Map();
     comp.body.forEach((b, k) => {
@@ -397,7 +442,12 @@ export function expandComponents(statements, errors, warnings) {
       title = `${comp.name} ${k}`;
       key = `${comp.name}${k}`;
     }
-    const inst = plan(comp, bound, key, title, n.tail, st.line);
+    if (n.forText && comp.body.some((b) => b.nested)) {
+      errors.push({ line: st.line, message: `${comp.name} uses other components, so it can't be a list instance yet` });
+      st.bad = true;
+      continue;
+    }
+    const inst = plan(comp, bound, key, title, n.tail, st.line, n.forText);
     inst.name = n.name;
     if (n.name) instances.set(n.name, inst);
     plans.set(st, inst);
@@ -407,6 +457,35 @@ export function expandComponents(statements, errors, warnings) {
   //    then each enclosing instance's tail, so the outermost instance has the last word.
   const out = [];
   const seenDrawn = new Map();
+  // A body line of a list instance. A local that doesn't depend on the lists (m = 0) is repeated
+  // once per copy; a click action on a list local changes only the clicked copy (Desmos's index).
+  const listLine = (inst, b, text) => {
+    const L = inst.list;
+    const a = assigned(b.text);
+    const isList = (t) => identifiers(t).some((id) => L.names.has(id));
+    let [math, tail] = splitTail(text);
+    if (a && inst.comp.locals.has(a.name) && !b.fnArgs?.length) {
+      const name = inst.names.get(a.name);
+      const rhs = math.slice(math.indexOf("=") + 1).trim();
+      if (!isList(rhs) && !/\[\s*[^\]]*:[^\]]*\]\s*$/.test(rhs)) math = `${name} = [${rhs} for ${L.forText}]`;
+      if (/^\s*\[/.test(rhs) && !isList(rhs)) {
+        errors.push({ line: b.line, message: `'${a.name}' is a list, and Desmos has no lists of lists, so it can't be part of a list instance` });
+      }
+      L.names.add(name);
+    }
+    tail = tail.replace(/click\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)/g, (all, body) => {
+      const k = allocate("k", inst.key.replace(/[^A-Za-z0-9]/g, "") + "i");
+      const atIndex = (e) => substitute(e, (id) => (L.names.has(id) ? `${id}[index]` : undefined));
+      const acts = splitArgs(body).map((act) => {
+        const m = act.match(/^([A-Za-z][A-Za-z0-9_]*)\s*->\s*([\s\S]+)$/);
+        if (!m || !L.names.has(m[1])) return act;
+        return `${m[1]} -> [{${k} = index: ${atIndex(m[2])}, ${m[1]}[${k}]} for ${k} = [1...length(${m[1]})]]`;
+      });
+      return `click(${acts.join(", ")})`;
+    });
+    return tail ? `${math} ${tail}` : math;
+  };
+
   const emitBody = (inst, outer, topKey) => {
     inst.comp.body.forEach((b, k) => {
       if (b.nested) {
@@ -415,6 +494,7 @@ export function expandComponents(statements, errors, warnings) {
         return;
       }
       let text = inScope(inst, b.text, b.fnArgs);
+      if (inst.list) text = listLine(inst, b, text);
       const tails = [inst.tail, ...outer].filter(Boolean);
       if (tails.length) text += " " + tails.join(" ");
       out.push({ text, line: b.line, comments: [...b.comments], instance: topKey });
@@ -440,6 +520,7 @@ export function expandComponents(statements, errors, warnings) {
       continue;
     }
     if (depth === 0) out.push({ text: `folder ${JSON.stringify(inst.title)} {`, line: st.line, comments: st.comments, instance: inst.key });
+    for (const def of inst.list?.defs ?? []) out.push({ text: `${def} . hidden`, line: st.line, comments: [], instance: inst.key });
     emitBody(inst, [], inst.key);
     if (depth === 0) out.push({ text: "}", line: st.line, comments: [], instance: inst.key });
   }

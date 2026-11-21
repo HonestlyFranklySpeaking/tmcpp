@@ -1,0 +1,108 @@
+// PRISM POST | Route a pulse through both stamps and into the cyan mail slot.
+// Click brass mirrors to rotate them. Dispatch as often as you like. Par counts turns.
+settings x [-2 : 7] y [-2.4 : 5.9] no-grid @{ showXAxis: false, showYAxis: false }
+
+class ink { #E4F1EF point-opacity 0 no-outline }
+class stamp { #FFB85C }
+class glass { #FFE2AD }
+class button { #255262 fill 1 width 1 }
+
+L = 1
+g = 0                 // 0 editing, 1 in flight, 2 returned, 3 delivered
+startRow = [2,0,1][L]
+slotX = [5,6,4][L]
+slotY = [4,1,4][L]
+par = L + 1
+editable = {g=0: 1, g=2: 1, 0}
+
+// The path doubles as the beam's drawing and the record of stamps it visited.
+X = [-1]
+Y = [2]
+u = 1
+v = 0
+a = X[length(X)]
+b = Y[length(Y)]
+
+folder "Sorting office" collapsed {
+  y > -100 . #101D2A fill 1 opacity 0
+  polygon((-0.52,-0.52),(5.52,-0.52),(5.52,3.52),(-0.52,3.52)) . #1E3443 fill 1 width 2
+  ([0 ... 5],0) . #466473 point 3
+  ([0 ... 5],1) . #466473 point 3
+  ([0 ... 5],2) . #466473 point 3
+  ([0 ... 5],3) . #466473 point 3
+  (-1,startRow) . #FF9968 point 23
+  (-1,startRow) . #332C33 point 9
+  (slotX,slotY) . #62DDDC point 29
+  (slotX,slotY) . #10232D point 14
+}
+
+// Each mirror owns its turn count, reflective face, click action and tile.
+// bend is zero off this tile. On the tile it selects which way to turn the pulse.
+component Mirror(h,k,tilt) {
+  turns = 0
+  slope = 1-2*mod(tilt+turns,2)
+  bend = {abs(a-h)+abs(b-k)=0: slope, 0}
+  flip = {editable=1: (turns -> turns+1,g -> 0)}
+  polygon((h-0.36,k-0.36),(h+0.36,k-0.36),(h+0.36,k+0.36),(h-0.36,k+0.36)) . #715846 fill 1 width 1 @{ onClick: flip }
+  segment((h-0.26,k-0.26*slope),(h+0.26,k+0.26*slope)) .glass width 4 @{ onClick: flip }
+}
+
+// The third argument sets the starting tilt on each route.
+new Mirror(5,3,0) as amber
+new Mirror(0,3,[0,1,0][L]) as birch
+new Mirror(4,1,[0,1,0][L]) as clover
+new Mirror(0,0,[0,1,0][L]) as delta
+new Mirror(3,1,[0,0,1][L]) as ember
+new Mirror(3,2,[0,0,1][L]) as frost
+new Mirror(4,3,[0,0,1][L]) as grove
+new Mirror(5,2,[0,0,1][L]) as hazel
+
+// Each stamp knows whether the current delivery passed through its cell.
+component Stamp(h,k) {
+  lit = {min((X-h)^2+(Y-k)^2)=0: 1, 0}
+  polygon((h-0.22,k),(h,k+0.29),(h+0.22,k),(h,k-0.29)) .stamp fill 0.18 width 3
+  ({g>0: {lit=1: h}},k) .stamp point 12
+}
+new Stamp([1,0,1][L],[2,2,1][L]) as first
+new Stamp(4,2) as second
+
+folder "Dispatch" collapsed {
+  bend = amber.bend+birch.bend+clover.bend+delta.bend+ember.bend+frost.bend+grove.bend+hazel.bend
+  moves = amber.turns+birch.turns+clover.turns+delta.turns+ember.turns+frost.turns+grove.turns+hazel.turns
+  dx = {bend=0: u, bend*v}
+  dy = {bend=0: v, bend*u}
+  nx = a+dx
+  ny = b+dy
+  outside = {nx<0: 1, nx>5: 1, ny<0: 1, ny>3: 1, 0}
+  stamps = first.lit+second.lit
+  arrived = {abs(nx-slotX)+abs(ny-slotY)=0: {stamps=2: 1, 0}, 0}
+  step = {g=1: (X -> join(X,[nx]), Y -> join(Y,[ny]), u -> dx, v -> dy, g -> {arrived=1: 3, outside=1: 2, 1})}
+  launch = (X -> [-1], Y -> [startRow], u -> 1, v -> 0, g -> 1)
+  clearBoard = (amber.turns -> 0, birch.turns -> 0, clover.turns -> 0, delta.turns -> 0, ember.turns -> 0, frost.turns -> 0, grove.turns -> 0, hazel.turns -> 0, g -> 0)
+}
+ticker step . play 150ms
+
+folder "Flight recorder" collapsed {
+  ({g>0: X},Y) . #6DDBDA width 4 @{ points: false }
+  ({g=1: a},b) . #EBFFFA point 15
+}
+
+folder "Counter" collapsed {
+  (2.5,5.42) .ink label "PRISM POST" center label-size 1.8
+  (2.5,4.91) .ink label "Rotate mirrors. Stamp both diamonds. Deliver to the cyan ring." center
+  (2.5,4.5) .ink label "ROUTE ${L}/3     ·     TURNS ${m_{oves}}     ·     PAR ${p_{ar}}" center
+  ({g=0: 2.5},-0.94) .ink label "Ready for dispatch" center
+  ({g=1: 2.5},-0.94) .ink label "In transit…" center
+  ({g=2: 2.5},-0.94) .ink label "Returned · ${s_{tamps}}/2 stamps. Adjust a mirror and retry." center
+  ({g=3: {L<3: 2.5}},-0.94) .ink label "Delivered. Next route unlocked." center
+  ({g=3: {L=3: 2.5}},-0.94) .ink label "All three routes delivered!" center
+
+  B = {g=3: (clearBoard,L -> mod(L,3)+1), g=0: launch, g=2: launch}
+  polygon((-0.3,-1.93),(2.95,-1.93),(2.95,-1.27),(-0.3,-1.27)) .button @{ onClick: B }
+  ({g<3: 1.325},-1.6) .ink label "DISPATCH" center @{ onClick: B }
+  ({g=3: {L<3: 1.325}},-1.6) .ink label "NEXT ROUTE" center @{ onClick: B }
+  ({g=3: {L=3: 1.325}},-1.6) .ink label "PLAY AGAIN" center @{ onClick: B }
+  C = clearBoard
+  polygon((3.15,-1.93),(5.3,-1.93),(5.3,-1.27),(3.15,-1.27)) .button @{ onClick: C }
+  (4.225,-1.6) .ink label "RESET" center @{ onClick: C }
+}

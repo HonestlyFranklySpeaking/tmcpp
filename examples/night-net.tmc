@@ -1,67 +1,67 @@
 settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -9, ymax: 9 }, showGrid: false, showXAxis: false, showYAxis: false, randomSeed: "544d432b2b01dc2b62dc22ed27f3e0ab" };
 
-ticker step @{ playing: true, minStep: 33 };
+ticker s_tep @{ playing: true, minStep: 33 };
 folder "Controls" {
-bx = 0 @{ slider: @{ min: -10, max: 10, step: 0 } };
+b_x = 0 @{ slider: @{ min: -10, max: 10, step: 0 } };
 };
 folder "Game state" {
 X = [-6, -2, 2, 6, 0];
 Y = [12, 15, 18, 21, 24];
 T = [1, 1, 0, 1, 1];
-score = 0;
-lives = 3;
-best = 0;
-going = 0;
-played = 0;
+s_core = 0;
+l_ives = 3;
+b_est = 0;
+g_oing = 0;
+p_layed = 0;
 k = 0;
-fl = 0;
-hu = 0;
+f_l = 0;
+h_u = 0;
 } @{ collapsed: true };
 folder "Rules" {
-rnd(u) = mod(43758.5453 * sin(12.9898 * u + 78.233), 1);
+r_nd(u) = mod(43758.5453 * sin(12.9898 * u + 78.233), 1);
 I = [1 ... 5];
 w = 1.6;
-v = 0.12 + 0.012 * min(score, 40);
-Yn = Y - v;
-Land = {Yn < -6.6: 1, 0};
-Hit = {abs(X - bx) < w: 1, 0};
-good = total(Land * Hit * T);
-bad = total(Land * (1 - Hit) * T) + total(Land * Hit * (1 - T));
-Yr = {Land = 1: 12 + 5 * rnd(k + 3 * I), Yn};
-Xr = {Land = 1: -10 + 20 * rnd(k + 7 * I + 0.37), X};
-Tr = {Land = 1: {rnd(k + 11 * I + 0.71) < 0.22 + 0.01 * min(score, 25): 0, 1}, T};
-tick = (Y -> Yr, X -> Xr, T -> Tr, score -> score + good, lives -> lives - bad, k -> k + 1, fl -> {good > 0: 1, max(0, fl - 0.06)}, hu -> {bad > 0: 1, max(0, hu - 0.05)});
-over = (going -> 0, played -> 1, lives -> 0, score -> score + good, best -> max(best, score + good), hu -> 1);
-step = {going = 1: {lives - bad > 0: tick, over}, hu > 0: hu -> max(0, hu - 0.05)};
-start = (going -> 1, score -> 0, lives -> 3, fl -> 0, hu -> 0, k -> k + 101, X -> [-6, -2, 2, 6, 0], Y -> [12, 15, 18, 21, 24], T -> [1, 1, 0, 1, 1]);
+v = 0.12 + 0.012 * min(s_core, 40);
+Y_n = Y - v;
+L_and = {Y_n < -6.6: 1, 0};
+H_it = {abs(X - b_x) < w: 1, 0};
+g_ood = total(L_and * H_it * T);
+b_ad = total(L_and * (1 - H_it) * T) + total(L_and * H_it * (1 - T));
+Y_r = {L_and = 1: 12 + 5 * r_nd(k + 3 * I), Y_n};
+X_r = {L_and = 1: -10 + 20 * r_nd(k + 7 * I + 0.37), X};
+T_r = {L_and = 1: {r_nd(k + 11 * I + 0.71) < 0.22 + 0.01 * min(s_core, 25): 0, 1}, T};
+t_ick = (Y -> Y_r, X -> X_r, T -> T_r, s_core -> s_core + g_ood, l_ives -> l_ives - b_ad, k -> k + 1, f_l -> {g_ood > 0: 1, max(0, f_l - 0.06)}, h_u -> {b_ad > 0: 1, max(0, h_u - 0.05)});
+o_ver = (g_oing -> 0, p_layed -> 1, l_ives -> 0, s_core -> s_core + g_ood, b_est -> max(b_est, s_core + g_ood), h_u -> 1);
+s_tep = {g_oing = 1: {l_ives - b_ad > 0: t_ick, o_ver}, h_u > 0: h_u -> max(0, h_u - 0.05)};
+s_tart = (g_oing -> 1, s_core -> 0, l_ives -> 3, f_l -> 0, h_u -> 0, k -> k + 101, X -> [-6, -2, 2, 6, 0], Y -> [12, 15, 18, 21, 24], T -> [1, 1, 0, 1, 1]);
 } @{ collapsed: true };
 folder "Scene" {
 y > -100 @{ color: "#0b1026", fill: 1, lines: @{ opacity: 0 } };
 y < [-9, -8.5 ... 2] @{ color: "#2a2f6b", fill: 0.05, lines: @{ opacity: 0 } };
 y < -7.7 @{ color: "#05070f", fill: 1, lines: @{ opacity: 0 } };
-((-12 + 24 * rnd([1 ... 60])), (-1 + 10 * rnd([1 ... 60] + 0.5))) @{ color: "#e8ecff", points: @{ size: 2, opacity: 0.35 } };
-y > -100 @{ color: "#ef476f", fill: 0.3*hu, lines: @{ opacity: 0 } };
+((-12 + 24 * r_nd([1 ... 60])), (-1 + 10 * r_nd([1 ... 60] + 0.5))) @{ color: "#e8ecff", points: @{ size: 2, opacity: 0.35 } };
+y > -100 @{ color: "#ef476f", fill: 0.3*h_u, lines: @{ opacity: 0 } };
 } @{ collapsed: true };
 folder "Falling" {
-({going * T = 1: X}, Y) @{ color: "#ffd166", points: @{ size: 24, opacity: 0.3 } };
-({going * T = 1: X}, Y) @{ color: "#ffd166", points: @{ size: 11 } };
-(1 - t) * (({going = 1: {T = 0: X}}, Y)) + t * ((X - 0.25, Y + 1.6)) @{ color: "#ef476f", lines: @{ width: 6, opacity: 0.5 } };
-({going * (1 - T) = 1: X}, Y) @{ color: "#ef476f", points: @{ size: 12 } };
+({g_oing * T = 1: X}, Y) @{ color: "#ffd166", points: @{ size: 24, opacity: 0.3 } };
+({g_oing * T = 1: X}, Y) @{ color: "#ffd166", points: @{ size: 11 } };
+(1 - t) * (({g_oing = 1: {T = 0: X}}, Y)) + t * ((X - 0.25, Y + 1.6)) @{ color: "#ef476f", lines: @{ width: 6, opacity: 0.5 } };
+({g_oing * (1 - T) = 1: X}, Y) @{ color: "#ef476f", points: @{ size: 12 } };
 } @{ collapsed: true };
 folder "Net" {
-polygon((bx - w, -6.4), (bx + w, -6.4), (bx + 1.1, -7.6), (bx - 1.1, -7.6)) @{ color: "#7bdff2", fill: 0.25+0.6*fl, lines: @{ width: 3 } };
-(bx, -7) @{ color: "#7bdff2", points: @{ size: 8, drag: "X" } };
+polygon((b_x - w, -6.4), (b_x + w, -6.4), (b_x + 1.1, -7.6), (b_x - 1.1, -7.6)) @{ color: "#7bdff2", fill: 0.25+0.6*f_l, lines: @{ width: 3 } };
+(b_x, -7) @{ color: "#7bdff2", points: @{ size: 8, drag: "X" } };
 } @{ collapsed: true };
 folder "HUD" {
 (-11.3, 8.2) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "Score ${s_{core}}", orientation: "right", size: 1.3 } };
 (-11.3, 7.3) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "Best ${b_est}", orientation: "right" } };
 H = [1 ... 3];
-({H <= lives: 6.2 + 1.1 * H}, 8.2) @{ color: "#ef476f", points: @{ size: 13 } };
+({H <= l_ives: 6.2 + 1.1 * H}, 8.2) @{ color: "#ef476f", points: @{ size: 13 } };
 } @{ collapsed: true };
 folder "Menu" {
-({going = 0: 0}, 3.8) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "NIGHT NET", orientation: "center", size: 3.2 } };
-({going = 0: 0}, 2.2) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "Drag the net. Catch the gold stars, let the red meteors fall.", orientation: "center", size: 1.1 } };
-({going = 0: {played = 1: 0}}, 0.8) @{ color: "#ef476f", points: @{ opacity: 0 }, label: @{ outline: false, text: "Game over: ${s_{core}} points", orientation: "center", size: 1.4 } };
-{going = 0: polygon((-2.6, -2.6), (2.6, -2.6), (2.6, -0.8), (-2.6, -0.8))} @{ color: "#3a86ff", fill: 0.85, lines: @{ width: 2 }, onClick: start };
-({going = 0: 0}, -1.7) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "PLAY", orientation: "center", size: 1.6 }, onClick: start };
+({g_oing = 0: 0}, 3.8) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "NIGHT NET", orientation: "center", size: 3.2 } };
+({g_oing = 0: 0}, 2.2) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "Drag the net. Catch the gold stars, let the red meteors fall.", orientation: "center", size: 1.1 } };
+({g_oing = 0: {p_layed = 1: 0}}, 0.8) @{ color: "#ef476f", points: @{ opacity: 0 }, label: @{ outline: false, text: "Game over: ${s_{core}} points", orientation: "center", size: 1.4 } };
+{g_oing = 0: polygon((-2.6, -2.6), (2.6, -2.6), (2.6, -0.8), (-2.6, -0.8))} @{ color: "#3a86ff", fill: 0.85, lines: @{ width: 2 }, onClick: start };
+({g_oing = 0: 0}, -1.7) @{ color: "#e8ecff", points: @{ opacity: 0 }, label: @{ outline: false, text: "PLAY", orientation: "center", size: 1.6 }, onClick: start };
 };

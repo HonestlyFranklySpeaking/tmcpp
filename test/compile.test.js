@@ -258,7 +258,7 @@ test("piecewise passes through", () => {
 });
 
 test("multi-letter variable names are not mistaken for style words", () => {
-  assert.equal(ok("total = width * 2"), "total = width * 2;");
+  assert.equal(ok("total = width * 2"), "t_otal = w_idth * 2;");
 });
 
 test("slider playback tokens merge with bounds", () => {
@@ -395,7 +395,7 @@ test("named colour errors", () => {
 });
 
 test("a variable called color is still math", () => {
-  assert.equal(ok("color = 5"), "color = 5;");
+  assert.equal(ok("color = 5"), "c_olor = 5;");
 });
 
 test("segment(A, B) draws a line, also between lists of points", () => {
@@ -417,5 +417,35 @@ test("segment and path errors", () => {
 });
 
 test("segment only rewrites a whole statement", () => {
-  assert.equal(ok("y = segmentation(x)"), "y = segmentation(x);");
+  assert.equal(ok("y = segmentation(x)"), "y = s_egmentation(x);");
+});
+
+test("multi-letter names become names Desmos accepts", () => {
+  assert.equal(ok("score = 1"), "s_core = 1;");
+  assert.equal(ok("hello_world = 2"), "h_elloworld = 2;");
+  assert.equal(ok("total = 3"), "t_otal = 3;");             // total is a Desmos function
+  assert.equal(ok("y = total(L)"), "y = total(L);");        // ...but calling it is fine
+  assert.equal(ok("f(x) = score * x"), "f(x) = s_core * x;");
+  assert.equal(ok("theta = 1"), "theta = 1;");
+  assert.equal(ok("X_1 = 5"), "X_1 = 5;");
+  assert.equal(ok("P.x + speed"), "P.x + s_peed;");
+});
+
+test("names in slider bounds, style values and tickers are renamed too", () => {
+  assert.equal(ok("a = 1 [0 : top]"), "a = 1 @{ slider: @{ min: 0, max: t_op, step: 0 } };");
+  assert.equal(ok("y > 0 . fill alpha*level"), "y > 0 @{ fill: alpha*l_evel };");
+  assert.equal(ok("ticker score -> score + 1 . play"), "ticker s_core -> s_core + 1 @{ playing: true };");
+});
+
+test("label interpolation uses the Desmos name", () => {
+  assert.equal(ok('(0, 0) label "score: ${score}"'), '(0, 0) @{ label: @{ text: "score: ${s_core}" } };');
+});
+
+test("names that collide in Desmos get a warning", () => {
+  const r = compile("hello_world = 1\nhelloworld = 2", { defaultSettings: {}, watermark: false });
+  assert.match(r.warnings.map((w) => w.message).join(), /hello_world and helloworld are the same variable in Desmos \(h_elloworld\)/);
+});
+
+test("label interpolation already in Desmos form is left alone", () => {
+  assert.equal(ok('(0, 0) label "Score ${s_{core}} / ${best}"'), '(0, 0) @{ label: @{ text: "Score ${s_{core}} / ${b_est}" } };');
 });

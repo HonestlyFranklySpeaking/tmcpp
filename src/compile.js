@@ -1,7 +1,7 @@
 // TMC++ v1 compiler: TMC++ source -> DesModder Text Mode (TMC) text.
 // Covers spec milestones M1 (lines, notes, folders, sliders) and M2 (classes, inline styles).
 
-import { implicitMultiply } from "./implicit.js";
+import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
@@ -32,6 +32,10 @@ const VOCAB = [
 const OPEN = "([{", CLOSE = ")]}";
 
 // ---------- small helpers ----------
+
+// Names renamed for Desmos during the current compile (desmos name -> names written), for collision warnings.
+let renamed = null;
+const implicitMultiply = (m) => implicitMultiplyRaw(m, renamed);
 
 /** Remove a // comment that is outside string literals. Returns [code, comment]. */
 function splitComment(line) {
@@ -263,7 +267,14 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "label") {
       const v = tokens[i + 1];
       if (!v || !v.startsWith('"')) errors.push({ line, message: "'label' needs a string, e.g. label \"A\"" });
-      else { set(["label", "text"], v, "label"); i++; }
+      else {
+        // ${score} in a label must name the variable as Desmos knows it (${s_core}).
+        // Already in Desmos's own form (${s_{core}}): leave it.
+        const text = v.replace(/\$\{((?:[^{}]|\{[^{}]*\})*)\}/g, (all, inner) =>
+          /[{}\\]/.test(inner) ? all : "${" + desmosNames(inner, renamed) + "}");
+        set(["label", "text"], text, "label");
+        i++;
+      }
       continue;
     }
     if (lower === "label-size" || lower === "label-angle") {
@@ -363,6 +374,7 @@ function applySettings(text, settings, errors, line) {
  * lineMap[i] = TMC++ source line for TMC output line i (0-based).
  */
 export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true } = {}) {
+  renamed = new Map();
   const errors = [], warnings = [];
   const statements = toStatements(source);
   const classes = new Map();
@@ -580,6 +592,11 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const header = writeTmcObject(settings);
   if (header) { out.unshift(`settings ${header};`, ""); lineMap.unshift(0, 0); }
 
+  for (const [name, from] of renamed) {
+    if (from.size > 1) {
+      warnings.push({ line: 1, message: `${[...from].join(" and ")} are the same variable in Desmos (${name}); rename one` });
+    }
+  }
   errors.sort((a, b) => a.line - b.line);
   return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource };
 }

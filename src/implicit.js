@@ -5,8 +5,38 @@
 // Left alone: function calls f(x), multi-letter names (quack42), keywords (for),
 // big operators `sum n=(1...5) n` / `integral x=(0...5) x^2`, and derivatives `(d/d x) f(x)`.
 
-const KEYWORDS = new Set(["for", "with", "in", "else", "if", "and", "or", "from", "to", "of"]);
+import { buildConfig } from "@desmodder/text-mode-core";
+
 const BIG_OPS = new Set(["sum", "product", "integral"]);
+const BIG_OPS_SET = BIG_OPS;
+const KEYWORDS = new Set(["for", "with", "in", "else", "if", "and", "or", "from", "to", "of", "true", "false"]);
+
+// Desmos only accepts one-letter names, optionally with a subscript (s_core, X_1). Its built-in
+// functions (sin, total, length...) are reserved, and so are Greek letters and constants.
+const TM = buildConfig({});
+const BUILTIN = new Set([...TM.operatorNames]);
+const COMMANDS = new Set([...TM.commandNames, "e", "infinity", "infty"]);
+const greekHead = (n) => COMMANDS.has(n.split("_")[0]);
+
+/**
+ * A name as Desmos needs it: "score" -> "s_core", "hello_world" -> "h_elloworld", "total" (as a
+ * variable) -> "t_otal". Names Desmos already accepts are returned unchanged.
+ * `isCall`: the name is followed by "(" (a call keeps a built-in's name).
+ */
+export function desmosName(name, isCall = false) {
+  if (name.length === 1) return name;
+  if (KEYWORDS.has(name) || BIG_OPS_SET.has(name)) return name;
+  if (greekHead(name) && /^[A-Za-z]+(_[A-Za-z0-9]+)?$/.test(name)) return name;
+  if (isCall && BUILTIN.has(name)) return name;
+  if (/^[A-Za-z]_[A-Za-z0-9]+$/.test(name)) return name;       // already a subscript: X_1, s_core
+  if (/^[A-Za-z][0-9]+$/.test(name)) return name;              // a1: TMC makes it a_1
+  if (!BUILTIN.has(name) && !/_/.test(name) && /^[A-Za-z][A-Za-z0-9]*$/.test(name) && !isCall) {
+    return `${name[0]}_${name.slice(1)}`;                      // score -> s_core (what TMC does, made explicit)
+  }
+  const rest = name.slice(1).replace(/_/g, "");
+  return rest ? `${name[0]}_${rest}` : name[0];
+}
+
 const TOKEN = /"(?:[^"\\]|\\.)*"|\.\.\.|\d+(?:\.\d+)?|\.\d+|[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*|\s+|./g;
 
 const kind = (t) =>
@@ -15,7 +45,31 @@ const kind = (t) =>
   /^[A-Za-z]/.test(t) ? (KEYWORDS.has(t) || BIG_OPS.has(t) ? "kw" : "id") :
   /^\s+$/.test(t) ? "ws" : t;
 
-export function implicitMultiply(math) {
+/** Rename multi-letter identifiers to names Desmos accepts (see desmosName). */
+export function desmosNames(math, seen = null) {
+  const toks = math.match(TOKEN) ?? [];
+  let out = "";
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (!/^[A-Za-z]/.test(t)) { out += t; continue; }
+    // Only the head of a dotted name (P.x, L.random) is a variable; and nothing right after a dot.
+    let j = out.length - 1; while (j >= 0 && /\s/.test(out[j])) j--;
+    if (out[j] === ".") { out += t; continue; }
+    const [head, ...props] = t.split(".");
+    let k = i + 1; while (k < toks.length && /^\s+$/.test(toks[k])) k++;
+    const isCall = !props.length && toks[k] === "(";
+    const name = desmosName(head, isCall);
+    if (seen && name !== head) {
+      if (!seen.has(name)) seen.set(name, new Set());
+      seen.get(name).add(head);
+    }
+    out += [name, ...props].join(".");
+  }
+  return out;
+}
+
+export function implicitMultiply(math, seen = null) {
+  math = desmosNames(math, seen);
   const toks = math.match(TOKEN) ?? [];
   let out = "", gap = false;
   const sig = [];            // recent significant tokens: { t, k }

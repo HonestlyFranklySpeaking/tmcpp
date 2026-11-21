@@ -59,6 +59,19 @@ Math is TMC math with four conveniences.
 
 Left alone: function calls `f(x)`, multi-letter names `total`, keywords such as `for`, the body of `sum n=(1...5) n`, `product` and `integral x=(0 ... 5) x^2`, and whatever follows `(d/d x)`.
 
+**Variable names.** Desmos only accepts one-letter names with an optional subscript (`a`, `X_1`, `s_{core}`). TMC++ lets you write real names and renames them consistently everywhere (math, slider bounds, style values, tickers and `${...}` in labels):
+
+| You write | Desmos gets |
+| --- | --- |
+| `score` | `s_core` |
+| `hello_world` | `h_elloworld` |
+| `total`, `width` (Desmos functions, used as variables) | `t_otal`, `w_idth` |
+| `total(L)`, `sin(x)` (calls of built-ins) | unchanged |
+| `theta`, `alpha_2`, `X_1`, `a1`, `P.x` | unchanged |
+| `"Score: ${score}"` | `"Score: ${s_core}"` |
+
+Two names that end up the same (`hello_world` and `helloworld`) get a warning. Interpolation already written in Desmos's form, like `${s_{core}}`, is left alone.
+
 **Double inequalities.** Desmos only draws `a < f < b` when `f` is `x` or `y`. TMC++ rewrites the rest:
 
 ```js

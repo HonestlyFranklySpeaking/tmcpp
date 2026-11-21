@@ -14,6 +14,7 @@
 // Uses your installed Chrome, or Edge, through playwright-core. Needs internet access to desmos.com.
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { restoreGreek } from "../src/greek.js";
 import { compile } from "../src/compile.js";
 import { decodeSource } from "../src/decode.js";
 import { renderFrames } from "../src/preview-page.js";
@@ -71,6 +72,7 @@ if (!/\.tmc$/i.test(file)) {
   tmc = r.tmc;
 }
 const [{ diagnostics }, state] = textToRaw(buildConfig({}), tmc);
+restoreGreek(state);
 const errs = diagnostics.filter((d) => d.severity === "error");
 if (errs.length || !state) die(`TMC rejected the file: ${errs[0]?.message ?? "no state"} (run tools/check.js for details)`);
 

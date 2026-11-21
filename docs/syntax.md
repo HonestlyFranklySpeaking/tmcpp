@@ -107,6 +107,21 @@ path(C)  #blue width 3                     // joins the points in order
 
 **Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number or an expression written without spaces (`fill 0.8*(1-t)^2`).
 
+### Greek letters and Unicode
+
+Write Greek letters by name: `alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi pi rho sigma tau upsilon phi chi psi omega`, the capitals `Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega`, and `varphi vartheta varepsilon`. A subscript works as usual: `lambda_1`. All of them reach Desmos as real Greek letters, labels included (`label "${gamma}"`).
+
+You can also type the symbols themselves: `θ π ω Δ` and the rest, plus `≤ ≥ × · ÷ − → ∞`. Inside a string (a label or a note) they stay exactly as typed.
+
+```js
+r = 2θ
+k = Delta + omega ≤ 3
+(1, 2) . label "γ = ${gamma}"
+gamma = 3
+```
+
+Because Greek names are recognised, a two-letter variable like `mu`, `nu`, `xi`, `pi` or `eta` means the Greek letter, not two letters multiplied.
+
 ## Style tails
 
 Everything after the math that styles it is the tail. It starts at the first of these that follows a space:

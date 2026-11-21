@@ -4,6 +4,7 @@ import { decompile } from "../../src/decompile.js";
 import { latexToTmc } from "../../src/latex.js";
 import { compile, isWatermarkSeed } from "../../src/compile.js";
 import { decodeSource } from "../../src/decode.js";
+import { restoreGreek } from "../../src/greek.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
@@ -146,6 +147,7 @@ function mount(Calc, Desmos) {
     let analysis, state;
     try {
       [analysis, state] = textToRaw(buildConfigFromGlobals(Desmos, Calc), r.tmc);
+      restoreGreek(state); // placeholder names -> \gamma, \lambda... (see src/greek.js)
     } catch (e) {
       report([{ line: 1, kind: "err", message: `Text Mode failed: ${e.message}` }], "");
       return;

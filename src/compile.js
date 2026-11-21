@@ -6,6 +6,7 @@ import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
 import { expandComponents } from "./components.js";
+import { unicodeToTmc } from "./greek.js";
 
 const NAMED_COLORS = {
   red: "RED", blue: "BLUE", green: "GREEN",
@@ -431,7 +432,9 @@ function applySettings(text, settings, errors, line) {
 export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true } = {}) {
   renamed = new Map();
   const errors = [], warnings = [];
-  const expanded = expandComponents(toStatements(source), errors, warnings);
+  const parsed = toStatements(source);
+  for (const st of parsed) st.text = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
+  const expanded = expandComponents(parsed, errors, warnings);
   const statements = expanded.statements;
   const classes = new Map();
 

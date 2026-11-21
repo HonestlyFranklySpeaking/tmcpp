@@ -102,7 +102,8 @@ export function latexToTmc(src) {
     }
     if (name === "mathrm" || name === "text") { glue++; const w = arg(); glue--; return w; }
     if (FUNCS.has(name)) return fn(name);
-    if (GREEK.has(name)) return ` ${name} `;
+    // A Greek letter is its own factor, but a subscript belongs to it: \gamma_{1} -> gamma_1.
+    if (GREEK.has(name)) return src[i] === "_" ? ` ${name}` : ` ${name} `;
     if (name in SYMBOLS) return SYMBOLS[name];
     fail(`unsupported \\${name}`);
   }
@@ -113,7 +114,12 @@ export function latexToTmc(src) {
       const c = peek();
       if (c === "\\") out += command();
       else if (c === "^") { i++; const a = arg().trim(); out += /^[\w.]+$/.test(a) ? `^${a}` : `^(${a})`; }
-      else if (c === "_") { i++; glue++; const a = arg().trim(); glue--; out += `_${a}`; }
+      else if (c === "_") {
+        i++; glue++; const a = arg().trim(); glue--;
+        // a_{1}x is a_1 times x: keep what follows from gluing onto the subscript.
+        const next = src.slice(i);
+        out += `_${a}` + (/^([A-Za-z0-9]|\\(?!left|right|cdot|times|le|ge|to)[A-Za-z])/.test(next) ? " " : "");
+      }
       else if (c === "{") { i++; out += seq("}"); i++; }
       else if (c === "}") { fail("unbalanced }"); }
       else if (c === "=" || c === "<" || c === ">" || c === "+" || c === "~") { i++; out += ` ${c} `; }

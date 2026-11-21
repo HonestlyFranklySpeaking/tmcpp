@@ -3,6 +3,7 @@
 // Usage: node tools/check.js file.tmcpp   (compiles first)  or  file.tmc
 // Note: the npm release can lag the extension (e.g. it rejects |x|, which the extension accepts).
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { restoreGreek } from "../src/greek.js";
 import { readFileSync } from "node:fs";
 import { compile } from "../src/compile.js";
 import { decodeSource } from "../src/decode.js";
@@ -16,6 +17,7 @@ if (path.endsWith(".tmcpp")) {
   tmc = r.tmc;
 }
 const [{ diagnostics }, state] = textToRaw(buildConfig({}), tmc);
+restoreGreek(state);
 const lineOf = (pos) => tmc.slice(0, pos).split("\n").length;
 const lines = tmc.split("\n");
 const seen = new Set();

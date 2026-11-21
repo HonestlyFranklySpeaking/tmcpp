@@ -72,3 +72,10 @@ test("a fraction followed by a factor keeps its own brackets", () => {
   assert.equal(latexToTmc("y=\\frac{1}{2}x"), "y = (1 / 2)x");
   assert.equal(latexToTmc("y=\\frac{1}{2}\\cdot x"), "y = 1 / 2 * x");
 });
+
+test("sqrt, fractions and |x| don't glue onto a letter in front", () => {
+  assert.equal(latexToTmc("y=a\\sqrt{x}"), "y = a sqrt(x)");
+  assert.equal(latexToTmc("y=\\pi\\sqrt{x}"), "y = pi sqrt(x)");
+  assert.equal(latexToTmc("y=x\\frac{1}{2}"), "y = x 1 / 2");
+  assert.equal(latexToTmc("y=x\\left|y\\right|"), "y = x abs(y)");
+});

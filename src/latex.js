@@ -39,7 +39,7 @@ export function latexToTmc(src) {
       // \left( \right) \left[ \left\{ \left|
       if (peek() === "\\") { i++; const c = src[i++]; return c === "{" ? (name === "left" ? "{" : "}") : c === "}" ? "}" : c === "|" ? "|" : fail("bad delimiter"); }
       const c = src[i++];
-      if (c === "|") return name === "left" ? "abs(" : ")";
+      if (c === "|") return name === "left" ? " abs(" : ")";
       return c === "." ? "" : c;
     }
     if (name === "frac") {
@@ -51,11 +51,12 @@ export function latexToTmc(src) {
       // \frac{a}{b}^{2} squares the whole fraction, and \frac{1}{\pi}\left(y\right) multiplies it.
       const rest = src.slice(j);
       const ends = rest === "" || /^([+\-=<>,:)\]}]|\\(cdot|times|div|le|ge|leq|geq|to|right|ldots|cdots)\b|\\[,;: !])/.test(rest);
-      return ends ? frac : `(${frac})`;
+      return ends ? ` ${frac}` : ` (${frac})`;
     }
     if (name === "sqrt") {
-      if (peek() === "[") { i++; const n = seq("]"); i++; const a = arg(); return `nthroot(${a}, ${n})`; }
-      return `sqrt(${arg()})`;
+      // A leading space keeps a\sqrt{x} from gluing into "asqrt".
+      if (peek() === "[") { i++; const n = seq("]"); i++; const a = arg(); return ` nthroot(${a}, ${n})`; }
+      return ` sqrt(${arg()})`;
     }
     // A function call. Its name must not glue onto what is before it (x\cos -> "x cos"). Desmos also
     // allows \sin^{2}\left(x\right) (-> sin(x)^2), \sin^{-1} (-> arcsin) and a bare argument,

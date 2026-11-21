@@ -6,6 +6,16 @@ import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
 
 // LaTeX exactly as Desmos/TMC produced it earlier in this project.
 const CASES = [
+  // Found in the 2025 art contest gallery: keywords, functions and Greek must not glue on.
+  ["L=\\left[a\\operatorname{for}a=\\left[1...5\\right]\\right]", "L = [a for a = [1...5]]"],
+  ["y=a\\operatorname{with}a=3", "y = a with a = 3"],
+  ["y=x\\cos\\left(x\\right)", "y = x cos(x)"],
+  ["y=x\\cos\\theta", "y = x cos(theta)"],
+  ["y=2\\sin x+1", "y = 2 sin(x) + 1"],
+  ["y=\\sin^{2}\\left(x\\right)", "y = sin(x)^(2)"],
+  ["y=\\sin^{-1}\\left(x\\right)", "y = arcsin(x)"],
+  ["y=2\\theta x", "y = 2 theta x"],
+  ["a_{\\theta}=1", "a_theta = 1"],
   ["y=a\\cdot \\operatorname{sin}\\left(x\\right)", "y = a * sin(x)"],
   ["y=\\frac{x^{2}}{4\\cdot p}", "y = x^2 / (4 * p)"],
   ["2\\cdot \\pi", "2 * pi"],

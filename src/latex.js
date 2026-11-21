@@ -7,6 +7,7 @@ const GREEK = new Set(["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "et
   "Lambda", "Xi", "Pi", "Sigma", "Upsilon", "Phi", "Psi", "Omega", "varphi", "vartheta", "varepsilon"]);
 const FUNCS = new Set(["sin", "cos", "tan", "csc", "sec", "cot", "sinh", "cosh", "tanh", "arcsin", "arccos", "arctan",
   "ln", "log", "exp", "max", "min", "det"]);
+const KEYWORDS = new Set(["for", "with", "and", "or", "in"]);
 const SYMBOLS = { cdot: " * ", times: " * ", le: " <= ", ge: " >= ", leq: " <= ", geq: " >= ", to: " -> ",
   ldots: "...", cdots: "...", infty: "infinity", div: " / " };
 
@@ -52,9 +53,49 @@ export function latexToTmc(src) {
       if (peek() === "[") { i++; const n = seq("]"); i++; const a = arg(); return `nthroot(${a}, ${n})`; }
       return `sqrt(${arg()})`;
     }
-    if (name === "operatorname") return arg();
+    // A function call. Its name must not glue onto what is before it (x\cos -> "x cos"). Desmos also
+    // allows \sin^{2}\left(x\right) (-> sin(x)^2), \sin^{-1} (-> arcsin) and a bare argument,
+    // \cos\theta or \sin 2x, which runs to the next + - = , : or bracket at the same level.
+    const fn = (n) => {
+      const skip = () => { while (src[i] === " ") i++; };
+      skip();
+      let exp = null;
+      if (src[i] === "^") { i++; exp = arg().trim(); skip(); }
+      if (exp === "-1" && FUNCS.has(n) && !n.startsWith("arc")) { n = "arc" + n; exp = null; }
+      let inner;
+      if (src.startsWith("\\left(", i)) {
+        let depth = 0, j = i;
+        for (; j < src.length; j++) {
+          if (src.startsWith("\\left", j)) depth++;
+          else if (src.startsWith("\\right", j) && --depth === 0) break;
+        }
+        if (j >= src.length) fail("unclosed \\left(");
+        inner = latexToTmc(src.slice(i + 6, j));
+        i = j + 7; // past \right)
+      } else if (src[i] === "(") {
+        return exp === null ? ` ${n}` : fail(`${n}^ with a plain bracket`);
+      } else {
+        let depth = 0, j = i;
+        for (; j < src.length; j++) {
+          const c = src[j];
+          if (src.startsWith("\\left", j) || c === "{") depth++;
+          else if (src.startsWith("\\right", j) || c === "}") { if (depth === 0) break; depth--; }
+          else if (depth === 0 && /[+\-=<>,:]/.test(c)) break;
+          else if (depth === 0 && j > i && /^\\(operatorname|sin|cos|tan|ln|log|cdot)\b/.test(src.slice(j))) break;
+        }
+        if (j === i) fail(`${n} without an argument`);
+        inner = latexToTmc(src.slice(i, j));
+        i = j;
+      }
+      return exp === null ? ` ${n}(${inner})` : ` ${n}(${inner})^(${exp})`;
+    };
+    if (name === "operatorname") {
+      const word = arg().trim();
+      return KEYWORDS.has(word) ? ` ${word} ` : fn(word);
+    }
     if (name === "mathrm" || name === "text") return arg();
-    if (FUNCS.has(name) || GREEK.has(name)) return name;
+    if (FUNCS.has(name)) return fn(name);
+    if (GREEK.has(name)) return ` ${name} `;
     if (name in SYMBOLS) return SYMBOLS[name];
     fail(`unsupported \\${name}`);
   }
@@ -64,8 +105,8 @@ export function latexToTmc(src) {
     while (!eof() && peek() !== end) {
       const c = peek();
       if (c === "\\") out += command();
-      else if (c === "^") { i++; const a = arg(); out += /^[\w.]+$/.test(a) ? `^${a}` : `^(${a})`; }
-      else if (c === "_") { i++; const a = arg(); out += `_${a}`; }
+      else if (c === "^") { i++; const a = arg().trim(); out += /^[\w.]+$/.test(a) ? `^${a}` : `^(${a})`; }
+      else if (c === "_") { i++; const a = arg().trim(); out += `_${a}`; }
       else if (c === "{") { i++; out += seq("}"); i++; }
       else if (c === "}") { fail("unbalanced }"); }
       else if (c === "=" || c === "<" || c === ">" || c === "+" || c === "~") { i++; out += ` ${c} `; }

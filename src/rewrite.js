@@ -119,3 +119,115 @@ export function rewriteSegments(math) {
   const P = /^[A-Za-z][A-Za-z0-9_]*$/.test(args[0]) ? args[0] : `(${args[0]})`;
   return { math: `(1 - t) * (${P}[1...length(${P}) - 1]) + t * (${P}[2...length(${P})])` };
 }
+
+/** Index of the bracket that closes the one opening at `open` (strings skipped), or -1. */
+function closeOf(s, open) {
+  let depth = 0, inStr = false;
+  for (let i = open; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (c === "\\") i++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (OPEN.includes(c)) depth++;
+    else if (CLOSE.includes(c) && --depth === 0) return i;
+  }
+  return -1;
+}
+function openOf(s, close) {
+  let depth = 0;
+  for (let i = close; i >= 0; i--) {
+    if (CLOSE.includes(s[i])) depth++;
+    else if (OPEN.includes(s[i]) && --depth === 0) return i;
+  }
+  return -1;
+}
+/** Is there a ':' at the top level of this group's inside? (Then it's a piecewise, not a restriction.) */
+function hasTopColon(inner) {
+  let depth = 0;
+  for (const c of inner) {
+    if (OPEN.includes(c)) depth++;
+    else if (CLOSE.includes(c)) depth--;
+    else if (c === ":" && depth === 0) return true;
+  }
+  return false;
+}
+/** Position just after the top-level relation (=, <, >, <=, >=; not ->), or 0 if there is none. */
+function afterRelation(s) {
+  let depth = 0, inStr = false, at = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (c === "\\") i++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (OPEN.includes(c)) depth++;
+    else if (CLOSE.includes(c)) depth--;
+    else if (depth === 0 && "=<>".includes(c) && !(c === ">" && s[i - 1] === "-")) {
+      at = s[i + 1] === "=" ? i + 2 : i + 1;
+      if (s[i + 1] === "=") i++;
+    }
+  }
+  return at;
+}
+
+/**
+ * Desmos restrictions: `y = 2x {0 < x < 1}` (one or more {condition} groups after the math).
+ * The parser we ship can't read them, so they become a piecewise around the right-hand side:
+ *   y = {0 < x < 1: 2x}      x^2 + y^2 < {y > 0: {x > 0: 4}}      (P) {t > 0} -> {t > 0: P}
+ * When a condition is false the side is undefined, so nothing is drawn there, exactly as before.
+ */
+export function rewriteRestrictions(math) {
+  let s = math.trimEnd();
+  const conds = [];
+  while (s.endsWith("}")) {
+    const open = openOf(s, s.length - 1);
+    if (open <= 0) break;
+    const inner = s.slice(open + 1, -1);
+    const before = s.slice(0, open).trimEnd();
+    if (hasTopColon(inner) || !/[\w)\]}.]$/.test(before)) break; // a piecewise value, not a restriction
+    conds.unshift(inner.trim());
+    s = before;
+  }
+  if (!conds.length) return { math };
+  const at = afterRelation(s);
+  const head = s.slice(0, at), body = s.slice(at).trim();
+  const wrapped = conds.reduceRight((v, c) => `{${c}: ${v}}`, body);
+  return { math: at ? `${head.trimEnd()} ${wrapped}` : wrapped };
+}
+
+/**
+ * Desmos lets a list comprehension go without brackets: `L = f(i) for i = [1...5]` or as a call
+ * argument, `join(g(a) for a = [1, 2])`. The parser needs `[f(i) for i = [1...5]]`, so add them.
+ */
+export function bracketComprehensions(math) {
+  let s = math;
+  for (let guard = 0; guard < 50; guard++) {
+    // Find a ` for ` whose innermost enclosing bracket is not `[`.
+    let depth = 0, inStr = false, found = -1;
+    const stack = [];
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (inStr) { if (c === "\\") i++; else if (c === '"') inStr = false; continue; }
+      if (c === '"') { inStr = true; continue; }
+      if (OPEN.includes(c)) stack.push(i);
+      else if (CLOSE.includes(c)) stack.pop();
+      else if (/\s/.test(c) && s.startsWith("for ", i + 1) && s[stack.at(-1)] !== "[") { found = i; break; }
+    }
+    if (found === -1) return s;
+    const encl = stack.at(-1);
+    let start, end;
+    if (encl === undefined) { start = afterRelation(s.slice(0, found)); end = s.length; }
+    else {
+      end = closeOf(s, encl);
+      start = encl + 1;
+      // The comprehension is one argument: it starts after the last top-level comma before `for`.
+      let d = 0;
+      for (let i = found; i > encl; i--) {
+        if (CLOSE.includes(s[i])) d++;
+        else if (OPEN.includes(s[i])) d--;
+        else if (s[i] === "," && d === 0) { start = i + 1; break; }
+      }
+    }
+    const piece = s.slice(start, end);
+    const lead = piece.match(/^\s*/)[0];
+    s = `${s.slice(0, start)}${lead}[${piece.trim()}]${s.slice(end)}`;
+  }
+  return s;
+}

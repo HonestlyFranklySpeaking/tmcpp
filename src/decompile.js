@@ -251,9 +251,23 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
     if (item.type === "text") out.push(`${indent}${q(item.text ?? "")}`);
     else if (item.type === "expression") {
       if (!(item.latex ?? "").trim()) return out; // an empty row in the Desmos list
-      out.push(exprLine(item, indent));
+      // One value that won't convert (a slider bound, a colour, a click action) must not sink the
+      // whole rebuild: keep the math and say what was dropped.
+      try { out.push(exprLine(item, indent)); }
+      catch (e) {
+        warnings.push(`couldn't convert the style of ${item.id}: ${e.message}`);
+        out.push(`${indent}${mathOf(item).math}`);
+      }
     }
-    else if (itemToTmc) out.push(...itemToTmc(item).split("\n").map((l) => indent + l));
+    else if (itemToTmc) {
+      // Convert the item on its own: its folder is written around it here, not by the converter.
+      const { folderId, ...alone } = item;
+      try { out.push(...itemToTmc(alone).split("\n").map((l) => indent + l)); }
+      catch (e) {
+        warnings.push(`couldn't convert ${item.type} ${item.id}: ${e.message}`);
+        out.push(`${indent}// (left out: ${item.type} ${item.id}, which couldn't be converted)`);
+      }
+    }
     else warnings.push(`skipped a ${item.type} (no converter)`);
     return out;
   };

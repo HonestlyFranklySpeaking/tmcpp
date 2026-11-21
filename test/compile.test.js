@@ -467,3 +467,18 @@ test("click actions: click(...) and click-label", () => {
 test("a number written without its leading zero (.95) after fill/opacity is a number, not a class", () => {
   assert.equal(ok("y = x . opacity .5 fill .95"), "y = x @{ lines: @{ opacity: 0.5 }, fill: 0.95 };");
 });
+
+test("restrictions become a piecewise around the right-hand side", () => {
+  assert.equal(ok("y = 2x {0 < x < 1}"), "y = {0 < x < 1: 2 * x};");
+  assert.equal(ok("x^2 + y^2 < 4 {y > 0}{x > 0}"), "x^2 + y^2 < {y > 0: {x > 0: 4}};");
+  assert.equal(ok("x = 225 {43 <= y <= 47}"), "x = {43 <= y <= 47: 225};");
+  assert.equal(ok("f(x) = x^2 {x > 0}"), "f(x) = {x > 0: x^2};");
+  assert.equal(ok("(cos(t), sin(t)) {t < 3}"), "{t < 3: (cos(t), sin(t))};");
+  assert.equal(ok("y = {x > 0: 1, 2}"), "y = {x > 0: 1, 2};"); // a piecewise value is not a restriction
+});
+
+test("list comprehensions without brackets get them", () => {
+  assert.equal(ok("P = polygon((a, b), (c, i)) for i = [1...5]"), "P = [polygon((a, b), (c, i)) for i = [1...5]];");
+  assert.equal(ok("L = join(g(a) for a = [1, 2], b = [3])"), "L = join([g(a) for a = [1, 2], b = [3]]);");
+  assert.equal(ok("L = [i for i = [1...3]]"), "L = [i for i = [1...3]];");
+});

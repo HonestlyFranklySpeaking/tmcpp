@@ -194,3 +194,21 @@ test("click actions survive decompiling (game buttons)", () => {
   assert.deepEqual(back.expressions.list.map((e) => e.clickableInfo?.latex),
     ["s\\to 1.75", "U\\left(1\\right)", "\\left(a\\to 1,b\\to 2\\right)"]);
 });
+
+test("a table inside a folder converts without its folder id; a failing item is skipped, not fatal", () => {
+  const seen = [];
+  const state = { version: 11, graph: {}, expressions: { list: [
+    { type: "folder", id: "f", title: "F" },
+    { type: "table", id: "t", folderId: "f", columns: [] },
+    { type: "image", id: "i", folderId: "f" },
+  ] } };
+  const itemToTmc = (item) => {
+    seen.push(item.folderId);
+    if (item.type === "image") throw new Error("nope");
+    return "table {\n}";
+  };
+  const { source, warnings } = decompile(state, { latexToText: (l) => l, itemToTmc });
+  assert.deepEqual(seen, [undefined, undefined]);
+  assert.match(source, /folder "F" \{\n  table \{\n  \}\n  \/\/ \(left out: image i, which couldn't be converted\)\n\}/);
+  assert.match(warnings.join(" "), /couldn't convert image i/);
+});

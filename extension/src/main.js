@@ -179,7 +179,8 @@ function mount(Calc, Desmos) {
   const itemTmc = (item) => {
     // text-mode-core needs a current state version and a viewport, or it refuses everything.
     const base = { version: 11, randomSeed: "", graph: { viewport: { xmin: -10, xmax: 10, ymin: -10, ymax: 10 } } };
-    const [err, text] = rawToText(cfg(), { ...base, expressions: { list: [item] } });
+    const { folderId, ...alone } = item; // a folder id with no folder makes Text Mode refuse the item
+    const [err, text] = rawToText(cfg(), { ...base, expressions: { list: [alone] } });
     if (err) throw new Error("Text Mode couldn't convert this item");
     let t = text.trim();
     if (t.startsWith("settings")) {

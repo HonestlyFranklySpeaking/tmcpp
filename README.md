@@ -32,7 +32,7 @@ Requires Node 22+.
 
 ```sh
 npm install
-npm test                                  # 71 tests, including DesModder's real parser
+npm test                                  # 90 tests, including DesModder's real parser
 node src/cli.js examples/sunset.tmcpp     # print TMC, or errors with line numbers
 node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModder's parser
 ```
@@ -135,6 +135,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 
 | File | What it shows |
 | --- | --- |
+| `examples/night-net.tmcpp` | NIGHT NET, a playable game: drag the net to catch falling gold stars and let the red meteors drop. A ticker runs the game loop, a clickable PLAY button (`@{ onClick: start }`) resets it, and it tracks lives, score and best score |
 | `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette, one list inequality for 24 water bands, and `segment()` for the coral (232 items) |
 | `examples/event-horizon.tmcpp` | EVENT HORIZON (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
 | `examples/hello.tmcpp` | HELLO WORLD written stroke by stroke from 46 segments and one parametric expression (the extension's starter) |

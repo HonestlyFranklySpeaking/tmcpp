@@ -1,0 +1,91 @@
+// NIGHT NET: a playable catching game, all equations.
+// Drag the net left and right. Gold stars are worth a point; let one fall and you lose a life.
+// Red meteors cost a life if you catch them, so let them drop. It speeds up as you score.
+// Click PLAY to start. The ticker runs the game loop; buttons are clickable polygons.
+
+settings x [-12 : 12] y [-9 : 9] no-grid @{ showXAxis: false, showYAxis: false }
+
+color sky #0b1026
+color dusk #2a2f6b
+color ground #05070f
+color gold #ffd166
+color ember #ef476f
+color net #7bdff2
+color ui #e8ecff
+color button #3a86ff
+
+class hud { #ui point-opacity 0 no-outline }
+
+ticker step . play 33ms
+
+folder "Controls" {
+  bx = 0 [-10 : 10]                       // net position: drag the net, or this slider
+}
+
+folder "Game state" collapsed {
+  X = [-6, -2, 2, 6, 0]                   // falling objects: x, y, type (1 star, 0 meteor)
+  Y = [12, 15, 18, 21, 24]
+  T = [1, 1, 0, 1, 1]
+  score = 0
+  lives = 3
+  best = 0
+  going = 0                               // 1 while a round is running
+  played = 0                              // 1 after the first round, for the game-over text
+  k = 0                                   // tick counter, seeds the randomness
+  fl = 0                                  // catch flash, decays each tick
+  hu = 0                                  // hurt flash
+}
+
+folder "Rules" collapsed {
+  rnd(u) = mod(43758.5453 sin(12.9898 u + 78.233), 1)
+  I = [1 ... 5]
+  w = 1.6                                 // half-width of the net
+  v = 0.12 + 0.012 min(score, 40)         // fall speed per tick
+  Yn = Y - v
+  Land = {Yn < -6.6: 1, 0}                // reached the net line this tick
+  Hit = {abs(X - bx) < w: 1, 0}           // over the net
+  good = total(Land * Hit * T)
+  bad = total(Land * (1 - Hit) * T) + total(Land * Hit * (1 - T))
+  Yr = {Land = 1: 12 + 5 rnd(k + 3I), Yn}
+  Xr = {Land = 1: -10 + 20 rnd(k + 7I + 0.37), X}
+  Tr = {Land = 1: {rnd(k + 11I + 0.71) < 0.22 + 0.01 min(score, 25): 0, 1}, T}
+  tick = (Y -> Yr, X -> Xr, T -> Tr, score -> score + good, lives -> lives - bad, k -> k + 1, fl -> {good > 0: 1, max(0, fl - 0.06)}, hu -> {bad > 0: 1, max(0, hu - 0.05)})
+  over = (going -> 0, played -> 1, lives -> 0, score -> score + good, best -> max(best, score + good), hu -> 1)
+  step = {going = 1: {lives - bad > 0: tick, over}, hu > 0: hu -> max(0, hu - 0.05)}
+  start = (going -> 1, score -> 0, lives -> 3, fl -> 0, hu -> 0, k -> k + 101, X -> [-6, -2, 2, 6, 0], Y -> [12, 15, 18, 21, 24], T -> [1, 1, 0, 1, 1])
+}
+
+folder "Scene" collapsed {
+  y > -100                                       #sky fill 1 opacity 0
+  y < [-9, -8.5 ... 2]                           #dusk fill 0.05 opacity 0
+  y < -7.7                                       #ground fill 1 opacity 0
+  ((-12 + 24 rnd([1 ... 60])), (-1 + 10 rnd([1 ... 60] + 0.5)))   #ui point 2 point-opacity 0.35
+  y > -100                                       #ember fill 0.3*hu opacity 0
+}
+
+folder "Falling" collapsed {
+  ({going * T = 1: X}, Y)                              #gold point 24 point-opacity 0.3
+  ({going * T = 1: X}, Y)                              #gold point 11
+  segment(({going = 1: {T = 0: X}}, Y), (X - 0.25, Y + 1.6))  #ember width 6 opacity 0.5
+  ({going * (1 - T) = 1: X}, Y)                              #ember point 12
+}
+
+folder "Net" collapsed {
+  polygon((bx - w, -6.4), (bx + w, -6.4), (bx + 1.1, -7.6), (bx - 1.1, -7.6))   #net fill 0.25+0.6*fl width 3
+  (bx, -7)                                       #net point 8 drag x
+}
+
+folder "HUD" collapsed {
+  (-11.3, 8.2)                                   .hud label "Score ${s_{core}}" right label-size 1.3
+  (-11.3, 7.3)                                   .hud label "Best ${b_est}" right
+  H = [1 ... 3]
+  ({H <= lives: 6.2 + 1.1 H}, 8.2)               #ember point 13
+}
+
+folder "Menu" {
+  ({going = 0: 0}, 3.8)                          .hud label "NIGHT NET" center label-size 3.2
+  ({going = 0: 0}, 2.2)                          .hud label "Drag the net. Catch the gold stars, let the red meteors fall." center label-size 1.1
+  ({going = 0: {played = 1: 0}}, 0.8)      #ember point-opacity 0 no-outline label "Game over: ${s_{core}} points" center label-size 1.4
+  {going = 0: polygon((-2.6, -2.6), (2.6, -2.6), (2.6, -0.8), (-2.6, -0.8))}   #button fill 0.85 width 2 @{ onClick: start }
+  ({going = 0: 0}, -1.7)                         .hud label "PLAY" center label-size 1.6 @{ onClick: start }
+}

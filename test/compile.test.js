@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { compile } from "../src/compile.js";
 
 // Most tests check statements only, so they switch the default settings header off.
-const ok = (src, opts = { defaultSettings: {} }) => {
+const ok = (src, opts = { defaultSettings: {}, watermark: false }) => {
   const r = compile(src, opts);
   assert.deepEqual(r.errors, [], JSON.stringify(r.errors));
   return r.tmc;
@@ -181,23 +181,23 @@ test("folders close with a semicolon", () => {
 
 test("default settings header is added", () => {
   assert.equal(
-    ok("y = x", {}),
+    ok("y = x", { watermark: false }),
     "settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 } };\n\ny = x;",
   );
 });
 
 test("TMC++ settings shorthand overrides defaults", () => {
-  assert.match(ok("settings y [-6 : 6] degrees\ny = x", {}),
+  assert.match(ok("settings y [-6 : 6] degrees\ny = x", { watermark: false }),
     /^settings @\{ viewport: @\{ xmin: -10, xmax: 10, ymin: -6, ymax: 6 \}, degreeMode: true \}/);
 });
 
 test("raw TMC settings merge over defaults", () => {
-  assert.match(ok('settings @{ viewport: @{ xmax: 20 }, randomSeed: "abc" }\ny = x', {}),
+  assert.match(ok('settings @{ viewport: @{ xmax: 20 }, randomSeed: "abc" }\ny = x', { watermark: false }),
     /^settings @\{ viewport: @\{ xmin: -10, xmax: 20, ymin: -10, ymax: 10 \}, randomSeed: "abc" \}/);
 });
 
 test("multi-line raw settings block", () => {
-  assert.match(ok("settings @{\n  viewport: @{ xmin: 0 },\n}\ny = x", {}), /xmin: 0, xmax: 10/);
+  assert.match(ok("settings @{\n  viewport: @{ xmin: 0 },\n}\ny = x", { watermark: false }), /xmin: 0, xmax: 10/);
 });
 
 test("raw @{} on an expression merges instead of duplicating keys", () => {
@@ -314,7 +314,7 @@ test("point style, point opacity and item flags", () => {
 });
 
 test("settings no-grid and lock", () => {
-  assert.match(ok("settings no-grid lock\ny = x", {}), /showGrid: false, lockViewport: true \};/);
+  assert.match(ok("settings no-grid lock\ny = x", { watermark: false }), /showGrid: false, lockViewport: true \};/);
 });
 
 test("slider bounds take natural math like 2pi", () => {
@@ -340,7 +340,7 @@ test("mixed-direction double inequality is an error", () => {
 });
 
 test("f(x,y) = list after f is defined draws curves instead of redefining", () => {
-  const r = compile("q(x,y) = x^2 + y^2\nq(x,y) = [1, 4]", { defaultSettings: {} });
+  const r = compile("q(x,y) = x^2 + y^2\nq(x,y) = [1, 4]", { defaultSettings: {}, watermark: false });
   assert.deepEqual(r.errors, []);
   assert.equal(r.tmc, "q(x,y) = x^2 + y^2;\nq(x,y) - ([1, 4]) = 0;");
   assert.match(r.warnings[0].message, /q is defined on line 1/);
@@ -357,4 +357,25 @@ test("sources decode from UTF-8, UTF-8 with BOM and UTF-16 (PowerShell)", async 
   assert.equal(decodeSource(Buffer.from(text, "utf8")), want);
   assert.equal(decodeSource(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text, "utf8")])), want);
   assert.equal(decodeSource(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")])), want);
+});
+
+
+test("watermark: seed starts with TMC++ in ASCII hex and looks like a Desmos seed", async () => {
+  const { watermarkSeed, isWatermarkSeed, WATERMARK } = await import("../src/compile.js");
+  assert.equal(WATERMARK, Buffer.from("TMC++").toString("hex"));
+  const seed = watermarkSeed("y = x");
+  assert.match(seed, /^544d432b2b01[0-9a-f]{20}$/);
+  assert.equal(seed, watermarkSeed("y = x"));       // stable for the same source
+  assert.notEqual(seed, watermarkSeed("y = 2x"));   // differs between graphs
+  assert.ok(isWatermarkSeed(seed));
+  assert.ok(!isWatermarkSeed("ba9f5c1341fffbc57ac9c50540018465"));
+});
+
+test("watermark goes into settings unless the source sets a seed", () => {
+  const r = compile("y = x", { defaultSettings: {} });
+  assert.match(r.tmc, /^settings @\{ randomSeed: "544d432b2b01[0-9a-f]{20}" \};/);
+  const own = compile('settings @{ randomSeed: "mine" }\ny = x', { defaultSettings: {} });
+  assert.match(own.tmc, /randomSeed: "mine"/);
+  const kept = compile("y = x", { defaultSettings: {}, randomSeed: "544d432b2b01aaaaaaaaaaaaaaaaaaaa" });
+  assert.match(kept.tmc, /randomSeed: "544d432b2b01aaaaaaaaaaaaaaaaaaaa"/);
 });

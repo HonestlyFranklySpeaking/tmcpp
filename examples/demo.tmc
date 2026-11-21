@@ -1,4 +1,4 @@
-settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 } };
+settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -10, ymax: 10 }, randomSeed: "544d432b2b01517898391f68fb06a52a" };
 
 "Parabola demo: drag the point to move the focus";
 folder "Controls" {

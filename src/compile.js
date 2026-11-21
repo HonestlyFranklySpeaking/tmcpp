@@ -4,6 +4,7 @@
 import { implicitMultiply } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { rewriteDoubleInequality, rewriteRedefinition, functionDefs } from "./rewrite.js";
+import { fnv1a } from "./meta.js";
 
 const NAMED_COLORS = {
   red: "RED", blue: "BLUE", green: "GREEN",
@@ -294,6 +295,18 @@ function styleToTmc(style, rawInner) {
   return w ? " " + w : "";
 }
 
+// Watermark: the graph's randomSeed starts with "TMC++" in ASCII hex, then a version byte.
+// It looks like any Desmos seed (32 hex chars) and is never shown in the UI.
+export const WATERMARK = "544d432b2b"; // T M C + +
+export const WATERMARK_VERSION = "01";
+export const isWatermarkSeed = (seed) => typeof seed === "string" && seed.startsWith(WATERMARK);
+
+/** A watermarked seed whose tail is derived from the source, so the same source gives the same seed. */
+export function watermarkSeed(source) {
+  const tail = (fnv1a(source) + fnv1a("1" + source) + fnv1a("2" + source)).slice(0, 20);
+  return WATERMARK + WATERMARK_VERSION + tail;
+}
+
 /** Desmos defaults written at the top of every compiled graph; override with `settings`. */
 export const DEFAULT_SETTINGS = {
   viewport: { xmin: "-10", xmax: "10", ymin: "-10", ymax: "10" },
@@ -343,7 +356,7 @@ function applySettings(text, settings, errors, line) {
  *             lineMap: number[], classes: Map }}
  * lineMap[i] = TMC++ source line for TMC output line i (0-based).
  */
-export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
+export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true } = {}) {
   const errors = [], warnings = [];
   const statements = toStatements(source);
   const classes = new Map();
@@ -533,6 +546,10 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     if (st.orphan) warnings.push({ line: st.line, message: "Comments at the end of the file are not attached to any statement" });
   }
 
+  // A seed set in the source always wins; otherwise keep the graph's seed or make a watermarked one.
+  if (watermark && settings.randomSeed === undefined) {
+    settings = mergeTmc(settings, { randomSeed: JSON.stringify(randomSeed ?? watermarkSeed(source)) });
+  }
   const header = writeTmcObject(settings);
   if (header) { out.unshift(`settings ${header};`, ""); lineMap.unshift(0, 0); }
 

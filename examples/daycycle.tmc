@@ -1,4 +1,4 @@
-settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7, ymax: 9 } };
+settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7, ymax: 9 }, randomSeed: "544d432b2b01663aceb520192a8e14b6" };
 
 "A day over the sea: press play on t (hours, 0 to 24)";
 folder "Clock" {

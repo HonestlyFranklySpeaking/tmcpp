@@ -1,4 +1,4 @@
-settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7, ymax: 9 } };
+settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7, ymax: 9 }, randomSeed: "544d432b2b016af0a3caa0dd39b99bae" };
 
 "Sunset over the sea: drag t to change the time of day";
 folder "Controls" {

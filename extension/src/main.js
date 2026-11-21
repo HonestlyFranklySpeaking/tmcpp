@@ -1,6 +1,6 @@
 // TMC++ panel for desmos.com/calculator. Runs in the page (MAIN world) so it can use Calc and Desmos.
 import { buildConfigFromGlobals, textToRaw } from "@desmodder/text-mode-core";
-import { compile } from "../../src/compile.js";
+import { compile, isWatermarkSeed } from "../../src/compile.js";
 import { decodeSource } from "../../src/decode.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 
@@ -64,16 +64,20 @@ function mount(Calc, Desmos) {
   // What the open graph says about itself. Checked whenever the panel opens or a compile finishes,
   // because Desmos loads saved graphs after Calc exists and swaps graphs without reloading the page.
   const showGraphInfo = () => {
-    const found = readMeta(Calc.getState().expressions.list);
+    const state = Calc.getState();
+    const found = readMeta(state.expressions.list);
+    const mark = isWatermarkSeed(state.randomSeed) ? " TMC++ watermark ✓" : "";
     if (found?.meta) {
       const tagged = Object.values(found.meta.exprs ?? {}).filter((e) => e.tags?.length).length;
       const classes = Object.keys(found.meta.classes ?? {});
       info.textContent = `This graph was made with TMC++: ${classes.length} class(es)` +
-        `${classes.length ? ` (${classes.join(", ")})` : ""}, ${tagged} tagged item(s).`;
+        `${classes.length ? ` (${classes.join(", ")})` : ""}, ${tagged} tagged item(s).${mark}`;
     } else if (found?.error) {
       info.textContent = `TMC++ metadata note found but unreadable: ${found.error}`;
     } else {
-      info.textContent = "This graph has no TMC++ metadata yet. Compile to add it.";
+      info.textContent = mark
+        ? "This graph carries the TMC++ watermark, but its metadata note is gone." + mark
+        : "This graph has no TMC++ metadata yet. Compile to add it.";
     }
   };
   src.value = localStorage.getItem(STORE()) ?? STARTER;
@@ -114,7 +118,9 @@ function mount(Calc, Desmos) {
   function run() {
     localStorage.setItem(STORE(), src.value);
     hasLocalSource = true;
-    const r = compile(src.value);
+    // Keep this graph's TMC++ seed so random() results don't reshuffle on every compile.
+    const seed = Calc.getState().randomSeed;
+    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined });
     const notes = r.warnings.map((w) => ({ ...w, kind: "warn" }));
     if (r.errors.length) {
       report([...r.errors.map((e) => ({ ...e, kind: "err" })), ...notes], "");
@@ -207,7 +213,8 @@ function mount(Calc, Desmos) {
     run();
   };
   panel.querySelector("#tmcpp-tmc").onclick = async () => {
-    const r = compile(src.value);
+    const seed = Calc.getState().randomSeed;
+    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined });
     await navigator.clipboard.writeText(r.tmc);
     report([], "Compiled TMC copied to the clipboard.");
   };

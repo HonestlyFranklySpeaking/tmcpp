@@ -1,4 +1,4 @@
-settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -6, ymax: 7 }, showGrid: false, showXAxis: false, showYAxis: false };
+settings @{ viewport: @{ xmin: -10, xmax: 10, ymin: -6, ymax: 7 }, showGrid: false, showXAxis: false, showYAxis: false, randomSeed: "544d432b2b014d0f3178f97569e17086" };
 
 "Hello world in TMC++: press play on s to write it again (Ctrl+Enter recompiles)";
 s = 0 @{ slider: @{ min: 0, max: 1, step: 0.001, playing: true, loopMode: "PLAY_ONCE", period: 4000 } };

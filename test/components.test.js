@@ -305,7 +305,7 @@ k = s1.coils + s2.coils`);
 
 test("abstract parameters work in list instances and nested components", () => {
   const list = ok(`component D(i, abstract r = 0.4) {\n  (x - i)^2 + y^2 < r^2\n}\nnew D(i) for i = [1...5] as ds`);
-  assert.match(list, /^r_ds = 0\.4;/m);
+  assert.match(list, /^r_ds = \[0\.4 for i = \[1\.\.\.5\]\];/m); // one value per copy
   assert.match(list, /< r_ds\^2/);
   const nested = ok(`component In(abstract a = 1) {\n  y = a\n}\ncomponent Out(b) {\n  new In(b + 1) as i\n}\nnew Out(2) as o\nq = o.i.a`);
   assert.match(nested, /^a_oi = 2 \+ 1 @\{ hidden: true \};/m);

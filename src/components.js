@@ -412,6 +412,12 @@ export function expandComponents(statements, errors, warnings) {
       const name = allocate(p.name, suffix);
       inst.names.set(p.name, name);
       const value = bound.get(p.name);
+      if (inst.list) {
+        // In a list instance every copy gets its own value, like a local.
+        inst.abstractDefs.push(`${name} = [${value} for ${inst.list.forText}]`);
+        inst.list.names.add(name);
+        continue;
+      }
       inst.abstractDefs.push(`${name} = ${value}` + (/^-?\d*\.?\d+$/.test(value.trim()) ? p.bounds : " . hidden"));
     }
     for (const local of comp.locals.keys()) inst.names.set(local, allocate(local, suffix));

@@ -45,7 +45,7 @@ Not carried over from TMC: one-line blocks such as `folder "A" { y = x; }`. Put 
 
 ## Math
 
-Math is TMC math with four conveniences.
+Math is TMC math with a few conveniences.
 
 **Juxtaposition.** TMC requires an explicit `*`; TMC++ inserts it.
 
@@ -105,7 +105,19 @@ path(C)  #blue width 3                     // joins the points in order
 - The line is drawn with the parameter `t`, so the points themselves can't use `t`.
 - Use them for anything drawn as strokes: lettering, branches, constellations, rigging.
 
-**Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number or an expression written without spaces (`fill 0.8*(1-t)^2`).
+**Restrictions.** Desmos's `{...}` restrictions work, and can be stacked:
+
+```js
+y = 2x {0 < x < 1}
+x^2 + y^2 < 4 {y > 0}{x > 0}
+(cos(t), sin(t)) {t < 3}
+```
+
+The parser TMC++ uses can't read restrictions, so each becomes a piecewise around the right-hand side (`y = {0 < x < 1: 2x}`), which draws the same thing. A `{...}` with a `:` in it is a piecewise value and is left alone.
+
+**List comprehensions without brackets.** Desmos accepts `L = f(i) for i = [1...5]` and `join(g(a) for a = [1, 2])`; TMC++ adds the brackets TMC needs.
+
+**Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number, an expression written without spaces (`fill 0.8*(1-t)^2`), or an expression in brackets, which may contain spaces (`opacity (a pi)`). A number may skip its leading zero: `fill .95`.
 
 ### Greek letters and Unicode
 
@@ -213,7 +225,7 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 | `name.local`, `name.param` | Reach into an instance from anywhere in the file. |
 
 - **Parameters** are pasted in as text (bracketed when needed), so they cost no Desmos variables. A string argument works where a string goes: `P . label text`.
-- **Abstract parameters** are real variables instead: `component Spring(A, B, abstract coils = 8 [1 : 20])` gives every instance its own `coils` variable (a slider you can drag, with those bounds), and the body refers to it. Use one when you want to tweak a value per instance in Desmos, or when the argument is a big expression you'd rather compute once than paste into every line. A value that isn't a plain number is kept as a hidden variable. `s1.coils` reads it.
+- **Abstract parameters** are real variables instead: `component Spring(A, B, abstract coils = 8 [1 : 20])` gives every instance its own `coils` variable (a slider you can drag, with those bounds), and the body refers to it. Use one when you want to tweak a value per instance in Desmos, or when the argument is a big expression you'd rather compute once than paste into every line. A value that isn't a plain number is kept as a hidden variable. `s1.coils` reads it. In a list instance, each copy gets its own value, like a local.
 - **Locals** are the names a body defines (`d = ...`, `f(u) = ...`). Each instance gets its own copy under a Desmos name the compiler picks, such as `d_s1`. The name never clashes with anything else in the file; if `d_s1` is taken, it becomes `d_s1x`. Write `s1.d` and let the compiler worry about the spelling.
 - `x =` and `y =` lines draw curves, as everywhere else, so they are not locals. `r =` is a polar curve too (`r = 5` is a circle), unless another line of the same body uses `r`: with `r = s` and `x^2 + y^2 = r^2`, `r` is a local, a radius.
 - Sliders and click actions inside a body belong to each instance: `k = 1 [0 : 5]` gives every instance its own slider, and `click(n -> n + 1)` updates that instance's `n`.
@@ -307,6 +319,7 @@ p = 2
 | --- | --- |
 | `[min : max]` | `slider: @{ min, max, step: 0 }` |
 | `[min : max : step]` | `slider: @{ min, max, step }` |
+| `[ : max]`, `[min : ]` | one bound only; Desmos keeps its default for the other |
 | `play` | `slider: @{ playing: true }` |
 | `loop` `bounce` `once` `forever` | `loopMode: "LOOP_FORWARD"` / `"LOOP_FORWARD_REVERSE"` / `"PLAY_ONCE"` / `"PLAY_INDEFINITELY"` |
 | `reverse` | `reversed: true` |
@@ -402,8 +415,12 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 | an item you added in Desmos | its math and any styling, without Desmos's automatic colour |
 | a graph made without TMC++ | every item with its colours (including colour variables, as `#(c_1)`), fills and other styling |
 | a deleted item that had comments | the comments, at the end under `// orphaned comments` |
+| a parametric's or polar curve's range (`t` from 0 to 360) | a raw block: `@{ domain: @{ min: 0, max: 360 } }` |
+| a table, image or value TMC++ can't convert | skipped with a warning and a `// (left out: ...)` comment, never failing the whole rebuild |
 
 `settings` lines come back as written, so panning or zooming in Desmos doesn't change your source. Comments are placed above the item they belonged to.
+
+Component instances come back as their expanded folders for now; giving back the `new ... as ...` lines is milestone M8.
 
 ## Errors and warnings
 
@@ -420,7 +437,14 @@ Every message names the TMC++ line. Common ones:
 | `segment() takes two points` / `path() takes one list of points` | wrong number of arguments |
 | `'label' needs a string` | write `label "text"` |
 | `q is defined on line N, so this is drawn as the curve ...` (warning) | the level-curve rewrite happened |
+| `Unknown component 'Sprin' (did you mean 'Spring'?)` | component not defined |
+| `Missing argument 'B' for Spring` / `Spring takes 3 arguments, got 4` | check the call against the definition |
+| `s1 (a Spring) has no member 'dd'` | `s1.dd`: no local or parameter of that name |
+| `A uses B uses A: a component can't contain itself` | components may nest, but not in a loop |
+| `Unknown keyword 'compoment' (did you mean 'component'?)` | misspelt keyword |
 | `TMC: ...` (extension) | DesModder's parser rejected the compiled line |
+
+In the extension, **Copy all** at the top of the message list copies every message with its source line.
 
 ## Cheat sheet
 
@@ -441,4 +465,15 @@ y = k sin(x + a)          .ink
 1 < x^2 + y^2 < 4         .glow
 (0, k) #red point 10 drag y label "k = ${k}" above
 segment((0, 0), (0, k))   . dotted
+y = 2x {0 < x < 1}        // a restriction
+r = 2 + cos(3θ)           // Greek, typed or by name
+
+// components
+component Dot(P, abstract n = 0) {
+  P . point 12 click(n -> n + 1) label "${n}"
+}
+new Dot((2, 1)) as d1
+new Dot((4, 1), n = 5) as d2  . #red
+total_clicks = d1.n + d2.n
+new Dot((i, -3)) for i = [1...5] as row   // five dots in one folder of lists, each with its own n
 ```

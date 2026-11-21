@@ -1,6 +1,6 @@
 # TMC with Classes (TMC++)
 
-**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels and slider shorthand, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
+**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand and reusable components, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
 
 The name is a nod to C++, which started life as "C with Classes".
 
@@ -32,7 +32,7 @@ Requires Node 22+.
 
 ```sh
 npm install
-npm test                                  # 90 tests, including DesModder's real parser
+npm test                                  # 200 tests, including DesModder's real parser
 node src/cli.js examples/sunset.tmcpp     # print TMC, or errors with line numbers
 node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModder's parser
 ```
@@ -162,9 +162,9 @@ The compiler (`src/compile.js`) is a line-based preprocessor; all math parsing i
 The npm release of text-mode-core (0.1.1) is older than the DesModder extension. `npm test` and `tools/check.js` therefore reject a few things the extension accepts, and the bundled extension inherits the same limits:
 
 - `|x|` absolute value: use `abs(x)`
-- `{y > 0}` restrictions: use a piecewise, such as `r < {y > 0: 0.9, -1}`
 - regression parameter blocks `# { ... }`
 - the `id` style option (TMC++ assigns ids itself)
+- Greek letters other than `alpha beta theta phi pi tau`, and restrictions like `y = x {x > 0}`: TMC++ handles both itself (see the syntax reference), so they only matter if you write plain TMC
 
 ## Roadmap
 

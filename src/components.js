@@ -14,11 +14,16 @@
 import { desmosName } from "./implicit.js";
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
-// x and y on the left of `=` draw a curve (y = x^2); they are never locals. r is a polar curve
-// only when its right side uses θ (r = 1 + cos(θ)); otherwise `r = s` is a local, a radius.
+// x and y on the left of `=` draw a curve (y = x^2); they are never locals. `r = ...` is a polar
+// curve (r = 5 is a circle) unless another line of the same body uses r, as in
+// `r = s` + `x^2 + y^2 = r^2`: then r is a local, a radius. With theta it is always polar.
 const CURVE_VARS = new Set(["x", "y"]);
-const isCurve = (a, text) => CURVE_VARS.has(a.name) ||
-  (a.name === "r" && !a.args.length && /θ|\btheta\b/.test(text.slice(text.indexOf("=") + 1)));
+const isCurve = (a, b, body) => {
+  if (CURVE_VARS.has(a.name)) return true;
+  if (a.name !== "r" || a.args.length) return false;
+  if (/\btheta\b/.test(b.text.slice(b.text.indexOf("=") + 1))) return true;
+  return !body.some((o) => o !== b && identifiers(o.text).includes("r"));
+};
 const MISSPELT = /^(compoment|componet|compnent|componnet|comp)\s+[A-Za-z]/;
 const FORBIDDEN_IN_BODY = /^(component|folder|table|class|color|settings|ticker|image)\b/;
 
@@ -241,7 +246,7 @@ export function expandComponents(statements, errors, warnings) {
         continue;
       }
       const a = assigned(b.text);
-      if (!a || isCurve(a, b.text)) continue;
+      if (!a || isCurve(a, b, body)) continue;
       if (owned(a.name)) {
         errors.push({ line: b.line, message: owned(a.name) === "a parameter"
           ? `'${a.name}' is a parameter of ${name}; give the local another name`
@@ -414,7 +419,7 @@ export function expandComponents(statements, errors, warnings) {
       if (tails.length) text += " " + tails.join(" ");
       out.push({ text, line: b.line, comments: [...b.comments], instance: topKey });
       const a = assigned(b.text);
-      if (!a || isCurve(a, b.text)) {
+      if (!a || !inst.comp.locals.has(a.name)) {
         const key = `${inst.comp.name}#${k}`;
         if (!seenDrawn.has(key)) seenDrawn.set(key, new Map());
         const label = inst.key === topKey ? inst.title : `${inst.title} (${inst.key})`;

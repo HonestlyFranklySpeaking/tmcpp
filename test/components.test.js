@@ -162,11 +162,12 @@ test("warning: two instances drawing the same thing on top of each other", () =>
   assert.equal(warns(`component C(i) {\n  m = 0\n  y = i\n}\nnew C(1) as p\nnew C(2) as q`), "");
 });
 
-test("r is a local (a radius) unless its right side uses θ", () => {
+test("r is a polar curve unless another line of the body uses it", () => {
   const tmc = ok(`component Ring(s) {\n  r = s\n  x^2 + y^2 = r^2\n}\nnew Ring(1) as inner\nnew Ring(2) as outer`);
   assert.match(tmc, /^r_inner = 1;\nx\^2 \+ y\^2 = r_inner\^2;/m);
   assert.match(tmc, /^r_outer = 2;/m);
   assert.match(ok(`component Rose(k) {\n  r = cos(k * theta)\n}\nnew Rose(3) as a`), /^r = cos\(3 \* theta\);/m);
+  assert.match(ok(`component Circle(s) {\n  r = s\n}\nnew Circle(5) as c`), /^r = 5;/m);
 });
 
 test("a misspelt keyword is reported, and the body still parses as a component", () => {

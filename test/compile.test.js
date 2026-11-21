@@ -463,3 +463,7 @@ test("click actions: click(...) and click-label", () => {
   assert.equal(ok("polygon(B) . click(a -> a + 1, b -> 0)"), "polygon(B) @{ onClick: (a -> a + 1, b -> 0) };");
   assert.match(errs("polygon(B) . click(a -> 1"), /Unclosed click action/);
 });
+
+test("a number written without its leading zero (.95) after fill/opacity is a number, not a class", () => {
+  assert.equal(ok("y = x . opacity .5 fill .95"), "y = x @{ lines: @{ opacity: 0.5 }, fill: 0.95 };");
+});

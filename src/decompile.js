@@ -82,7 +82,7 @@ function sliderView(s) {
 /** A value as a token argument: numbers as-is, LaTeX expressions as no-space TMC text. */
 function valueText(v, latexToText) {
   const s = String(v);
-  if (/^-?\d*\.?\d+$/.test(s)) return s;
+  if (/^-?\d*\.?\d+$/.test(s)) return s.replace(/^(-?)\./, "$10"); // .95 -> 0.95
   try { return latexToText(s).replace(/\s+/g, ""); } catch { return s; }
 }
 

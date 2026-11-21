@@ -246,7 +246,8 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
   // A number, or an expression written without spaces (e.g. 0.9*(1-t)).
   const num = (i, name) => {
     const v = tokens[i + 1];
-    const looksLikeToken = v !== undefined && (/^[.#"]/.test(v) || VOCAB.includes(v.toLowerCase()));
+    // `.95` after a number-taking word is a number (Desmos writes opacities that way), not a class.
+    const looksLikeToken = v !== undefined && !/^-?\.\d/.test(v) && (/^[.#"]/.test(v) || VOCAB.includes(v.toLowerCase()));
     if (v === undefined || looksLikeToken) {
       errors.push({ line, message: `'${name}' needs a number or a no-space expression` });
       return null;

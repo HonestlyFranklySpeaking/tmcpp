@@ -25,12 +25,14 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "build:ext": "node tools/build-ext.js"
+    "build:ext": "node tools/build-ext.js",
+    "preview": "node tools/preview.js"
   },
   "dependencies": {
     "@desmodder/text-mode-core": "0.1.1"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "playwright-core": "1.65.1"
   }
 }

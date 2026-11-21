@@ -37,6 +37,17 @@ node src/cli.js examples/sunset.tmcpp     # print TMC, or errors with line numbe
 node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModder's parser
 ```
 
+### Preview in real Desmos
+
+```sh
+npm run preview -- examples/glass-choir.tmcpp                          # one frame -> glass-choir.preview.png
+npm run preview -- examples/glass-choir.tmcpp --at a=1.2 d=-0.5        # set sliders first
+npm run preview -- examples/glass-choir.tmcpp --sweep a=0..2pi/9       # 9 frames of a loop as a contact sheet
+npm run preview -- examples/hello.tmcpp --sweep s=0..=1/5 --out hello.png   # ..= includes the end value
+```
+
+The parser only proves the equations are valid; the preview shows the composition, such as a moving shape crossing a title at some slider values. It renders with Desmos itself (`Calc.asyncScreenshot`) in your installed Chrome or Edge, headless, so it needs internet access to desmos.com but no extra browser download. Add `--show` to watch it, `--width` and `--cols` to size the output.
+
 Paste the printed TMC into DesModder's Text Mode (the T button above the expression list), or use the extension below.
 
 ## Browser extension

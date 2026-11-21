@@ -1,6 +1,7 @@
 // TMC++ panel for desmos.com/calculator. Runs in the page (MAIN world) so it can use Calc and Desmos.
 import { buildConfigFromGlobals, textToRaw } from "@desmodder/text-mode-core";
 import { compile } from "../../src/compile.js";
+import { decodeSource } from "../../src/decode.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
@@ -173,7 +174,7 @@ function mount(Calc, Desmos) {
       report([{ line: 1, kind: "err", message: `${file.name} is over 2 MB; that's too big for a graph source` }], "");
       return;
     }
-    src.value = (await file.text()).replace(/\r\n/g, "\n");
+    src.value = decodeSource(await file.arrayBuffer());
     localStorage.setItem(STORE(), src.value);
     hasLocalSource = true;
     run();

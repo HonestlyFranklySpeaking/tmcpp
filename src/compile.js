@@ -3,6 +3,7 @@
 
 import { implicitMultiply } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
+import { rewriteDoubleInequality, rewriteRedefinition, functionDefs } from "./rewrite.js";
 
 const NAMED_COLORS = {
   red: "RED", blue: "BLUE", green: "GREEN",
@@ -368,6 +369,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     applyTokens(def.tokens, {}, { classes, errors, warnings: [], line: def.line });
   }
 
+  const fnDefs = functionDefs(statements.filter((st) => !st.skip));
   const out = [], lineMap = [];
   // One entry per graph item, in emission order: what the metadata note remembers about it.
   const items = [];
@@ -494,7 +496,8 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
       if (parts.length < 2 || parts.length > 3 || parts.some((p) => p === "")) {
         errors.push({ line, message: "Slider bounds must be [min : max] or [min : max : step]" });
       } else {
-        style.slider = { min: parts[0], max: parts[1], step: parts[2] ?? "0" };
+        const [lo, hi, step = "0"] = parts.map((p) => implicitMultiply(p));
+        style.slider = { min: lo, max: hi, step };
       }
     }
 
@@ -506,6 +509,12 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS } = {}) {
     if (stray) {
       errors.push({ line, message: `Style word '${stray[1]}' is inside the math; start the style tail with '.' (e.g. '. ${stray[1]} ...')` });
     }
+    const dbl = rewriteDoubleInequality(math);
+    if (dbl.error) errors.push({ line, message: dbl.error });
+    else math = dbl.math;
+    const redef = rewriteRedefinition(math, line, fnDefs);
+    if (redef.note) warnings.push({ line, message: redef.note });
+    math = redef.math;
     math = implicitMultiply(math);
     let rawInner = null;
     try { [tail, rawInner] = splitRaw(tail); }

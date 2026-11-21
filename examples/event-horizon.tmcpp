@@ -14,7 +14,7 @@ class caption { #bdd0df point 0 label-size 0.8 no-outline }
 
 "EVENT HORIZON | An impossible postcard from the edge of spacetime."
 folder "Flight controls" {
-  a = 0.7 [0 : 6.28318530718 : 0.01] . play loop 24s
+  a = 0.7 [0 : 2pi : 0.01] . play loop 24s
   b = 0.29 [0.18 : 0.48 : 0.01]
   "a: orbit animation. b: tilt of the accretion disk. All artwork is equations."
 }

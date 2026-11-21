@@ -316,3 +316,45 @@ test("point style, point opacity and item flags", () => {
 test("settings no-grid and lock", () => {
   assert.match(ok("settings no-grid lock\ny = x", {}), /showGrid: false, lockViewport: true \};/);
 });
+
+test("slider bounds take natural math like 2pi", () => {
+  assert.equal(ok("a = 0.7 [0 : 2pi : 0.01]"), "a = 0.7 @{ slider: @{ min: 0, max: 2 * pi, step: 0.01 } };");
+  assert.equal(ok("a = 1 [-pi : pi]"), "a = 1 @{ slider: @{ min: -pi, max: pi, step: 0 } };");
+});
+
+test("unsolved double inequalities become max(...) < 0", () => {
+  assert.equal(ok("2.49 < r(x,y) < 2.98"), "max(2.49 - (r(x,y)), (r(x,y)) - 2.98) < 0;");
+  assert.equal(ok("1 <= x^2 + y^2 <= 4"), "max(1 - (x^2 + y^2), (x^2 + y^2) - 4) <= 0;");
+  assert.equal(ok("4 > r > 1"), "max(1 - r, r - 4) < 0;");
+  assert.equal(ok("0.34 < q(x,y) < {v(x,y) < 0: 1.03, 0}"),
+    "max(0.34 - (q(x,y)), (q(x,y)) - ({v(x,y) < 0: 1.03, 0})) < 0;");
+});
+
+test("solved double inequalities are left for Desmos", () => {
+  assert.equal(ok("-x < y < x"), "-x < y < x;");
+  assert.equal(ok("1 < x < 4"), "1 < x < 4;");
+});
+
+test("mixed-direction double inequality is an error", () => {
+  assert.match(errs("1 < r > 2"), /must point one way/);
+});
+
+test("f(x,y) = list after f is defined draws curves instead of redefining", () => {
+  const r = compile("q(x,y) = x^2 + y^2\nq(x,y) = [1, 4]", { defaultSettings: {} });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.tmc, "q(x,y) = x^2 + y^2;\nq(x,y) - ([1, 4]) = 0;");
+  assert.match(r.warnings[0].message, /q is defined on line 1/);
+});
+
+test("update rules are not comparisons", () => {
+  assert.equal(ok("a -> a + 1"), "a -> a + 1;");
+});
+
+test("sources decode from UTF-8, UTF-8 with BOM and UTF-16 (PowerShell)", async () => {
+  const { decodeSource } = await import("../src/decode.js");
+  const text = "y = x // ok\r\nb = 2";
+  const want = "y = x // ok\nb = 2";
+  assert.equal(decodeSource(Buffer.from(text, "utf8")), want);
+  assert.equal(decodeSource(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text, "utf8")])), want);
+  assert.equal(decodeSource(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")])), want);
+});

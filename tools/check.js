@@ -5,9 +5,10 @@
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
 import { readFileSync } from "node:fs";
 import { compile } from "../src/compile.js";
+import { decodeSource } from "../src/decode.js";
 
 const path = process.argv[2];
-let tmc = readFileSync(path, "utf8");
+let tmc = decodeSource(readFileSync(path));
 if (path.endsWith(".tmcpp")) {
   const r = compile(tmc);
   for (const e of r.errors) console.error(`${path}:${e.line}: tmc++ error: ${e.message}`);

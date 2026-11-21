@@ -2,7 +2,7 @@ settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7.5, ymax: 7.5 }, degreeMod
 
 "EVENT HORIZON | An impossible postcard from the edge of spacetime.";
 folder "Flight controls" {
-a = 0.7 @{ slider: @{ min: 0, max: 6.28318530718, step: 0.01, playing: true, loopMode: "LOOP_FORWARD", period: 24000 } };
+a = 0.7 @{ slider: @{ min: 0, max: 2 * pi, step: 0.01, playing: true, loopMode: "LOOP_FORWARD", period: 24000 } };
 b = 0.29 @{ slider: @{ min: 0.18, max: 0.48, step: 0.01 } };
 "a: orbit animation. b: tilt of the accretion disk. All artwork is equations.";
 };

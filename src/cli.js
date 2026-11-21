@@ -2,9 +2,10 @@
 // Usage: node src/cli.js graph.tmcpp   (or pipe source on stdin)
 import { readFileSync } from "node:fs";
 import { compile } from "./compile.js";
+import { decodeSource } from "./decode.js";
 
 const path = process.argv[2];
-const source = readFileSync(path ?? 0, "utf8");
+const source = decodeSource(readFileSync(path ?? 0));
 const { tmc, errors, warnings } = compile(source);
 const name = path ?? "<stdin>";
 

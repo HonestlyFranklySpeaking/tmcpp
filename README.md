@@ -65,6 +65,9 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 - `//` comments are allowed anywhere and are never sent to TMC.
 - Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls, keywords, `sum`/`product`/`integral` bodies and `(d/d x)` are left alone, and `.5` becomes `0.5`.
 - Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
+- Double inequalities work on anything: Desmos only draws `a < f < b` when `f` is `x` or `y`, so TMC++ rewrites the rest to `max(a - f, f - b) < 0`. `2.49 < r(x,y) < 2.98` draws a ring, and the bounds can be piecewise.
+- Drawing level curves of a function you defined just works: `q(x,y) = [0.5, 0.6]` after `q(x,y) = ...` would redefine `q` in Desmos, so it becomes `q(x,y) - ([0.5, 0.6]) = 0` (with a warning saying so).
+- Files can be UTF-8 or UTF-16 (what Windows PowerShell's `>` writes).
 
 ### Style tails
 
@@ -94,7 +97,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `label "text"` | label; `${p}` interpolation passes through |
 | `above` `below-left` `right` ... | label position (all 16 Desmos orientations, hyphenated) |
 | `label-size N`, `label-angle N`, `no-outline`, `hover`, `editable`, `editable-math` | label options |
-| `[min : max]`, `[min : max : step]` | slider bounds (go right after the math) |
+| `[min : max]`, `[min : max : step]` | slider bounds (go right after the math); bounds are math, so `[0 : 2pi]` works |
 | `play`, `loop` `bounce` `once` `forever`, `reverse`, `40s` `500ms` | slider playback |
 | `@{ ... }` | raw TMC style, merged in last |
 

@@ -213,6 +213,7 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 | `name.local`, `name.param` | Reach into an instance from anywhere in the file. |
 
 - **Parameters** are pasted in as text (bracketed when needed), so they cost no Desmos variables. A string argument works where a string goes: `P . label text`.
+- **Abstract parameters** are real variables instead: `component Spring(A, B, abstract coils = 8 [1 : 20])` gives every instance its own `coils` variable (a slider you can drag, with those bounds), and the body refers to it. Use one when you want to tweak a value per instance in Desmos, or when the argument is a big expression you'd rather compute once than paste into every line. A value that isn't a plain number is kept as a hidden variable. `s1.coils` reads it.
 - **Locals** are the names a body defines (`d = ...`, `f(u) = ...`). Each instance gets its own copy under a Desmos name the compiler picks, such as `d_s1`. The name never clashes with anything else in the file; if `d_s1` is taken, it becomes `d_s1x`. Write `s1.d` and let the compiler worry about the spelling.
 - `x =` and `y =` lines draw curves, as everywhere else, so they are not locals. `r =` is a polar curve too (`r = 5` is a circle), unless another line of the same body uses `r`: with `r = s` and `x^2 + y^2 = r^2`, `r` is a local, a radius.
 - Sliders and click actions inside a body belong to each instance: `k = 1 [0 : 5]` gives every instance its own slider, and `click(n -> n + 1)` updates that instance's `n`.

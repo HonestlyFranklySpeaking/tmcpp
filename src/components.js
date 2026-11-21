@@ -252,11 +252,17 @@ export function expandComponents(statements, errors, warnings) {
 
     const params = [];
     for (const p of splitArgs(paramText)) {
-      const pm = p.match(/^([A-Za-z][A-Za-z0-9_]*)\s*(?:=\s*(.+))?$/);
+      // `abstract coils = 8`: a real Desmos variable per instance, not text pasted into the body.
+      const abstract = /^abstract\s+/.test(p);
+      const pm = p.replace(/^abstract\s+/, "").match(/^([A-Za-z][A-Za-z0-9_]*)\s*(?:=\s*(.+))?$/);
       if (!pm) { errors.push({ line: st.line, message: `Malformed parameter '${p}'` }); continue; }
       if (pm[1] === "x" || pm[1] === "y") errors.push({ line: st.line, message: `A parameter can't be named '${pm[1]}' (it would clash with P.${pm[1]})` });
       if (params.some((q) => q.name === pm[1])) errors.push({ line: st.line, message: `Parameter '${pm[1]}' is listed twice` });
-      params.push({ name: pm[1], default: pm[2]?.trim() });
+      // abstract coils = 8 [1 : 20]: the bounds belong to the parameter, whatever value is passed.
+      let def = pm[2]?.trim(), bounds = "";
+      const bm = abstract && def?.match(/^(.*\S)\s+(\[[^\[\],]*:[^\[\],]*\])$/);
+      if (bm) { def = bm[1]; bounds = ` ${bm[2]}`; }
+      params.push({ name: pm[1], default: def, abstract, bounds });
     }
 
     const locals = new Map();   // name -> body line
@@ -398,6 +404,16 @@ export function expandComponents(statements, errors, warnings) {
         inst.list.defs.push(`${name} = [${arg} for ${forText}]`);
       }
     }
+    // Abstract parameters become one variable per instance: c_oilss1 = 8. (In a list instance, one
+    // that uses the loop is already a hidden list above.)
+    inst.abstractDefs = [];
+    for (const p of comp.params) {
+      if (!p.abstract || inst.names.has(p.name)) continue;
+      const name = allocate(p.name, suffix);
+      inst.names.set(p.name, name);
+      const value = bound.get(p.name);
+      inst.abstractDefs.push(`${name} = ${value}` + (/^-?\d*\.?\d+$/.test(value.trim()) ? p.bounds : " . hidden"));
+    }
     for (const local of comp.locals.keys()) inst.names.set(local, allocate(local, suffix));
     const anon = new Map();
     comp.body.forEach((b, k) => {
@@ -487,6 +503,7 @@ export function expandComponents(statements, errors, warnings) {
   };
 
   const emitBody = (inst, outer, topKey) => {
+    for (const def of inst.abstractDefs ?? []) out.push({ text: def, line: inst.line, comments: [], instance: topKey });
     inst.comp.body.forEach((b, k) => {
       if (b.nested) {
         const child = inst.nested.get(k);

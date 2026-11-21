@@ -286,3 +286,28 @@ test("errors: list instances inside components, of nesting components, and list 
   assert.match(errs(`component L(i) {\n  q = [1, 2, 3]\n  y = i\n}\nnew L(i) for i = [1...3]`), /no lists of lists/);
   assert.match(errs(`${CELL}\nnew Cell(1, 2) for as c`), /Expected 'for name = \[list\]'/);
 });
+
+// ---------- abstract parameters ----------
+
+test("an abstract parameter is a real variable per instance, not pasted text", () => {
+  const tmc = ok(`component Spring(A, B, abstract coils = 8 [1 : 20], abstract w = (0, 1)) {
+  (1 - t) * A + t * B + sin(2 * pi * coils * t) * w * 0.1
+}
+new Spring((0, 0), (4, 1)) as s1
+new Spring((0, 2), (4, 3), coils = 12) as s2
+k = s1.coils + s2.coils`);
+  assert.match(tmc, /^c_oilss1 = 8 @\{ slider: @\{ min: 1, max: 20, step: 0 \} \};/m); // a slider with its bounds
+  assert.match(tmc, /^c_oilss2 = 12 @\{ slider: @\{ min: 1, max: 20/m);                // the passed value, same bounds
+  assert.match(tmc, /^w_s1 = \(0, 1\) @\{ hidden: true \};/m);                         // not a number: hidden
+  assert.match(tmc, /sin\(2 \* pi \* c_oilss1 \* t\) \* w_s1/);
+  assert.match(tmc, /^k = c_oilss1 \+ c_oilss2;/m);
+});
+
+test("abstract parameters work in list instances and nested components", () => {
+  const list = ok(`component D(i, abstract r = 0.4) {\n  (x - i)^2 + y^2 < r^2\n}\nnew D(i) for i = [1...5] as ds`);
+  assert.match(list, /^r_ds = 0\.4;/m);
+  assert.match(list, /< r_ds\^2/);
+  const nested = ok(`component In(abstract a = 1) {\n  y = a\n}\ncomponent Out(b) {\n  new In(b + 1) as i\n}\nnew Out(2) as o\nq = o.i.a`);
+  assert.match(nested, /^a_oi = 2 \+ 1 @\{ hidden: true \};/m);
+  assert.match(nested, /^q = a_oi;/m);
+});

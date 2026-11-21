@@ -86,7 +86,7 @@ export function assignIds(state, items) {
  * Build the metadata object from a compile result and the state as Desmos holds it
  * (read back with Calc.getState() after setState, so hashes match what M4 will see).
  */
-export function buildMeta(compiled, list) {
+export function buildMeta(compiled, list, ticker = null) {
   const byId = new Map();
   for (const e of list) {
     byId.set(e.id, e);
@@ -100,6 +100,10 @@ export function buildMeta(compiled, list) {
     if (it.tags?.length) entry.tags = it.tags;
     if (it.tail) entry.tail = it.tail;
     if (it.comments?.length) entry.comments = it.comments;
+    if (it.math !== undefined && typeof e.latex === "string") {
+      entry.m = it.math;          // the math exactly as written
+      entry.lh = fnv1a(e.latex);  // ...valid while Desmos's LaTeX still hashes to this
+    }
     entry.sh = styleHash(e);
     exprs[id] = entry;
   };
@@ -110,7 +114,15 @@ export function buildMeta(compiled, list) {
   });
   const classes = {};
   for (const [name, def] of compiled.classes) classes[name] = def.tokens.join(" ");
-  return { v: 1, classes, exprs, graph: graphHash(list) };
+  const colors = {};
+  for (const [name, def] of compiled.colors ?? []) colors[name] = def.hex;
+  const meta = { v: 1, classes, exprs, graph: graphHash(list) };
+  if (Object.keys(colors).length) meta.colors = colors;
+  if (compiled.settingsSource?.length) meta.settings = compiled.settingsSource;
+  if (compiled.tickerSource && ticker?.handlerLatex) {
+    meta.ticker = { src: compiled.tickerSource, lh: fnv1a(`${ticker.handlerLatex}|${ticker.minStepLatex ?? ""}`) };
+  }
+  return meta;
 }
 
 export const metaText = (meta) => `${META_HEADER}\n${JSON.stringify(meta)}`;

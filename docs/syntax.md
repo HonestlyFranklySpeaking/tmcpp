@@ -269,6 +269,21 @@ Every `settings` line merges over the previous ones, key by key, starting from a
 - A watermark: a `randomSeed` starting with `544d432b2b` ("TMC++" in ASCII hex), unless you set `randomSeed` yourself. The same source always gets the same seed.
 - In the extension only: stable item ids (`t1`, `t2`, ...) and a hidden metadata note that records classes, tags, tails, comments and hashes.
 
+### Rebuilding source from a graph
+
+The extension's **From graph** button turns a graph back into TMC++, using the metadata note:
+
+| In the graph | Comes back as |
+| --- | --- |
+| a line you haven't touched | exactly what you wrote (math and tail) |
+| a line you restyled in Desmos | its classes plus only what changed, e.g. `.curve width 5` |
+| math you edited in Desmos | the new math converted to TMC, with your tail |
+| a slider whose bounds you changed | regenerated `[min : max : step]` and playback tokens |
+| an item you added in Desmos | its math and any styling, without Desmos's automatic colour |
+| a deleted item that had comments | the comments, at the end under `// orphaned comments` |
+
+`settings` lines come back as written, so panning or zooming in Desmos doesn't change your source. Comments are placed above the item they belonged to.
+
 ## Errors and warnings
 
 Every message names the TMC++ line. Common ones:

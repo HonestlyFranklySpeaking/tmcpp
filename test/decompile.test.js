@@ -1,0 +1,139 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { compile } from "../src/compile.js";
+import { assignIds, buildMeta, metaItem } from "../src/meta.js";
+import { decompile } from "../src/decompile.js";
+import { latexToTmc } from "../src/latex.js";
+
+// What Desmos does on load (measured in live Desmos): drop false/empty defaults.
+function desmosLoad(state) {
+  for (const e of state.expressions.list) {
+    for (const k of ["secret", "hidden", "displayEvaluationAsFraction", "suppressTextOutline", "interactiveLabel"]) if (e[k] === false) delete e[k];
+    for (const k of ["regressionParameters", "vizProps"]) if (e[k] && !Object.keys(e[k]).length) delete e[k];
+    if (e.slider) {
+      delete e.slider.playDirection;
+      if (e.slider.hardMin === false && e.slider.hardMax === false && e.slider.min === undefined) delete e.slider;
+    }
+  }
+  return state;
+}
+
+/** Compile like the extension does and return the graph state Desmos would hold, plus a LaTeX->text stub. */
+function graph(src) {
+  const r = compile(src);
+  assert.deepEqual(r.errors, []);
+  const [{ diagnostics }, state] = textToRaw(buildConfig({}), r.tmc);
+  assert.deepEqual(diagnostics, []);
+  assert.ok(assignIds(state, r.items));
+  desmosLoad(state);
+  state.expressions.list.unshift(metaItem(buildMeta(r, state.expressions.list, state.expressions.ticker)));
+  const latexToText = latexToTmc;
+  return { state, latexToText, item: (latex) => state.expressions.list.find((e) => e.latex === latex) };
+}
+
+const SRC = `color sea #2d70b3
+class curve { #c74440 dashed width 3 }
+
+"A note"
+
+folder "Controls" collapsed {
+  // the amplitude
+  a = 2  [0 : 5 : 0.1]
+}
+
+y = a sin(x)  .curve
+y = cos(x)  #sea width 4   // the second curve
+(0, a)  #green point 9 label "top" above
+`;
+
+test("an untouched graph comes back as written", () => {
+  const { state, latexToText } = graph(SRC);
+  const { source, fromMeta, warnings } = decompile(state, { latexToText });
+  assert.ok(fromMeta);
+  assert.deepEqual(warnings, []);
+  for (const line of ["color sea #2d70b3", "class curve { #c74440 dashed width 3 }", '"A note"',
+    'folder "Controls" collapsed {', "  // the amplitude", "  a = 2  [0 : 5 : 0.1]",
+    "y = a sin(x)  .curve", "y = cos(x)  #sea width 4", '(0, a)  #green point 9 label "top" above']) {
+    assert.ok(source.split("\n").includes(line), `missing line: ${line}\n---\n${source}`);
+  }
+  assert.match(source, /\/\/ the second curve\ny = cos\(x\)/);
+});
+
+test("the rebuilt source compiles to the same graph", () => {
+  const { state, latexToText } = graph(SRC);
+  const { source } = decompile(state, { latexToText });
+  const strip = (t) => t.split("\n").filter((l) => !l.startsWith("settings")).join("\n");
+  assert.equal(strip(compile(source).tmc), strip(compile(SRC).tmc));
+});
+
+test("restyled in Desmos: classes stay, only the change is inline", () => {
+  const { state, latexToText, item } = graph(SRC);
+  item("y=a\\cdot \\operatorname{sin}\\left(x\\right)").lineWidth = "5";
+  assert.match(decompile(state, { latexToText }).source, /^y = a sin\(x\)  \.curve width 5$/m);
+});
+
+test("a class property reset to the Desmos default comes back as that default", () => {
+  const { state, latexToText, item } = graph(SRC);
+  delete item("y=a\\cdot \\operatorname{sin}\\left(x\\right)").lineStyle; // dashed -> solid
+  assert.match(decompile(state, { latexToText }).source, /^y = a sin\(x\)  \.curve solid$/m);
+});
+
+test("a recoloured line uses the palette name when there is one", () => {
+  const { state, latexToText, item } = graph(SRC);
+  item("y=a\\cdot \\operatorname{sin}\\left(x\\right)").color = "#2d70b3";
+  assert.match(decompile(state, { latexToText }).source, /^y = a sin\(x\)  \.curve #sea$/m);
+});
+
+test("math edited in Desmos is converted; its style survives", () => {
+  const { state, latexToText, item } = graph(SRC);
+  item("y=\\operatorname{cos}\\left(x\\right)").latex = "y=\\operatorname{cos}\\left(2\\cdot x\\right)";
+  assert.match(decompile(state, { latexToText }).source, /^y = cos\(2 \* x\)  #sea width 4$/m);
+});
+
+test("slider bounds changed in Desmos are regenerated", () => {
+  const { state, latexToText, item } = graph(SRC);
+  Object.assign(item("a=2").slider, { max: "10", step: "" });
+  assert.match(decompile(state, { latexToText }).source, /^  a = 2  \[0 : 10\]$/m);
+});
+
+test("items added in the Desmos UI come back without their automatic colour", () => {
+  const { state, latexToText } = graph(SRC);
+  state.expressions.list.push({ id: "77", type: "expression", latex: "y=x^{2}", color: "#388c46" });
+  const { source } = decompile(state, { latexToText });
+  assert.match(source, /^y = x\^2$/m);
+});
+
+test("comments of deleted items are kept at the end", () => {
+  const { state, latexToText } = graph(SRC);
+  state.expressions.list = state.expressions.list.filter((e) => e.latex !== "y=\\operatorname{cos}\\left(x\\right)");
+  const { source } = decompile(state, { latexToText });
+  assert.match(source, /orphaned comments[^\n]*\n\/\/ the second curve/);
+});
+
+test("a graph without TMC++ metadata still decompiles", () => {
+  const state = { version: 9, graph: { viewport: { xmin: -5, xmax: 5, ymin: -3, ymax: 3 }, showGrid: false },
+    expressions: { list: [{ id: "1", type: "expression", latex: "y=x", color: "#c74440", lineStyle: "DASHED" }] } };
+  const { source, fromMeta } = decompile(state, { latexToText: (l) => l.replace("=", " = ") });
+  assert.equal(fromMeta, false);
+  assert.match(source, /^settings x \[-5 : 5\] y \[-3 : 3\] no-grid$/m);
+  assert.match(source, /^y = x  \. dashed$/m);
+});
+
+import { readFileSync, readdirSync } from "node:fs";
+for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
+  test(`round trip: examples/${f} decompiles to source that compiles identically`, () => {
+    const src = readFileSync(`examples/${f}`, "utf8");
+    const { state, latexToText } = graph(src);
+    const { source, warnings } = decompile(state, { latexToText });
+    assert.deepEqual(warnings, []);
+    // Desmos keeps one ticker per graph, so its position in the file doesn't matter: compare it last.
+    const strip = (t) => {
+      const ls = t.split("\n").filter((l) => !l.startsWith("settings"));
+      return [...ls.filter((l) => !l.startsWith("ticker")), ...ls.filter((l) => l.startsWith("ticker"))].join("\n");
+    };
+    const again = compile(source);
+    assert.deepEqual(again.errors, []);
+    assert.equal(strip(again.tmc), strip(compile(src).tmc));
+  });
+}

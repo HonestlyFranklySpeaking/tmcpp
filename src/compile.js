@@ -414,6 +414,8 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const push = (text, line) => { out.push(text); lineMap.push(line); };
   const folderStack = [];
   let settings = defaultSettings;
+  const settingsLines = [];
+  let tickerSource = null;
 
   for (const st of statements) {
     if (st.skip || st.orphan) continue;
@@ -481,12 +483,14 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
 
     // Settings: merged into one block written at the top
     if (/^settings\b/.test(text)) {
+      settingsLines.push(text);
       settings = applySettings(text, settings, errors, line);
       continue;
     }
 
     // Ticker: ticker <action> [play] [2s] [@{ }]
     if (/^ticker\b/.test(text)) {
+      tickerSource = text;
       let body = text.replace(/^ticker\b/, "").trim(), tail = "";
       const tts = findTailStart(" " + body);
       if (tts !== -1) { tail = body.slice(tts - 1).trim(); body = body.slice(0, tts - 1).trim(); }
@@ -560,7 +564,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     let styled = "";
     try { styled = styleToTmc(style, rawInner); }
     catch (e) { errors.push({ line, message: e.message }); }
-    record({ kind: "expr", line, comments: st.comments, tags, tail: text.slice(mathWritten.length).trim() });
+    record({ kind: "expr", line, comments: st.comments, tags, math: mathWritten, tail: text.slice(mathWritten.length).trim() });
     push(`${math}${styled};`, line);
   }
 
@@ -577,5 +581,5 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   if (header) { out.unshift(`settings ${header};`, ""); lineMap.unshift(0, 0); }
 
   errors.sort((a, b) => a.line - b.line);
-  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, items };
+  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource };
 }

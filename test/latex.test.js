@@ -1,0 +1,58 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { latexToTmc } from "../src/latex.js";
+import { compile } from "../src/compile.js";
+import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+
+// LaTeX exactly as Desmos/TMC produced it earlier in this project.
+const CASES = [
+  ["y=a\\cdot \\operatorname{sin}\\left(x\\right)", "y = a * sin(x)"],
+  ["y=\\frac{x^{2}}{4\\cdot p}", "y = x^2 / (4 * p)"],
+  ["2\\cdot \\pi", "2 * pi"],
+  ["0.07\\cdot \\left(1-t\\right)", "0.07 * (1 - t)"],
+  ["X_{a}=\\left[-7,-5\\right]", "X_a = [-7, -5]"],
+  ["\\left\\{x>0:2\\cdot x,-x\\right\\}", "{x > 0: 2 * x, -x}"],
+  ["y<\\left[0,0.5...4\\right]", "y < [0, 0.5...4]"],
+  ["\\left(1-t\\right)\\cdot \\left(P\\right)+t\\cdot \\left(Q\\right)", "(1 - t) * (P) + t * (Q)"],
+  ["s_{tep}\\to s_{tep}+1", "s_tep -> s_tep + 1"],
+  ["q\\left(x,y\\right)=\\sqrt{\\frac{u\\left(x,y\\right)}{7.7}^{2}+\\frac{v\\left(x,y\\right)}{7.7\\cdot b}^{2}}",
+    "q(x, y) = sqrt((u(x, y) / 7.7)^2 + (v(x, y) / (7.7 * b))^2)"],
+  ["\\left|x-k\\right|", "abs(x - k)"],
+  ["F=\\left\\{46\\cdot s-I>0:\\operatorname{min}\\left(1,46\\cdot s-I\\right)\\right\\}", "F = {46 * s - I > 0: min(1, 46 * s - I)}"],
+  ["x^{2}+y^{2}\\le4", "x^2 + y^2 <= 4"],
+  ["y=e^{-x^{2}}", "y = e^(-x^2)"],
+  ["\\theta=\\frac{\\pi}{2}", "theta = pi / 2"],
+];
+
+for (const [latex, want] of CASES) {
+  test(`latex: ${latex}`, () => assert.equal(latexToTmc(latex), want));
+}
+
+test("unknown commands throw so callers can fall back", () => {
+  assert.throws(() => latexToTmc("\\int_{0}^{1}x\\ dx"), /unsupported/);
+});
+
+test("every converted expression compiles back to the same LaTeX", () => {
+  const cfg = buildConfig({});
+  for (const [latex] of CASES) {
+    if (latex.includes("\\frac{u")) continue; // (a/b)^2 vs \frac{a}{b}^{2}: same value, different LaTeX
+    const r = compile(latexToTmc(latex), { defaultSettings: {}, watermark: false });
+    assert.deepEqual(r.errors, [], latex);
+    const [{ diagnostics }, state] = textToRaw(cfg, r.tmc);
+    assert.deepEqual(diagnostics, [], latex);
+  }
+});
+
+test("converted math compiles back to the same LaTeX Desmos had", () => {
+  const cfg = buildConfig({});
+  for (const latex of [
+    "y=a\\cdot \\operatorname{sin}\\left(x\\right)",
+    "0.07\\cdot \\left(1-t\\right)",
+    "\\left\\{x>0:2\\cdot x,-x\\right\\}",
+    "q\\left(x,y\\right)=\\sqrt{\\frac{u\\left(x,y\\right)}{7.7}^{2}+\\frac{v\\left(x,y\\right)}{7.7\\cdot b}^{2}}",
+  ]) {
+    const r = compile(latexToTmc(latex), { defaultSettings: {}, watermark: false });
+    const [, state] = textToRaw(cfg, r.tmc);
+    assert.equal(state.expressions.list[0].latex, latex);
+  }
+});

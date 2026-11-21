@@ -1,5 +1,7 @@
 // TMC++ panel for desmos.com/calculator. Runs in the page (MAIN world) so it can use Calc and Desmos.
-import { buildConfigFromGlobals, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfigFromGlobals, textToRaw, rawToText } from "@desmodder/text-mode-core";
+import { decompile } from "../../src/decompile.js";
+import { latexToTmc } from "../../src/latex.js";
 import { compile, isWatermarkSeed } from "../../src/compile.js";
 import { decodeSource } from "../../src/decode.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
@@ -46,6 +48,7 @@ function mount(Calc, Desmos) {
   panel.id = "tmcpp-panel";
   panel.innerHTML = `
     <div id="tmcpp-head"><b>TMC++</b>
+      <button class="ghost" id="tmcpp-fromgraph" title="Rebuild TMC++ from the graph as it is now, including edits made in Desmos">From graph</button>
       <button class="ghost" id="tmcpp-open" title="Open a .tmcpp file (or drop one on the editor)">Open</button>
       <button class="ghost" id="tmcpp-save" title="Download the editor text as a .tmcpp file">Save</button>
       <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
@@ -157,8 +160,9 @@ function mount(Calc, Desmos) {
     // Hash what Desmos actually holds (it drops defaults on load), then fill in the note.
     let saved = "";
     if (pairs) {
-      const list = Calc.getState().expressions.list.filter((e) => e.id !== META_ID);
-      const text = metaText(buildMeta(r, list));
+      const loaded = Calc.getState().expressions;
+      const list = loaded.list.filter((e) => e.id !== META_ID);
+      const text = metaText(buildMeta(r, list, loaded.ticker));
       Calc.setExpression({ id: META_ID, type: "text", text });
       saved = ` Metadata note saved (${(text.length / 1024).toFixed(1)} KB).`;
     }
@@ -168,6 +172,53 @@ function mount(Calc, Desmos) {
   }
 
   panel.querySelector("#tmcpp-run").onclick = run;
+  // ---- graph -> TMC++ (M4) ----
+  let tmCfg = null;
+  const cfg = () => (tmCfg ??= buildConfigFromGlobals(Desmos, Calc));
+  /** TMC text of one raw item, without the settings block rawToText adds. */
+  const itemTmc = (item) => {
+    // text-mode-core needs a current state version and a viewport, or it refuses everything.
+    const base = { version: 11, randomSeed: "", graph: { viewport: { xmin: -10, xmax: 10, ymin: -10, ymax: 10 } } };
+    const [err, text] = rawToText(cfg(), { ...base, expressions: { list: [item] } });
+    if (err) throw new Error("Text Mode couldn't convert this item");
+    let t = text.trim();
+    if (t.startsWith("settings")) {
+      let depth = 0, i = t.indexOf("@{");
+      if (i >= 0) {
+        for (; i < t.length; i++) { if (t[i] === "{") depth++; else if (t[i] === "}" && --depth === 0) break; }
+        t = t.slice(i + 1).replace(/^;?\s*/, "");
+      }
+    }
+    return t.replace(/;\s*$/, "");
+  };
+  /** TMC math for a LaTeX string: our converter, or text-mode-core for anything it doesn't know. */
+  const latexToText = (latex) => {
+    try { return latexToTmc(latex); } catch {}
+    const t = itemTmc({ type: "expression", id: "tmcpp-probe", latex });
+    let depth = 0, inStr = false;
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (c === '"' && t[i - 1] !== "\\") inStr = !inStr;
+      if (inStr) continue;
+      if ("([{".includes(c)) depth++;
+      else if (")]}".includes(c)) depth--;
+      else if (c === "@" && t[i + 1] === "{" && depth === 0) return t.slice(0, i).trim();
+    }
+    return t.trim();
+  };
+  const fromGraph = (why) => {
+    const { source, warnings } = decompile(Calc.getState(), { latexToText, itemToTmc: itemTmc });
+    src.value = source;
+    localStorage.setItem(STORE(), src.value);
+    hasLocalSource = true;
+    report(warnings.map((w) => ({ line: 1, kind: "warn", message: w })), why);
+  };
+  panel.querySelector("#tmcpp-fromgraph").onclick = () => {
+    if (src.value.trim() && !confirm("Replace the editor text with TMC++ rebuilt from the graph?")) return;
+    try { fromGraph("Rebuilt TMC++ from the graph, including any edits made in Desmos."); }
+    catch (e) { report([{ line: 1, kind: "err", message: `Couldn't rebuild from the graph: ${e.message}` }], ""); }
+  };
+
   // ---- .tmcpp files: open (button or drag-and-drop) and save ----
   const fileInput = panel.querySelector("#tmcpp-file");
   const loadFile = async (file) => {
@@ -254,8 +305,8 @@ function mount(Calc, Desmos) {
       autoOpened.add(lastPath);
       if (!isOpen()) open(true, false);
       if (!hasLocalSource) {
-        report([{ line: 1, kind: "warn",
-          message: "This graph's TMC++ source isn't saved in this browser. Rebuilding it from the graph comes in M4; compiling now replaces the graph with the editor text." }], "");
+        try { fromGraph("Rebuilt this graph's TMC++ from its metadata (it wasn't saved in this browser)."); }
+        catch (e) { report([{ line: 1, kind: "warn", message: `Couldn't rebuild TMC++ from this graph: ${e.message}` }], ""); }
       }
     }
   };

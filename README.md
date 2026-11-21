@@ -63,6 +63,7 @@ The panel:
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
 - saves your source per graph in the browser and follows you when you switch graphs
+- **From graph** rebuilds TMC++ from the graph as it is now. Untouched lines come back exactly as you wrote them; lines you restyled in Desmos come back as their classes plus only the changed tokens (`.curve width 5`); math edited in Desmos is converted back; items added in Desmos appear without their automatic colour. Opening a TMC++ graph this browser has no source for rebuilds it automatically.
 - watermarks the graph: its hidden `randomSeed` starts with `544d432b2b`, which is "TMC++" in ASCII hex, and is kept across recompiles so `random()` doesn't reshuffle (a seed you set in `settings` always wins)
 - writes a hidden metadata note into the graph (classes, tags, tails, comments, hashes) so the graph remembers it was made with TMC++, and pops the panel open when you open such a graph
 
@@ -149,6 +150,8 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 TMC++ --compile--> TMC --text-mode-core textToRaw--> Desmos state --Calc.setState--> graph
 ```
 
+Going back, `src/decompile.js` rebuilds TMC++ from a graph state using the metadata note, recompiling each tail to compare it with what Desmos holds, and `src/latex.js` turns Desmos LaTeX back into TMC math.
+
 The compiler (`src/compile.js`) is a line-based preprocessor; all math parsing is left to DesModder's text-mode-core. In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
 
 ## Known limits
@@ -167,7 +170,7 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M1 line compiler | done |
 | M2 classes, inline styles, labels, settings, playback, tables, tickers | done |
 | M3 browser extension with live compile, stable ids and the metadata note | done |
-| M4 decompile: rebuild TMC++ from a graph, with Desmos UI edits as inline overrides | next |
+| M4 decompile: rebuild TMC++ from a graph, with Desmos UI edits as inline overrides | done |
 | v2 components, e.g. `Spring(m, c)` expanding to several expressions | planned |
 | v2 `if` statements that compile to piecewise | planned |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |

@@ -232,9 +232,10 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
     const e = exprs[item.id];
     // A parametric's t range (0 to 360 in a degree-mode graph, say) has no token: write it raw.
     const pd = item.parametricDomain;
-    const val = (x) => valueText(x, latexToText);
-    ctx.extraRaw = pd && (String(pd.min ?? "0") !== "0" || String(pd.max ?? "1") !== "1")
-      ? [`domain: @{ t: @{ min: ${val(pd.min ?? "0")}, max: ${val(pd.max ?? "1")} } }`] : [];
+    // Desmos stores an untouched bound as "" (not missing): that means its default, 0 or 1.
+    const bound = (x, d) => (x === undefined || x === null || String(x).trim() === "" ? d : valueText(x, latexToText));
+    const lo = pd ? bound(pd.min, "0") : "0", hi = pd ? bound(pd.max, "1") : "1";
+    ctx.extraRaw = lo !== "0" || hi !== "1" ? [`domain: @{ t: @{ min: ${lo}, max: ${hi} } }`] : [];
     const { math } = mathOf(item);
     const actual = styleView(item);
     const join = (tail) => `${indent}${math}${tail ? "  " + tail : ""}`;

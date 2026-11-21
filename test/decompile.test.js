@@ -225,7 +225,7 @@ test("a slider with only a max, and a parametric's t range, survive From graph",
     { type: "expression", id: "1", latex: "a_{nim}=56.595", color: "#388c46",
       slider: { hardMax: true, max: "3532.91", loopMode: "PLAY_INDEFINITELY" } },
     { type: "expression", id: "2", latex: "\\left(\\cos t,\\sin t\\right)", color: "#000000",
-      parametricDomain: { min: "0", max: "360" } },
+      parametricDomain: { min: "", max: "360" } }, // Desmos writes an untouched min as ""
   ] } };
   const { source } = decompile(state, { latexToText: latexToTmc });
   assert.match(source, /^a_nim = 56\.595  \[ : 3532\.91\] \. forever/m);

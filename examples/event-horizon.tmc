@@ -1,0 +1,83 @@
+settings @{ viewport: @{ xmin: -12, xmax: 12, ymin: -7.5, ymax: 7.5 }, degreeMode: false, showGrid: false, showXAxis: false, showYAxis: false };
+
+"EVENT HORIZON | An impossible postcard from the edge of spacetime.";
+folder "Flight controls" {
+a = 0.7 @{ slider: @{ min: 0, max: 6.28318530718, step: 0.01, playing: true, loopMode: "LOOP_FORWARD", period: 24000 } };
+b = 0.29 @{ slider: @{ min: 0.18, max: 0.48, step: 0.01 } };
+"a: orbit animation. b: tilt of the accretion disk. All artwork is equations.";
+};
+folder "Geometry" {
+u(x,y) = 0.976187*x + 0.21693*y;
+v(x,y) = -0.21693*x + 0.976187*y;
+r(x,y) = sqrt(x^2+y^2);
+q(x,y) = sqrt((u(x,y)/7.7)^2+(v(x,y)/(7.7*b))^2);
+S = [1 ... 110];
+X = -11.7+23.4*mod(37*S,113)/113;
+Y = -7.1+14.2*mod(61*S,127)/127;
+K = [0 ... 11];
+c = a+2*pi*K/12;
+P = (7.25*0.976187*cos(c)-7.25*b*0.21693*sin(c),7.25*0.21693*cos(c)+7.25*b*0.976187*sin(c)) @{ hidden: true };
+} @{ collapsed: true };
+folder "Deep field" {
+y > -100 @{ fill: 1, lines: @{ opacity: 0 }, color: "#050913" };
+(x+5)^2/130+(y-2)^2/45 < 1 @{ fill: 0.5, lines: @{ opacity: 0 }, color: "#111b32" };
+(x-4)^2/90+(y+2)^2/30 < 1 @{ fill: 0.35, lines: @{ opacity: 0 }, color: "#1c132c" };
+(X,Y) @{ color: "#bce9ff", points: @{ size: 2, opacity: 0.55 } };
+(X[1 ... 18],Y[1 ... 18]) @{ color: "#fff2db", points: @{ size: 3.2, opacity: 0.8 } };
+(-9.3,3.2) @{ color: "#d3eeff", points: @{ size: 7 } };
+(-9.49+0.38*t,3.2) @{ color: "#d3eeff", lines: @{ width: 1.4 } };
+(-9.3,2.97+0.46*t) @{ color: "#d3eeff", lines: @{ width: 1.4 } };
+(9.1,-3.8) @{ color: "#fff0d1", points: @{ size: 5 } };
+} @{ collapsed: true };
+folder "Diffuse corona" {
+r(x,y) < 4.1 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.025 };
+r(x,y) < 3.7 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.035 };
+r(x,y) < 3.35 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.05 };
+r(x,y) < 3.05 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.07 };
+q(x,y) < 1.14 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.035 };
+q(x,y) < 1.08 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.055 };
+} @{ collapsed: true };
+folder "Lensed light behind the hole" {
+(r(x,y)-2.49)*(r(x,y)-2.98) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.12 };
+(r(x,y)-2.53)*(r(x,y)-2.86) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.22 };
+(r(x,y)-2.57)*(r(x,y)-2.76) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.5 };
+(r(x,y)-2.61)*(r(x,y)-2.69) < 0 @{ color: "#ffd28a", lines: @{ opacity: 0 }, fill: 0.9 };
+x^2+y^2 = 2.65^2 @{ color: "#fff1ca", lines: @{ width: 2, opacity: 0.95 } };
+} @{ collapsed: true };
+folder "Far accretion disk" {
+(q(x,y)-0.34)*(q(x,y)-1.03) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.12 };
+(q(x,y)-0.36)*(q(x,y)-1) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.28 };
+(q(x,y)-0.38)*(q(x,y)-0.96) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.45 };
+(q(x,y)-0.40)*(q(x,y)-0.91) < 0 @{ color: "#ffd28a", lines: @{ opacity: 0 }, fill: 0.55 };
+(q(x,y)-0.43)*(q(x,y)-0.85) < 0 @{ color: "#ffd28a", lines: @{ opacity: 0 }, fill: 0.72 };
+(q(x,y)-0.47)*(q(x,y)-0.77) < 0 @{ fill: 1, lines: @{ opacity: 0 }, color: "#ffe7b8" };
+(u(x,y)/7.7)^2+(v(x,y)/(7.7*b))^2 = [0.51,0.57,0.64,0.72,0.82,0.93]^2 @{ color: "#fff3d5", lines: @{ width: 1, opacity: 0.6 } };
+} @{ collapsed: true };
+folder "The shadow" {
+r(x,y) < 2.53 @{ fill: 1, lines: @{ opacity: 0 }, color: "#100d16" };
+r(x,y) < 2.45 @{ fill: 1, lines: @{ opacity: 0 }, color: "#05060b" };
+r(x,y) < 2.36 @{ fill: 1, lines: @{ opacity: 0 }, color: "#020308" };
+x^2+y^2 = 2.47^2 @{ color: "#ffb253", lines: @{ width: 1.8, opacity: 0.8 } };
+} @{ collapsed: true };
+folder "Near disk crossing the shadow" {
+max(0.34-q(x,y),q(x,y)-1.03,v(x,y)) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.12 };
+max(0.36-q(x,y),q(x,y)-1,v(x,y)) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.28 };
+max(0.38-q(x,y),q(x,y)-0.96,v(x,y)) < 0 @{ color: "#ff932e", lines: @{ opacity: 0 }, fill: 0.45 };
+max(0.40-q(x,y),q(x,y)-0.91,v(x,y)) < 0 @{ color: "#ffd28a", lines: @{ opacity: 0 }, fill: 0.55 };
+max(0.43-q(x,y),q(x,y)-0.85,v(x,y)) < 0 @{ color: "#ffd28a", lines: @{ opacity: 0 }, fill: 0.72 };
+max(0.47-q(x,y),q(x,y)-0.77,v(x,y)) < 0 @{ fill: 1, lines: @{ opacity: 0 }, color: "#ffe7b8" };
+(4.928*(0.976187*cos(pi+pi*t)-b*0.21693*sin(pi+pi*t)),4.928*(0.21693*cos(pi+pi*t)+b*0.976187*sin(pi+pi*t))) @{ color: "#fff5d9", lines: @{ width: 2, opacity: 0.7 } };
+} @{ collapsed: true };
+folder "Orbiting embers" {
+P @{ color: "#ff963c", points: @{ size: 13, opacity: 0.08 } };
+P @{ color: "#ffd59b", points: @{ size: 6, opacity: 0.5 } };
+P @{ color: "#fff5dc", points: @{ size: 2.5, opacity: 0.95 } };
+} @{ collapsed: true };
+folder "Observatory typography" {
+(-10.7,6.2) @{ color: "#edf6ff", points: @{ size: 0 }, label: @{ size: 1.35, outline: false, text: "E V E N T   H O R I Z O N", orientation: "right" } };
+(-10.7,5.5) @{ color: "#bdd0df", points: @{ size: 0 }, label: @{ size: 0.65, outline: false, text: "DEEP FIELD  /  01     —     THE LIGHT THAT COULD NOT LEAVE", orientation: "right" } };
+(-10.7+5.4*t,4.95) @{ color: "#7795ae", lines: @{ width: 1, opacity: 0.35 } };
+(-10.7,-5.9) @{ color: "#bdd0df", points: @{ size: 0 }, label: @{ size: 0.85, outline: false, text: "S I N G U L A R I T Y", orientation: "right" } };
+(-10.7,-6.45) @{ color: "#bdd0df", points: @{ size: 0 }, label: @{ size: 0.65, outline: false, text: "Rendered with mathematics. Escaping is left as an exercise.", orientation: "right" } };
+(10.6,-6.4) @{ color: "#bdd0df", points: @{ size: 0 }, label: @{ size: 0.65, outline: false, text: "TMC++  /  SPACE OBSERVATORY", orientation: "left" } };
+} @{ collapsed: true };

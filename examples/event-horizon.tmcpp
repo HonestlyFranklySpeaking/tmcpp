@@ -1,0 +1,104 @@
+// EVENT HORIZON — an animated mathematical space poster.
+// Paste this entire file into the TMC++ panel, then Ctrl+Enter.
+// Stylised gravitational lensing, not a relativistic simulation.
+// a = orbital phase; b = disk tilt. Pause a for a still image.
+
+settings x [-12 : 12] y [-7.5 : 7.5] radians no-grid @{ showXAxis: false, showYAxis: false }
+
+class paint { fill 1 opacity 0 }
+class amber { #ff932e opacity 0 }
+class gold { #ffd28a opacity 0 }
+class ice { #bce9ff }
+class hairline { #7795ae width 1 opacity 0.35 }
+class caption { #bdd0df point 0 label-size 0.8 no-outline }
+
+"EVENT HORIZON | An impossible postcard from the edge of spacetime."
+folder "Flight controls" {
+  a = 0.7 [0 : 6.28318530718 : 0.01] . play loop 24s
+  b = 0.29 [0.18 : 0.48 : 0.01]
+  "a: orbit animation. b: tilt of the accretion disk. All artwork is equations."
+}
+
+folder "Geometry" collapsed {
+  u(x,y) = 0.976187*x + 0.21693*y
+  v(x,y) = -0.21693*x + 0.976187*y
+  r(x,y) = sqrt(x^2+y^2)
+  q(x,y) = sqrt((u(x,y)/7.7)^2+(v(x,y)/(7.7*b))^2)
+  S = [1 ... 110]
+  X = -11.7+23.4*mod(37*S,113)/113
+  Y = -7.1+14.2*mod(61*S,127)/127
+  K = [0 ... 11]
+  c = a+2*pi*K/12
+  P = (7.25*0.976187*cos(c)-7.25*b*0.21693*sin(c),7.25*0.21693*cos(c)+7.25*b*0.976187*sin(c)) . hidden
+}
+
+folder "Deep field" collapsed {
+  y > -100 .paint #050913
+  (x+5)^2/130+(y-2)^2/45 < 1 .paint #111b32 fill 0.5
+  (x-4)^2/90+(y+2)^2/30 < 1 .paint #1c132c fill 0.35
+  (X,Y) .ice point 2 point-opacity 0.55
+  (X[1 ... 18],Y[1 ... 18]) #fff2db point 3.2 point-opacity 0.8
+  (-9.3,3.2) #d3eeff point 7
+  (-9.49+0.38*t,3.2) #d3eeff width 1.4
+  (-9.3,2.97+0.46*t) #d3eeff width 1.4
+  (9.1,-3.8) #fff0d1 point 5
+}
+
+folder "Diffuse corona" collapsed {
+  r(x,y) < 4.1 .amber fill 0.025
+  r(x,y) < 3.7 .amber fill 0.035
+  r(x,y) < 3.35 .amber fill 0.05
+  r(x,y) < 3.05 .amber fill 0.07
+  q(x,y) < 1.14 .amber fill 0.035
+  q(x,y) < 1.08 .amber fill 0.055
+}
+
+folder "Lensed light behind the hole" collapsed {
+  (r(x,y)-2.49)*(r(x,y)-2.98) < 0 .amber fill 0.12
+  (r(x,y)-2.53)*(r(x,y)-2.86) < 0 .amber fill 0.22
+  (r(x,y)-2.57)*(r(x,y)-2.76) < 0 .amber fill 0.5
+  (r(x,y)-2.61)*(r(x,y)-2.69) < 0 .gold fill 0.9
+  x^2+y^2 = 2.65^2 #fff1ca width 2 opacity 0.95
+}
+
+folder "Far accretion disk" collapsed {
+  (q(x,y)-0.34)*(q(x,y)-1.03) < 0 .amber fill 0.12
+  (q(x,y)-0.36)*(q(x,y)-1) < 0 .amber fill 0.28
+  (q(x,y)-0.38)*(q(x,y)-0.96) < 0 .amber fill 0.45
+  (q(x,y)-0.40)*(q(x,y)-0.91) < 0 .gold fill 0.55
+  (q(x,y)-0.43)*(q(x,y)-0.85) < 0 .gold fill 0.72
+  (q(x,y)-0.47)*(q(x,y)-0.77) < 0 .paint #ffe7b8
+  (u(x,y)/7.7)^2+(v(x,y)/(7.7*b))^2 = [0.51,0.57,0.64,0.72,0.82,0.93]^2 #fff3d5 width 1 opacity 0.6
+}
+
+folder "The shadow" collapsed {
+  r(x,y) < 2.53 .paint #100d16
+  r(x,y) < 2.45 .paint #05060b
+  r(x,y) < 2.36 .paint #020308
+  x^2+y^2 = 2.47^2 #ffb253 width 1.8 opacity 0.8
+}
+
+folder "Near disk crossing the shadow" collapsed {
+  max(0.34-q(x,y),q(x,y)-1.03,v(x,y)) < 0 .amber fill 0.12
+  max(0.36-q(x,y),q(x,y)-1,v(x,y)) < 0 .amber fill 0.28
+  max(0.38-q(x,y),q(x,y)-0.96,v(x,y)) < 0 .amber fill 0.45
+  max(0.40-q(x,y),q(x,y)-0.91,v(x,y)) < 0 .gold fill 0.55
+  max(0.43-q(x,y),q(x,y)-0.85,v(x,y)) < 0 .gold fill 0.72
+  max(0.47-q(x,y),q(x,y)-0.77,v(x,y)) < 0 .paint #ffe7b8
+  (4.928*(0.976187*cos(pi+pi*t)-b*0.21693*sin(pi+pi*t)),4.928*(0.21693*cos(pi+pi*t)+b*0.976187*sin(pi+pi*t))) #fff5d9 width 2 opacity 0.7
+}
+
+folder "Orbiting embers" collapsed {
+  P #ff963c point 13 point-opacity 0.08
+  P #ffd59b point 6 point-opacity 0.5
+  P #fff5dc point 2.5 point-opacity 0.95
+}
+
+folder "Observatory typography" collapsed {
+  (-10.7,6.2) .caption label "E V E N T   H O R I Z O N" right label-size 1.35 #edf6ff
+  (-10.7,5.5) .caption label "DEEP FIELD  /  01     —     THE LIGHT THAT COULD NOT LEAVE" right label-size 0.65
+  (-10.7+5.4*t,4.95) .hairline
+  (-10.7,-5.9) .caption label "S I N G U L A R I T Y" right label-size 0.85
+  (-10.7,-6.45) .caption label "Rendered with mathematics. Escaping is left as an exercise." right label-size 0.65
+  (10.6,-6.4) .caption label "TMC++  /  SPACE OBSERVATORY" left label-size 0.65
+}

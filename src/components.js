@@ -1,4 +1,4 @@
-// v2 components (docs/v2 spec, M5).
+// v2 components (docs/v2 spec, M5 and M6).
 //
 //   component Spring(A, B, coils = 8) { ...body lines... }
 //   new Spring((0, 0), (4, 1)) as s1  . dashed #red
@@ -9,7 +9,8 @@
 //   - locals (`d = B - A`, `f(u) = ...`) get one Desmos name per instance, from an allocator
 //     that never reuses a name the file already uses (`d` in `s1` -> d_s1, or d_s1x if taken)
 //   - the instance tail is appended after each line's own tail, so the instance wins
-//   - `s1.d` anywhere in the file reads a local or a parameter of an instance
+//   - `s1.d` anywhere in the file reads a local or a parameter of an instance; `s1.a.d` reaches
+//     into instance `a` nested inside `s1`. Nested instances share the outer instance's folder.
 import { desmosName } from "./implicit.js";
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
@@ -73,7 +74,7 @@ function wrap(arg) {
 /**
  * Replace identifiers using `lookup(name) -> text | undefined`. Strings are left alone except
  * inside `${...}`; names right after `.` (P.x, .class) or `#` (#colour) are never touched.
- * `member(inst, prop) -> text | undefined` handles `inst.prop` first.
+ * `member(head, props) -> text | undefined` handles a path like `s1.a.d` first.
  */
 function substitute(text, lookup, member = null) {
   let out = "";
@@ -101,9 +102,9 @@ function substitute(text, lookup, member = null) {
         out += name; i += name.length; continue;
       }
       if (member) {
-        const mm = text.slice(i).match(/^([A-Za-z][A-Za-z0-9_]*)\.([A-Za-z][A-Za-z0-9_]*)/);
+        const mm = text.slice(i).match(/^([A-Za-z][A-Za-z0-9_]*)((?:\.[A-Za-z][A-Za-z0-9_]*)+)/);
         if (mm) {
-          const r = member(mm[1], mm[2]);
+          const r = member(mm[1], mm[2].slice(1).split("."));
           if (r !== undefined) { out += r; i += mm[0].length; continue; }
         }
       }
@@ -131,9 +132,57 @@ function assigned(text) {
 /** Where an instance tail may start: a style token, a class, raw @{ }, a label or click. */
 const isTail = (s) => s === "" || /^(\.|#|@\{|label\b|click\(|click-label\b)/.test(s);
 
+/** Parse `new Name(args) [as name] [tail]`. Returns { comp, args, name, tail } or { error }. */
+function parseNew(text) {
+  const m = text.match(/^new\s+([A-Za-z][A-Za-z0-9_]*)\s*\(/);
+  if (!m) return { error: "Malformed instance; expected: new Name(args) as name" };
+  const open = m[0].length - 1;
+  const close = matchClose(text, open);
+  if (close === -1) return { error: "Unclosed '(' in instance" };
+  let after = text.slice(close + 1).trim();
+  let name = null;
+  const am = after.match(/^as\s+([A-Za-z][A-Za-z0-9_]*)\b\s*/);
+  if (am) { name = am[1]; after = after.slice(am[0].length).trim(); }
+  else if (/^as\b/.test(after)) return { error: "Expected a name after 'as'" };
+  if (!isTail(after)) return { error: `Unexpected '${after.split(/\s/)[0]}' after the instance; a style tail starts with '.'` };
+  return { comp: m[1], args: splitArgs(text.slice(open + 1, close)), name, tail: after };
+}
+
+/** Bind arguments: positional, then named, then defaults. Returns a Map, or null after errors. */
+function bindArgs(comp, args, report) {
+  const bound = new Map();
+  let sawNamed = false, ok = true;
+  const fail = (message) => { report(message); ok = false; };
+  args.forEach((a, k) => {
+    const nm = a.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=(?!=)\s*(.+)$/);
+    if (nm && comp.params.some((p) => p.name === nm[1])) {
+      sawNamed = true;
+      if (bound.has(nm[1])) fail(`'${nm[1]}' is given twice`);
+      bound.set(nm[1], nm[2].trim());
+      return;
+    }
+    if (nm && !/[<>]/.test(nm[2])) {
+      const hint = closest(nm[1], comp.params.map((p) => p.name));
+      return fail(`${comp.name} has no parameter '${nm[1]}'` + (hint ? ` (did you mean '${hint}'?)` : ""));
+    }
+    if (sawNamed) return fail("Positional arguments must come before named ones");
+    const p = comp.params[k];
+    if (!p) return fail(`${comp.name} takes ${comp.params.length} argument${comp.params.length === 1 ? "" : "s"}, got ${args.length}`);
+    if (a === "") return fail("Empty argument");
+    bound.set(p.name, a);
+  });
+  for (const p of comp.params) {
+    if (bound.has(p.name)) continue;
+    if (p.default !== undefined) bound.set(p.name, p.default);
+    else fail(`Missing argument '${p.name}' for ${comp.name}`);
+  }
+  return ok ? bound : null;
+}
+
 /**
  * Expand components. Returns { statements, components, instances }. Definitions are removed
- * (they draw nothing); each instance becomes folder-open, body lines, folder-close statements.
+ * (they draw nothing); each top-level instance becomes folder-open, body lines, folder-close.
+ * Instances inside a body (nesting) put their lines straight into the outer instance's folder.
  */
 export function expandComponents(statements, errors, warnings) {
   const components = new Map();
@@ -174,7 +223,9 @@ export function expandComponents(statements, errors, warnings) {
       params.push({ name: pm[1], default: pm[2]?.trim() });
     }
 
-    const locals = new Map(); // name -> body line
+    const locals = new Map();   // name -> body line
+    const children = new Map(); // instance name inside the body -> body line
+    const owned = (n) => params.some((p) => p.name === n) ? "a parameter" : locals.has(n) ? "a local" : children.has(n) ? "an instance" : null;
     for (const b of body) {
       if (FORBIDDEN_IN_BODY.test(b.text)) {
         errors.push({ line: b.line, message: `'${b.text.split(/\s/)[0]}' can't go inside a component` });
@@ -182,18 +233,19 @@ export function expandComponents(statements, errors, warnings) {
         continue;
       }
       if (/^new\b/.test(b.text)) {
-        errors.push({ line: b.line, message: "Using a component inside another component isn't supported yet (coming in M6)" });
-        b.bad = true;
+        const n = parseNew(b.text);
+        if (n.error) { errors.push({ line: b.line, message: n.error }); b.bad = true; continue; }
+        if (n.name && owned(n.name)) { errors.push({ line: b.line, message: `'${n.name}' is already ${owned(n.name)} in ${name}` }); b.bad = true; continue; }
+        b.nested = n;
+        if (n.name) children.set(n.name, b.line);
         continue;
       }
       const a = assigned(b.text);
       if (!a || isCurve(a, b.text)) continue;
-      if (params.some((p) => p.name === a.name)) {
-        errors.push({ line: b.line, message: `'${a.name}' is a parameter of ${name}; give the local another name` });
-        continue;
-      }
-      if (locals.has(a.name)) {
-        errors.push({ line: b.line, message: `'${a.name}' is already defined in ${name} on line ${locals.get(a.name)}` });
+      if (owned(a.name)) {
+        errors.push({ line: b.line, message: owned(a.name) === "a parameter"
+          ? `'${a.name}' is a parameter of ${name}; give the local another name`
+          : `'${a.name}' is already defined in ${name} on line ${locals.get(a.name) ?? children.get(a.name)}` });
         continue;
       }
       b.fnArgs = a.args;
@@ -202,161 +254,189 @@ export function expandComponents(statements, errors, warnings) {
     components.set(name, { name, line: st.line, params, locals, body: body.filter((b) => !b.bad) });
   }
 
+  // 2. Check nested instances once, at their definition: the component exists, the arguments
+  //    bind, and no component contains itself (directly or through others).
+  for (const comp of components.values()) {
+    for (const b of comp.body) {
+      if (!b.nested) continue;
+      const inner = components.get(b.nested.comp);
+      if (!inner) {
+        const hint = closest(b.nested.comp, [...components.keys()]);
+        errors.push({ line: b.line, message: `Unknown component '${b.nested.comp}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
+        b.bad = true;
+      } else if (!bindArgs(inner, b.nested.args, (message) => errors.push({ line: b.line, message }))) b.bad = true;
+    }
+    comp.body = comp.body.filter((b) => !b.bad);
+  }
+  const cyclic = new Set();
+  const visit = (name, path) => {
+    if (path.includes(name)) {
+      const loop = [...path.slice(path.indexOf(name)), name];
+      if (!cyclic.has(loop[0])) {
+        errors.push({ line: components.get(loop[0]).line, message: `${loop.join(" uses ")}: a component can't contain itself` });
+      }
+      loop.forEach((n) => cyclic.add(n));
+      return;
+    }
+    for (const b of components.get(name)?.body ?? []) if (b.nested) visit(b.nested.comp, [...path, name]);
+  };
+  for (const name of components.keys()) visit(name, []);
+
   const rest = statements.filter((_, i) => !defLines.has(i));
 
-  // 2. Find instances.
-  const instances = new Map();
-  const anonCount = new Map();
-  const parsed = new Map(); // statement -> parsed instance
-  const assignedNames = new Set(rest.map((s) => assigned(s.text)?.name).filter(Boolean));
-  for (const st of rest) {
-    if (!/^new\b/.test(st.text)) continue;
-    const m = st.text.match(/^new\s+([A-Za-z][A-Za-z0-9_]*)\s*\(/);
-    if (!m) { errors.push({ line: st.line, message: "Malformed instance; expected: new Name(args) as name" }); st.bad = true; continue; }
-    const open = m[0].length - 1;
-    const close = matchClose(st.text, open);
-    if (close === -1) { errors.push({ line: st.line, message: "Unclosed '(' in instance" }); st.bad = true; continue; }
-    let after = st.text.slice(close + 1).trim();
-    let instName = null;
-    const am = after.match(/^as\s+([A-Za-z][A-Za-z0-9_]*)\b\s*/);
-    if (am) { instName = am[1]; after = after.slice(am[0].length).trim(); }
-    else if (/^as\b/.test(after)) { errors.push({ line: st.line, message: "Expected a name after 'as'" }); st.bad = true; continue; }
-    if (!isTail(after)) {
-      errors.push({ line: st.line, message: `Unexpected '${after.split(/\s/)[0]}' after the instance; a style tail starts with '.'` });
-      st.bad = true;
-      continue;
-    }
-    const comp = components.get(m[1]);
-    if (!comp) {
-      const hint = closest(m[1], [...components.keys()]);
-      errors.push({ line: st.line, message: `Unknown component '${m[1]}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
-      st.bad = true;
-      continue;
-    }
-
-    // Bind arguments: positional, then named, then defaults.
-    const bound = new Map();
-    let sawNamed = false, ok = true;
-    const args = splitArgs(st.text.slice(open + 1, close));
-    args.forEach((a, k) => {
-      const nm = a.match(/^([A-Za-z][A-Za-z0-9_]*)\s*=(?!=)\s*(.+)$/);
-      if (nm && comp.params.some((p) => p.name === nm[1])) {
-        sawNamed = true;
-        if (bound.has(nm[1])) { errors.push({ line: st.line, message: `'${nm[1]}' is given twice` }); ok = false; }
-        bound.set(nm[1], nm[2].trim());
-        return;
-      }
-      if (nm && !/[<>]/.test(nm[2])) {
-        errors.push({ line: st.line, message: `${comp.name} has no parameter '${nm[1]}'` + (closest(nm[1], comp.params.map((p) => p.name)) ? ` (did you mean '${closest(nm[1], comp.params.map((p) => p.name))}'?)` : "") });
-        ok = false;
-        return;
-      }
-      if (sawNamed) { errors.push({ line: st.line, message: "Positional arguments must come before named ones" }); ok = false; return; }
-      const p = comp.params[k];
-      if (!p) { errors.push({ line: st.line, message: `${comp.name} takes ${comp.params.length} argument${comp.params.length === 1 ? "" : "s"}, got ${args.length}` }); ok = false; return; }
-      if (a === "") { errors.push({ line: st.line, message: "Empty argument" }); ok = false; return; }
-      bound.set(p.name, a);
-    });
-    for (const p of comp.params) {
-      if (bound.has(p.name)) continue;
-      if (p.default !== undefined) bound.set(p.name, p.default);
-      else { errors.push({ line: st.line, message: `Missing argument '${p.name}' for ${comp.name}` }); ok = false; }
-    }
-    if (!ok) { st.bad = true; continue; }
-
-    let key = instName, title = instName;
-    if (instName) {
-      if (instances.has(instName)) { errors.push({ line: st.line, message: `Instance '${instName}' already exists (line ${instances.get(instName).line})` }); st.bad = true; continue; }
-      if (assignedNames.has(instName)) { errors.push({ line: st.line, message: `'${instName}' is already a variable in this file; name the instance something else` }); st.bad = true; continue; }
-    } else {
-      const n = (anonCount.get(comp.name) ?? 0) + 1;
-      anonCount.set(comp.name, n);
-      title = `${comp.name} ${n}`;
-      key = `${comp.name}${n}`;
-    }
-    const inst = { comp, name: instName, title, key, bound, tail: after, line: st.line, names: new Map() };
-    if (instName) instances.set(instName, inst);
-    parsed.set(st, inst);
-  }
-
-  // 3. Allocate a Desmos name for every local of every instance, avoiding every name in use.
+  // 3. Every name already in use: the allocator never hands these out.
   const used = new Set();
   for (const st of rest) {
-    if (parsed.has(st) || st.bad) continue;
+    if (/^new\b/.test(st.text)) continue;
     for (const id of identifiers(st.text)) used.add(desmosName(id));
   }
   for (const comp of components.values()) {
     const own = new Set([...comp.params.map((p) => p.name), ...comp.locals.keys()]);
-    for (const b of comp.body) for (const id of identifiers(b.text)) if (!own.has(id)) used.add(desmosName(id));
-  }
-  for (const st of rest) {
-    const inst = parsed.get(st);
-    if (!inst) continue;
-    const suffix = inst.key.replace(/[^A-Za-z0-9]/g, "");
-    for (const local of inst.comp.locals.keys()) {
-      const base = `${local[0]}_${local.slice(1).replace(/_/g, "")}${suffix}`;
-      let name = base;
-      for (let k = 1; used.has(name); k++) name = k === 1 ? `${base}x` : `${base}x${k}`;
-      used.add(name);
-      inst.names.set(local, name);
+    for (const b of comp.body) {
+      if (b.nested) continue;
+      for (const id of identifiers(b.text)) if (!own.has(id)) used.add(desmosName(id));
     }
   }
+  const allocate = (local, suffix) => {
+    const base = `${local[0]}_${local.slice(1).replace(/_/g, "")}${suffix}`;
+    let name = base;
+    for (let k = 1; used.has(name); k++) name = k === 1 ? `${base}x` : `${base}x${k}`;
+    used.add(name);
+    return name;
+  };
 
-  const member = (instName, prop) => {
-    const inst = instances.get(instName);
+  // 4. Plan instances (top-level first, in source order, each with its nested children), so
+  //    `s1.a.d` resolves even on a line above the instance.
+  const instances = new Map();          // top-level named instances
+  const plans = new Map();              // statement -> top-level plan
+  const anonCount = new Map();
+  const assignedNames = new Set(rest.map((s) => assigned(s.text)?.name).filter(Boolean));
+
+  // Resolve `head.p1.p2...` from a scope: an instance's children first, then top-level instances.
+  // Returns text, undefined (not an instance path), or null (an instance without that member).
+  const resolve = (scope, head, props, line, report = true) => {
+    let inst = scope?.children.get(head) ?? instances.get(head);
     if (!inst) return undefined;
-    if (inst.names.has(prop)) return inst.names.get(prop);
-    if (inst.bound.has(prop)) return wrap(inst.bound.get(prop));
-    return null; // reported below
-  };
-  const memberChecked = (line) => (instName, prop) => {
-    const r = member(instName, prop);
-    if (r === null) {
-      const inst = instances.get(instName);
-      const all = [...inst.comp.params.map((p) => p.name), ...inst.comp.locals.keys()];
-      const hint = closest(prop, all);
-      errors.push({ line, message: `${instName} (a ${inst.comp.name}) has no member '${prop}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
-      return undefined;
+    let path = head;
+    for (let k = 0; k < props.length; k++) {
+      const p = props[k];
+      const restProps = props.slice(k + 1).map((q) => "." + q).join("");
+      if (inst.children.has(p)) { inst = inst.children.get(p); path += "." + p; continue; }
+      if (inst.names.has(p)) return inst.names.get(p) + restProps;
+      if (inst.bound.has(p)) return wrap(inst.bound.get(p)) + restProps;
+      if (report) {
+        const all = [...inst.comp.params.map((q) => q.name), ...inst.comp.locals.keys(), ...inst.children.keys()];
+        const hint = closest(p, all);
+        errors.push({ line, message: `${path} (a ${inst.comp.name}) has no member '${p}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
+      }
+      return null;
     }
-    return r;
+    return undefined; // a bare instance path is not a value
+  };
+  const memberFor = (scope, line) => (head, props) => {
+    const r = resolve(scope, head, props, line);
+    return r === null ? undefined : r;
+  };
+  // Text in an instance's body, written in terms of its parameters, locals and children.
+  const inScope = (inst, text, fnArgs) => substitute(text, (name) => {
+    if (fnArgs?.includes(name)) return undefined;
+    if (inst.names.has(name)) return inst.names.get(name);
+    if (inst.bound.has(name)) return wrap(inst.bound.get(name));
+    return undefined;
+  }, memberFor(inst, null));
+
+  const plan = (comp, bound, key, title, tail, line) => {
+    const inst = { comp, name: null, title, key, bound, tail, line, names: new Map(), children: new Map(), nested: new Map() };
+    const suffix = key.replace(/[^A-Za-z0-9]/g, "");
+    for (const local of comp.locals.keys()) inst.names.set(local, allocate(local, suffix));
+    const anon = new Map();
+    comp.body.forEach((b, k) => {
+      if (!b.nested || cyclic.has(comp.name)) return;
+      const inner = components.get(b.nested.comp);
+      // Arguments and the tail are written in the outer instance's terms.
+      const args = b.nested.args.map((a) => inScope(inst, a));
+      const childBound = bindArgs(inner, args, () => {});
+      if (!childBound) return;
+      const n = (anon.get(inner.name) ?? 0) + 1;
+      if (!b.nested.name) anon.set(inner.name, n);
+      const childKey = key + (b.nested.name ?? `${inner.name}${n}`);
+      const child = plan(inner, childBound, childKey, title, inScope(inst, b.nested.tail), b.line);
+      child.name = b.nested.name;
+      if (b.nested.name) inst.children.set(b.nested.name, child);
+      inst.nested.set(k, child);
+    });
+    return inst;
   };
 
-  // 4. Emit.
-  const out = [];
-  const seenDrawn = new Map();
-  let depth = 0;
   for (const st of rest) {
-    if (/^(folder|table)\b.*\{$/.test(st.text)) depth++;
-    else if (st.text === "}") depth--;
-    const inst = parsed.get(st);
-    if (!inst) {
-      if (st.bad) continue;
-      out.push(instances.size ? { ...st, text: substitute(st.text, () => undefined, memberChecked(st.line)) } : st);
+    if (!/^new\b/.test(st.text)) continue;
+    const n = parseNew(st.text);
+    if (n.error) { errors.push({ line: st.line, message: n.error }); st.bad = true; continue; }
+    const comp = components.get(n.comp);
+    if (!comp) {
+      const hint = closest(n.comp, [...components.keys()]);
+      errors.push({ line: st.line, message: `Unknown component '${n.comp}'` + (hint ? ` (did you mean '${hint}'?)` : "") });
+      st.bad = true;
       continue;
     }
-    const lookup = (fnArgs) => (name) => {
-      if (fnArgs?.includes(name)) return undefined;
-      if (inst.names.has(name)) return inst.names.get(name);
-      if (inst.bound.has(name)) return wrap(inst.bound.get(name));
-      return undefined;
-    };
-    if (depth === 0) out.push({ text: `folder ${JSON.stringify(inst.title)} {`, line: st.line, comments: st.comments, instance: inst.key });
-    inst.body = [];
+    if (cyclic.has(comp.name)) { st.bad = true; continue; }
+    const bound = bindArgs(comp, n.args, (message) => errors.push({ line: st.line, message }));
+    if (!bound) { st.bad = true; continue; }
+    let key = n.name, title = n.name;
+    if (n.name) {
+      if (instances.has(n.name)) { errors.push({ line: st.line, message: `Instance '${n.name}' already exists (line ${instances.get(n.name).line})` }); st.bad = true; continue; }
+      if (assignedNames.has(n.name)) { errors.push({ line: st.line, message: `'${n.name}' is already a variable in this file; name the instance something else` }); st.bad = true; continue; }
+    } else {
+      const k = (anonCount.get(comp.name) ?? 0) + 1;
+      anonCount.set(comp.name, k);
+      title = `${comp.name} ${k}`;
+      key = `${comp.name}${k}`;
+    }
+    const inst = plan(comp, bound, key, title, n.tail, st.line);
+    inst.name = n.name;
+    if (n.name) instances.set(n.name, inst);
+    plans.set(st, inst);
+  }
+
+  // 5. Emit. Tails stack from the inside out: a line's own tokens, then its instance's tail,
+  //    then each enclosing instance's tail, so the outermost instance has the last word.
+  const out = [];
+  const seenDrawn = new Map();
+  const emitBody = (inst, outer, topKey) => {
     inst.comp.body.forEach((b, k) => {
-      let text = substitute(b.text, lookup(b.fnArgs), memberChecked(b.line));
-      if (inst.tail) text += " " + inst.tail;
-      out.push({ text, line: b.line, comments: [...b.comments], instance: inst.key });
-      inst.body.push(text);
+      if (b.nested) {
+        const child = inst.nested.get(k);
+        if (child) emitBody(child, [inst.tail, ...outer], topKey);
+        return;
+      }
+      let text = inScope(inst, b.text, b.fnArgs);
+      const tails = [inst.tail, ...outer].filter(Boolean);
+      if (tails.length) text += " " + tails.join(" ");
+      out.push({ text, line: b.line, comments: [...b.comments], instance: topKey });
       const a = assigned(b.text);
       if (!a || isCurve(a, b.text)) {
         const key = `${inst.comp.name}#${k}`;
         if (!seenDrawn.has(key)) seenDrawn.set(key, new Map());
+        const label = inst.key === topKey ? inst.title : `${inst.title} (${inst.key})`;
         const prev = seenDrawn.get(key).get(text);
-        if (prev) warnings.push({ line: b.line, message: `${inst.title} and ${prev} draw this line identically, on top of each other` });
-        else seenDrawn.get(key).set(text, inst.title);
+        if (prev) warnings.push({ line: b.line, message: `${label} and ${prev} draw this line identically, on top of each other` });
+        else seenDrawn.get(key).set(text, label);
       }
     });
+  };
+  let depth = 0;
+  for (const st of rest) {
+    if (/^(folder|table)\b.*\{$/.test(st.text)) depth++;
+    else if (st.text === "}") depth--;
+    const inst = plans.get(st);
+    if (!inst) {
+      if (st.bad) continue;
+      out.push(instances.size ? { ...st, text: substitute(st.text, () => undefined, memberFor(null, st.line)) } : st);
+      continue;
+    }
+    if (depth === 0) out.push({ text: `folder ${JSON.stringify(inst.title)} {`, line: st.line, comments: st.comments, instance: inst.key });
+    emitBody(inst, [], inst.key);
     if (depth === 0) out.push({ text: "}", line: st.line, comments: [], instance: inst.key });
   }
-  return { statements: out, components, instances: [...parsed.values()] };
+  return { statements: out, components, instances: [...plans.values()] };
 }

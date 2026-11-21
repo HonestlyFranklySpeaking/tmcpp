@@ -203,7 +203,27 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 - Sliders and click actions inside a body belong to each instance: `k = 1 [0 : 5]` gives every instance its own slider, and `click(n -> n + 1)` updates that instance's `n`.
 - An instance inside a folder puts its lines straight into that folder (Desmos has no folders in folders).
 - Convention, not rule: component names start uppercase (`Spring`), class names lowercase (`.spring`). Breaking either gives a warning.
-- Not yet: components inside components, list instances (`new ... for ...`), and "From graph" giving back `new` lines instead of the expanded folders. These are milestones M6 to M8.
+- **Components inside components.** A body can use `new` too. Nested instances put their lines in the outer instance's folder, and their names follow the path (`n` in `a` in `p` becomes `n_pa`). Arguments and tails of a nested `new` can use the outer component's parameters and locals.
+
+  ```js
+  component Dot(P, c = 0) {
+    n = c
+    P . point 15 click(n -> n + 1)
+  }
+  component Pair(A, B) {
+    gap = distance(A, B)
+    new Dot(A) as a
+    new Dot(B, c = gap) as b
+    segment(a.P, b.P)
+  }
+  new Pair((0, 0), (3, 4)) as p . #red
+  clicks = [p.a.n, p.b.n]
+  ```
+
+- Paths reach as deep as you like: `p.b.n`, `p.b.P.x`. Inside a body, `a.P` means the nested instance `a`.
+- Tails stack from the inside out: a line's own tokens, then its instance's tail, then each enclosing instance's tail. The outermost instance has the last word, so `p . #red` above makes both dots red.
+- A component can't contain itself, directly or through others; that is an error at the definition.
+- Not yet: list instances (`new ... for ...`), and "From graph" giving back `new` lines instead of the expanded folders. These are milestones M7 and M8.
 
 ## Token reference
 

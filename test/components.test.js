@@ -147,7 +147,6 @@ test("errors: definitions", () => {
   assert.match(errs(`component P(a) {\n  a = 1\n}`), /'a' is a parameter of P/);
   assert.match(errs(`component P(a) {\n  b = 1\n  b = 2\n}`), /'b' is already defined in P/);
   assert.match(errs(`component P(a) {\n  folder "x" {\n}`), /'folder' can't go inside a component/);
-  assert.match(errs(`${SPRING}\ncomponent P(a) {\n  new Spring(1, 2)\n}`), /isn't supported yet/);
   assert.match(errs(`component P(a) {\n  y = a`), /never closed/);
   assert.match(errs(`${SPRING}\n${SPRING}`), /already defined/);
 });
@@ -173,4 +172,77 @@ test("r is a local (a radius) unless its right side uses θ", () => {
 test("a misspelt keyword is reported, and the body still parses as a component", () => {
   const r = run(`compoment Ring(s) {\n  r = s\n}\nnew Ring(1) as a`);
   assert.deepEqual(r.errors.map((e) => e.message), ["Unknown keyword 'compoment' (did you mean 'component'?)"]);
+});
+
+// ---------- M6: nesting ----------
+
+const DOT = `component Dot(P, c = 0) {
+  n = c
+  P . point 6 click(n -> n + 1)
+}`;
+const PAIR = `${DOT}
+component Pair(A, B) {
+  gap = distance(A, B)
+  new Dot(A) as a
+  new Dot(B, c = gap) as b
+  segment(a.P, b.P)
+}`;
+
+test("nested instances share the outer folder and get path-based names", () => {
+  const tmc = ok(`${PAIR}\nnew Pair((0, 0), (3, 4)) as p`);
+  assert.equal((tmc.match(/folder/g) ?? []).length, 1);
+  assert.match(tmc, /^g_app = distance\(\(0, 0\), \(3, 4\)\);/m);
+  assert.match(tmc, /^n_pa = 0;/m);
+  assert.match(tmc, /^n_pb = g_app;/m);          // an outer local passed in as an argument
+  assert.match(tmc, /onClick: n_pa -> n_pa \+ 1/);
+  assert.match(tmc, /onClick: n_pb -> n_pb \+ 1/);
+  assert.match(tmc, /^\(1 - t\) \* \(\(0, 0\)\) \+ t \* \(\(3, 4\)\);/m); // segment(a.P, b.P) inside the body
+});
+
+test("two outer instances get separate nested names", () => {
+  const tmc = ok(`${PAIR}\nnew Pair((0, 0), (1, 0)) as p\nnew Pair((0, 1), (1, 1)) as q`);
+  for (const n of ["n_pa", "n_pb", "n_qa", "n_qb"]) assert.match(tmc, new RegExp(`^${n} = `, "m"));
+});
+
+test("paths reach into nested instances from anywhere", () => {
+  const tmc = ok(`total = p.a.n + p.b.n + p.gap + p.b.P.x\n${PAIR}\nnew Pair((0, 0), (3, 4)) as p`);
+  assert.match(tmc, /^t_otal = n_pa \+ n_pb \+ g_app \+ \(3, 4\)\.x;/m);
+});
+
+test("anonymous nested instances", () => {
+  const tmc = ok(`${DOT}\ncomponent Two(A) {\n  new Dot(A)\n  new Dot(A, c = 1)\n}\nnew Two((1, 1)) as t`);
+  assert.match(tmc, /^n_tDot1 = 0;/m);
+  assert.match(tmc, /^n_tDot2 = 1;/m);
+});
+
+test("three levels deep", () => {
+  const tmc = ok(`${PAIR}\ncomponent Quad(A) {\n  new Pair(A, A + (1, 0)) as top\n  new Pair(A + (0, 1), A + (1, 1)) as bottom\n}\nnew Quad((0, 0)) as q\nk = q.top.a.n`);
+  assert.match(tmc, /^n_qtopa = 0;/m);
+  assert.match(tmc, /^n_qbottomb = g_apqbottom;/m);
+  assert.match(tmc, /^k = n_qtopa;/m);
+});
+
+test("tails stack from the inside out: the outermost instance wins", () => {
+  const src = `component In(P) {\n  P . #blue point 5\n}\ncomponent Out(P) {\n  new In(P) as i . #green\n}`;
+  assert.match(ok(`${src}\nnew Out((1, 1)) as o`), /color: GREEN/);
+  assert.match(ok(`${src}\nnew Out((1, 1)) as o . #red`), /color: RED/);
+  assert.doesNotMatch(ok(`${src}\nnew Out((1, 1)) as o . #red`), /GREEN|BLUE/);
+});
+
+test("nested names still avoid every name in the file", () => {
+  const tmc = ok(`n_pa = 7\n${PAIR}\nnew Pair((0, 0), (1, 0)) as p\nk = p.a.n`);
+  assert.match(tmc, /^n_pa = 7;/m);
+  assert.match(tmc, /^n_pax = 0;/m);
+  assert.match(tmc, /^k = n_pax;/m);
+});
+
+test("errors: recursion, nested names, nested arguments", () => {
+  assert.match(errs(`component A(p) {\n  new A(p)\n}`), /A uses A: a component can't contain itself/);
+  assert.match(errs(`component A(p) {\n  new B(p)\n}\ncomponent B(p) {\n  new A(p)\n}\nnew A(1) as a`), /A uses B uses A/);
+  assert.match(errs(`${DOT}\ncomponent P(A) {\n  k = 1\n  new Dot(A) as k\n}`), /'k' is already a local in P/);
+  assert.match(errs(`component P(A) {\n  new Dott(A) as d\n}`), /Unknown component 'Dott'/);
+  // A bad nested call is reported once, at the definition, however many instances there are.
+  const r = run(`${DOT}\ncomponent P(A) {\n  new Dot() as d\n}\nnew P(1) as a\nnew P(2) as b`);
+  assert.deepEqual(r.errors.map((e) => e.message), ["Missing argument 'P' for Dot"]);
+  assert.match(errs(`${PAIR}\nnew Pair(1, 2) as p\nk = p.a.zz`), /p\.a \(a Dot\) has no member 'zz'/);
 });

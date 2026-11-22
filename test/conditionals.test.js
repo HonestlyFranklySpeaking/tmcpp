@@ -73,6 +73,17 @@ new Cell(i) for i = [1...3] as row`);
   assert.match(tmc, /, m_row -> \[\{/);
 });
 
+test("block else-if chains nest, and sliders are refused inside blocks", () => {
+  const { tmc } = check("m = 1\nif m = 1 {\n  y = x\n} else if m = 2 {\n  y = 2x\n} else {\n  y = 3x\n}\nP = (1, 1)");
+  assert.match(tmc, /y = \{m = 1: x, \{m = 2: 2 \* x, 3 \* x\}\}/);
+  assert.match(tmc, /P = \(1, 1\)/);
+  const split = check("m = 1\nif m = 1 {\n  y = x\n}\nelse if m = 2 {\n  y = 2x\n}");
+  assert.match(split.tmc, /y = \{m = 1: x, \{m = 2: 2 \* x\}\}/);
+  const [error] = compile("c = 1\nif c = 1 {\n  a = 2 [0 : 5]\n}").errors;
+  assert.match(error.message, /slider/);
+  assert.equal(error.line, 3);
+});
+
 test("malformed conditionals report the original source line", () => {
   for (const [source, message] of [
     ["p = if then 1 else 0", /condition/],

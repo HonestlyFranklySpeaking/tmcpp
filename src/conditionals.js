@@ -2,8 +2,9 @@
 import { rewriteRestrictions, rewriteSegments } from "./rewrite.js";
 
 const blockHead = /^if\s+(.+?)\s*\{$/;
+const elseIfHead = /^(?:}\s*)?else\s+if\s+(.+?)\s*\{$/;
 const elseHead = /^(?:}\s*)?else\s*\{$/;
-export const isConditionalHeader = text => /^(?:if\b.*|(?:}\s*)?else)\s*\{$/.test(text);
+export const isConditionalHeader = text => /^(?:(?:}\s*)?else\s+)?if\b.*\{$|^(?:}\s*)?else\s*\{$/.test(text);
 
 // Math stays opaque. Only delimiters, quoted strings and the conditional keywords
 // matter here. An unparenthesized branch ends at the enclosing argument/list boundary.
@@ -80,6 +81,8 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
     const inverse = "{" + condition + ": 0, 1} = 1";
     function emit(row, guard, other) {
       let math;
+      for (const r of [row, other]) if (r?.lhs && /\[[^\[\]]*:[^\[\]]*\]\s*$/.test(r.value))
+        errors.push({ line: r.st.line, message: "A slider can't be defined inside an if block; define '" + r.lhs + "' outside it" });
       if (row.lhs) {
         const first = rewriteRestrictions(row.value).math;
         const fallback = other ? ", " + rewriteRestrictions(other.value).math : "";
@@ -110,16 +113,29 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
         if (!header || !header[1].trim()) throw Error("Missing if block condition");
         const yes = [];
         stack.push({ condition: inline(header[1].trim()), line: st.line, yes, no: [], branch: yes });
+      } else if (elseIfHead.test(st.text)) {
+        // `} else if c {` is an else block holding one nested if; both close at the final `}`.
+        if (!frame || frame.branch === frame.no || !st.text.startsWith("}")) throw Error("Unexpected else");
+        frame.branch = frame.no;
+        const yes = [];
+        stack.push({ condition: inline(st.text.match(elseIfHead)[1].trim()), line: st.line, yes, no: [], branch: yes, chained: true });
       } else if (elseHead.test(st.text)) {
         if (!frame || frame.branch === frame.no || !st.text.startsWith("}")) throw Error("Unexpected else");
         frame.branch = frame.no;
       } else if (frame && st.text === "}") {
-        if (/^else\s*\{$/.test(statements[i + 1]?.text ?? "") && frame.branch === frame.yes) {
+        const next = statements[i + 1]?.text ?? "";
+        if (frame.branch === frame.yes && elseIfHead.test(next) && !next.startsWith("}")) {
+          i++;
+          frame.branch = frame.no;
+          const yes = [];
+          stack.push({ condition: inline(next.match(elseIfHead)[1].trim()), line: statements[i].line, yes, no: [], branch: yes, chained: true });
+        } else if (/^else\s*\{$/.test(next) && frame.branch === frame.yes) {
           i++;
           frame.branch = frame.no;
         } else {
-          stack.pop();
-          merge(frame);
+          // One `}` closes an else-if chain and every block it hangs from.
+          let closing;
+          do { closing = stack.pop(); merge(closing); } while (closing.chained && stack.length);
         }
       } else {
         if (frame && /^(?:folder|component|new|class|color|table|ticker|settings|image)\b|^"/.test(st.text))

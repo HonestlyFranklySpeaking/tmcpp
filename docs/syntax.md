@@ -162,6 +162,10 @@ when `m = 1`, and the disk is drawn only in the other branch. A block may omit i
 `else` or contain nested blocks. Matching assignments take the first branch's style.
 A different style in the other branch produces a warning at that line.
 
+Blocks chain with `} else if condition {`, which becomes a nested piecewise
+(`y = {m = 1: x, {m = 2: 2x, 3x}}`). Sliders, folders, classes and other blocks can't
+go inside an `if` block: define the slider outside and use it inside.
+
 “From graph” currently returns the lowered piecewise expressions.
 
 ## Style tails

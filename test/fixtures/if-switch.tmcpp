@@ -8,9 +8,3 @@ if m = 1 {
   x^2 + y^2 < 4 {x > 0} . #blue
 }
 (0, 0) . #black point 18 click(if m = 0 then m -> 1 else m -> 0)
-<<<<<<< HEAD
-
-k = 0 [0 : 1 : 1]
-if m = 1 then if k = 1 then m -> 0 else k -> 1 else (m -> 1, k -> 0)
-=======
->>>>>>> a30adb4f00473bdcbd7fb0cad7f6b458a4b74314

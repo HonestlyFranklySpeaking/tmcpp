@@ -358,36 +358,59 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
       .map((st, k) => ({ ...st, line: lib.at, libLine: lib.statements[k].line, lib: lib.id, value: lib.statements[k].value }));
   }
 
-  // 6. Keep only the functions and constants something reaches.
-  const valueDefs = new Map(); // internal name -> { st, lib }
-  const compBodies = new Map(); // internal component name -> its statements
+  // 6. Keep only what something reaches: functions, constants, components, classes, colours.
+  const valueDefs = new Map(); // internal name -> statement
+  const compBodies = new Map(); // internal component name -> its statements, header to }
+  const classDefs = new Map(), colorDefs = new Map();
   for (const lib of libs.values()) {
     let current = null;
     for (const st of lib.out) {
-      const m = st.text.match(COMPONENT);
-      if (m) { current = []; compBodies.set(m[1], current); }
       if (current) { current.push(st); if (st.text === "}") current = null; continue; }
-      if (st.value) valueDefs.set(assigned(st.text).name, { st, lib });
+      let m;
+      if ((m = st.text.match(COMPONENT))) { current = [st]; compBodies.set(m[1], current); }
+      else if ((m = st.text.match(CLASS))) classDefs.set(m[1], st);
+      else if ((m = st.text.match(COLOR))) colorDefs.set(m[1], st);
+      else if (st.value) valueDefs.set(assigned(st.text).name, st);
     }
   }
-  const used = new Set(), queue = [];
-  const scan = (text, skip = []) => { for (const id of identifiers(text)) if (!skip.includes(id) && !used.has(id)) { used.add(id); queue.push(id); } };
+  const used = { ident: new Set(), classes: new Set(), colors: new Set() };
+  const queue = [];
+  const reach = (kind, name) => { if (!used[kind].has(name)) { used[kind].add(name); queue.push([kind, name]); } };
+  const scan = (text, skip = []) => {
+    for (const id of identifiers(text)) if (!skip.includes(id)) reach("ident", id);
+    outsideStrings(text, (part) => {
+      for (const c of part.matchAll(/(?:^|[\s{(,])\.([A-Za-z_][\w-]*)/g)) reach("classes", c[1]);
+      for (const c of part.matchAll(/(?:^|[\s{(,:])#([A-Za-z_][\w-]*)/g)) reach("colors", c[1]);
+      return part;
+    });
+  };
   for (const st of mainOut) if (!st.orphan) scan(st.text);
-  for (const lib of libs.values()) for (const st of lib.out) if (CLASS.test(st.text)) scan(st.text);
   while (queue.length) {
-    const id = queue.shift();
-    if (compBodies.has(id)) for (const st of compBodies.get(id)) scan(st.text);
-    if (valueDefs.has(id)) { const { st } = valueDefs.get(id); scan(st.text, assigned(st.text).args); }
+    const [kind, name] = queue.shift();
+    if (kind === "classes" && classDefs.has(name)) scan(classDefs.get(name).text.replace(CLASS, ""));
+    if (kind === "colors" || kind === "classes") continue;
+    if (compBodies.has(name)) for (const st of compBodies.get(name)) scan(st.text);
+    if (valueDefs.has(name)) { const st = valueDefs.get(name); scan(st.text, assigned(st.text).args); }
   }
+  const keep = (st) => {
+    let m;
+    if ((m = st.text.match(COMPONENT))) return used.ident.has(m[1]);
+    if ((m = st.text.match(CLASS))) return used.classes.has(m[1]);
+    if ((m = st.text.match(COLOR))) return used.colors.has(m[1]);
+    return true;
+  };
 
   // 7. Emit: definitions first (hoisted anyway), then each library's used helpers in a
   //    collapsed folder, then the file itself.
   const out = [];
   for (const lib of libs.values()) {
     const helpers = [];
+    let skipping = false;
     for (const st of lib.out) {
-      if (st.value) { if (used.has(assigned(st.text).name)) helpers.push(st); }
-      else out.push(st);
+      if (skipping) { if (st.text === "}") skipping = false; continue; }
+      if (COMPONENT.test(st.text) && !keep(st)) { skipping = true; continue; }
+      if (st.value) { if (used.ident.has(assigned(st.text).name)) helpers.push(st); }
+      else if (keep(st)) out.push(st);
     }
     if (helpers.length) {
       out.push({ text: `folder ${JSON.stringify(libTitle(lib.id))} collapsed {`, line: lib.at, comments: [], lib: lib.id });

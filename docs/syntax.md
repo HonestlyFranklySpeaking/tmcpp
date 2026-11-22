@@ -343,7 +343,7 @@ Three ways to import it:
 See [the spring library](../examples/lib/springs.tmcpp) and [a graph that imports it](../examples/springs-import.tmcpp) for a complete example.
 
 - **Internal names stay distinct.** If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
-- **Only what's used reaches Desmos.** Components, classes and colours cost nothing until used, as in one file. Functions and constants are emitted only if something uses them, with whatever they use in turn, in one collapsed folder named after the library.
+- **Only what's used comes in.** Components, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed folder named after the library.
 - Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
 
 **Where libraries come from:**

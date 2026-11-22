@@ -69,6 +69,16 @@ test("selective import brings only the listed names, and dependencies still reso
   assert.match(bare.tmc, /Q = \(2, 2\) @\{ color: "#6b7b8c" \}/);
 });
 
+test("unused classes, colours and components stay out, so the metadata only lists what's used", () => {
+  const lib = { s: "color ink #111111\ncolor sea #2266aa\nclass a { #ink }\nclass b { #sea width 2 }\nclass c { .a dashed }\ncomponent Dot(P) {\n  P .b\n}\ncomponent Spare(P) {\n  P\n}" };
+  const r = clean(build('import "s"\ny = x .c', lib));
+  assert.deepEqual([...r.classes.keys()].sort(), ["a", "c"]);
+  assert.deepEqual([...r.colors.keys()], ["ink"]);
+  const withDot = clean(build('import "s"\nnew Dot((1, 1))', lib));
+  assert.deepEqual([...withDot.classes.keys()], ["b"]);
+  assert.deepEqual([...withDot.colors.keys()], ["sea"]);
+});
+
 test("parameters, arguments and comprehension variables shadow library names", () => {
   const lib = { l: "a = 5\nf(t) = t + a" };
   const { tmc } = clean(build(`import "l" as l\nimport { a } from "l"\ng(a) = a + 1\nL = [a for a = [1...3]]\nm = a + l.f(1)`, lib));

@@ -9,10 +9,10 @@ class button { #255262 fill 1 width 1 }
 
 L = 1
 g = 0                 // 0 editing, 1 in flight, 2 returned, 3 delivered
-startRow = [2,0,1][L]
-slotX = [5,6,4][L]
-slotY = [4,1,4][L]
-par = L + 1
+startRow = [2,0,1,1,1,0,0][L]
+slotX = [5,6,4,3,6,3,1][L]
+slotY = [4,1,4,4,2,4,4][L]
+par = {L=7: 12, L+1}
 editable = {g=0: 1, g=2: 1, 0}
 
 // The path doubles as the beam's drawing and the record of stamps it visited.
@@ -48,14 +48,23 @@ component Mirror(h,k,tilt) {
 }
 
 // The third argument sets the starting tilt on each route.
-new Mirror(5,3,0) as amber
-new Mirror(0,3,[0,1,0][L]) as birch
-new Mirror(4,1,[0,1,0][L]) as clover
-new Mirror(0,0,[0,1,0][L]) as delta
-new Mirror(3,1,[0,0,1][L]) as ember
-new Mirror(3,2,[0,0,1][L]) as frost
-new Mirror(4,3,[0,0,1][L]) as grove
-new Mirror(5,2,[0,0,1][L]) as hazel
+new Mirror([5,5,5,1,2,4,2][L],[3,3,3,0,0,0,3][L],[0,0,0,1,1,1,0][L]) as amber
+new Mirror([0,0,0,3,3,1,0][L],[3,3,3,2,1,0,2][L],[0,1,0,1,1,0,1][L]) as birch
+new Mirror([4,4,4,2,2,1,4][L],[1,1,1,3,1,2,1][L],[0,1,0,0,0,0,0][L]) as clover
+new Mirror([0,0,0,3,1,5,5][L],[0,0,0,1,2,0,3][L],[0,1,0,0,1,0,0][L]) as delta
+new Mirror([3,3,3,0,1,4,3][L],[1,1,1,1,0,3,1][L],[0,0,1,0,0,0,0][L]) as ember
+new Mirror([3,3,3,1,1,0,3][L],[2,2,2,2,3,0,0][L],[0,0,1,1,1,1,0][L]) as frost
+new Mirror([4,4,4,0,3,0,3][L],[3,3,3,0,2,2,2][L],[0,0,1,0,1,1,1][L]) as grove
+new Mirror([5,5,5,2,2,3,5][L],[2,2,2,0,2,3,1][L],[0,0,1,0,0,0,1][L]) as hazel
+
+// Seven extra mirrors park off the board for the first six routes.
+new Mirror({L=7: 0, -20},1,1) as iris
+new Mirror({L=7: 1, -20},3,0) as jade
+new Mirror({L=7: 2, -20},1,0) as kelp
+new Mirror({L=7: 3, -20},3,1) as larch
+new Mirror({L=7: 1, -20},0,0) as mint
+new Mirror({L=7: 1, -20},1,0) as nutmeg
+new Mirror({L=7: 4, -20},0,1) as olive
 
 // Each stamp knows whether the current delivery passed through its cell.
 component Stamp(h,k) {
@@ -63,12 +72,12 @@ component Stamp(h,k) {
   polygon((h-0.22,k),(h,k+0.29),(h+0.22,k),(h,k-0.29)) .stamp fill 0.18 width 3
   ({g>0: {lit=1: h}},k) .stamp point 12
 }
-new Stamp([1,0,1][L],[2,2,1][L]) as first
-new Stamp(4,2) as second
+new Stamp([1,0,1,2,1,2,1][L],[2,2,1,2,1,0,2][L]) as first
+new Stamp([4,4,4,3,5,4,4][L],[2,2,2,3,2,2,3][L]) as second
 
 folder "Dispatch" collapsed {
-  bend = amber.bend+birch.bend+clover.bend+delta.bend+ember.bend+frost.bend+grove.bend+hazel.bend
-  moves = amber.turns+birch.turns+clover.turns+delta.turns+ember.turns+frost.turns+grove.turns+hazel.turns
+  bend = amber.bend+birch.bend+clover.bend+delta.bend+ember.bend+frost.bend+grove.bend+hazel.bend+iris.bend+jade.bend+kelp.bend+larch.bend+mint.bend+nutmeg.bend+olive.bend
+  moves = amber.turns+birch.turns+clover.turns+delta.turns+ember.turns+frost.turns+grove.turns+hazel.turns+iris.turns+jade.turns+kelp.turns+larch.turns+mint.turns+nutmeg.turns+olive.turns
   dx = {bend=0: u, bend*v}
   dy = {bend=0: v, bend*u}
   nx = a+dx
@@ -78,7 +87,7 @@ folder "Dispatch" collapsed {
   arrived = {abs(nx-slotX)+abs(ny-slotY)=0: {stamps=2: 1, 0}, 0}
   step = {g=1: (X -> join(X,[nx]), Y -> join(Y,[ny]), u -> dx, v -> dy, g -> {arrived=1: 3, outside=1: 2, 1})}
   launch = (X -> [-1], Y -> [startRow], u -> 1, v -> 0, g -> 1)
-  clearBoard = (amber.turns -> 0, birch.turns -> 0, clover.turns -> 0, delta.turns -> 0, ember.turns -> 0, frost.turns -> 0, grove.turns -> 0, hazel.turns -> 0, g -> 0)
+  clearBoard = (amber.turns -> 0, birch.turns -> 0, clover.turns -> 0, delta.turns -> 0, ember.turns -> 0, frost.turns -> 0, grove.turns -> 0, hazel.turns -> 0, iris.turns -> 0, jade.turns -> 0, kelp.turns -> 0, larch.turns -> 0, mint.turns -> 0, nutmeg.turns -> 0, olive.turns -> 0, g -> 0)
 }
 ticker step . play 150ms
 
@@ -90,19 +99,22 @@ folder "Flight recorder" collapsed {
 folder "Counter" collapsed {
   (2.5,5.42) .ink label "PRISM POST" center label-size 1.8
   (2.5,4.91) .ink label "Rotate mirrors. Stamp both diamonds. Deliver to the cyan ring." center
-  (2.5,4.5) .ink label "ROUTE ${L}/3     ·     TURNS ${m_{oves}}     ·     PAR ${p_{ar}}" center
-  ({g=0: 2.5},-0.94) .ink label "Ready for dispatch" center
+  (2.5,4.5) .ink label "ROUTE ${L}/7     ·     TURNS ${m_{oves}}     ·     PAR ${p_{ar}}" center
+  ({g=0: {L<7: 2.5}},-0.94) .ink label "Ready for dispatch" center
+  ({g=0: {L=7: 2.5}},-0.94) .ink label "Dead Letter Office" center
   ({g=1: 2.5},-0.94) .ink label "In transit…" center
   ({g=2: 2.5},-0.94) .ink label "Returned · ${s_{tamps}}/2 stamps. Adjust a mirror and retry." center
-  ({g=3: {L<3: 2.5}},-0.94) .ink label "Delivered. Next route unlocked." center
-  ({g=3: {L=3: 2.5}},-0.94) .ink label "All three routes delivered!" center
+  ({g=3: {L<7: 2.5}},-0.94) .ink label "Delivered. Next route unlocked." center
+  ({g=3: {L=7: 2.5}},-0.94) .ink label "Dead Letter Office cleared. All seven delivered!" center
 
-  B = {g=3: (clearBoard,L -> mod(L,3)+1), g=0: launch, g=2: launch}
+  B = {g=3: (clearBoard,L -> mod(L,7)+1), g=0: launch, g=2: launch}
   polygon((-0.3,-1.93),(2.95,-1.93),(2.95,-1.27),(-0.3,-1.27)) .button @{ onClick: B }
   ({g<3: 1.325},-1.6) .ink label "DISPATCH" center @{ onClick: B }
-  ({g=3: {L<3: 1.325}},-1.6) .ink label "NEXT ROUTE" center @{ onClick: B }
-  ({g=3: {L=3: 1.325}},-1.6) .ink label "PLAY AGAIN" center @{ onClick: B }
+  ({g=3: {L<7: 1.325}},-1.6) .ink label "NEXT ROUTE" center @{ onClick: B }
+  ({g=3: {L=7: 1.325}},-1.6) .ink label "PLAY AGAIN" center @{ onClick: B }
   C = clearBoard
   polygon((3.15,-1.93),(5.3,-1.93),(5.3,-1.27),(3.15,-1.27)) .button @{ onClick: C }
   (4.225,-1.6) .ink label "RESET" center @{ onClick: C }
 }
+
+

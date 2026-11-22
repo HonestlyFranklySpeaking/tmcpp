@@ -149,7 +149,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |
 | `examples/sunset.tmcpp` | a sunset scene driven by one time-of-day slider |
 | `examples/demo.tmcpp` | a parabola with a draggable focus |
-| `examples/prism-post.tmcpp` | PRISM POST, a three-level laser-routing puzzle. Rotate eight mirrors to send a pulse through both diamond stamps and into the cyan mail slot. Each Mirror instance handles its own clicks, draws its current angle, and redirects the beam. |
+| `examples/prism-post.tmcpp` | PRISM POST, a seven-route pulse-routing puzzle. Rotate the brass mirrors, then dispatch a pulse through both diamond stamps and into the cyan mail slot. The first six routes use eight mirrors; the final route adds seven more. `Mirror` and `Stamp` components track each mirror's turns and each stamp's state, while a ticker advances the pulse. The counter shows turns and par; returned pulses can be retried, and **Reset** clears the current route. |
 
 ## How it works
 

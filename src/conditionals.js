@@ -97,7 +97,7 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
       if (other && row.tail !== other.tail) warnings.push({
         line: other.st.line, message: "Branches of '" + row.lhs + "' have different styles; using the first branch's style",
       });
-      current().push({ ...row.st, text: math + (row.tail ? " " + row.tail : "") });
+      current().push({ ...row.st, text: math + (row.tail ? " " + row.tail : ""), cond: frame.top ? { key: frame.key, line: frame.line, end: frame.end } : row.st.cond });
     }
     for (const row of yes) {
       const other = row.lhs && no.find(r => !used.has(r) && r.lhs?.replace(/\s/g, "") === row.lhs.replace(/\s/g, ""));
@@ -120,7 +120,7 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
         const header = st.text.match(blockHead);
         if (!header || !header[1].trim()) throw Error("Missing if block condition");
         const yes = [];
-        stack.push({ condition: inline(header[1].trim()), line: st.line, yes, no: [], branch: yes });
+        stack.push({ condition: inline(header[1].trim()), line: st.line, yes, no: [], branch: yes, top: !stack.length, key: `c:${st.line}` });
       } else if (elseIfHead.test(st.text)) {
         // `} else if c {` is an else block holding one nested if; both close at the final `}`.
         if (!frame || frame.branch === frame.no || !st.text.startsWith("}")) throw Error("Unexpected else");
@@ -143,7 +143,11 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
         } else {
           // One `}` closes an else-if chain and every block it hangs from.
           let closing;
-          do { closing = stack.pop(); merge(closing); } while (closing.chained && stack.length);
+          do {
+            closing = stack.pop();
+            closing.end = st.end ?? st.line;
+            merge(closing);
+          } while (closing.chained && stack.length);
         }
       } else {
         if (frame && /^(?:folder|component|new|class|color|table|ticker|settings|image)\b|^"/.test(st.text)) {

@@ -80,6 +80,13 @@ export function assignIds(state, items) {
   return pairs;
 }
 
+/** Everything about an item except its id, in a fixed key order: any edit in Desmos changes it. */
+export function itemHash(e) {
+  const sorted = (v) => Array.isArray(v) ? v.map(sorted)
+    : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().filter((k) => k !== "id").map((k) => [k, sorted(v[k])])) : v;
+  return fnv1a(JSON.stringify(sorted(e)));
+}
+
 // ---------- the note ----------
 
 /**
@@ -97,14 +104,24 @@ export function buildMeta(compiled, list, ticker = null) {
     const e = byId.get(id);
     if (!e) return;
     const entry = {};
-    if (it.tags?.length) entry.tags = it.tags;
-    if (it.tail) entry.tail = it.tail;
+    // Tail and classes as written; the compiled ones (internal class names after an import) for checking.
+    const tags = it.writtenTags ?? it.tags;
+    if (tags?.length) entry.tags = tags;
+    if (it.writtenTags && it.tags?.length) entry.tagsc = it.tags;
+    const tail = it.writtenTail ?? it.tail;
+    if (tail) entry.tail = tail;
+    if (it.writtenTail !== undefined && it.tail) entry.tc = it.tail;
     if (it.comments?.length) entry.comments = it.comments;
     if (it.math !== undefined && typeof e.latex === "string") {
-      entry.m = it.math;          // the math exactly as written
+      entry.m = it.written ?? it.math;   // the math exactly as written
+      if (it.written !== undefined) entry.mc = it.math; // ...and as compiled, for checking styles
       entry.lh = fnv1a(e.latex);  // ...valid while Desmos's LaTeX still hashes to this
     }
     entry.sh = styleHash(e);
+    if (it.block) {
+      entry.b = it.block;        // the source block it came from (instance, if block, library)
+      entry.ih = itemHash(e);    // ...given back as written while every item of it still hashes the same
+    }
     exprs[id] = entry;
   };
   compiled.items.forEach((it, i) => {
@@ -116,7 +133,18 @@ export function buildMeta(compiled, list, ticker = null) {
   for (const [name, def] of compiled.classes) classes[name] = def.tokens.join(" ");
   const colors = {};
   for (const [name, def] of compiled.colors ?? []) colors[name] = def.hex;
-  const meta = { v: 1, classes, exprs, graph: graphHash(list) };
+  const meta = { v: 2, classes, exprs, graph: graphHash(list) };
+  // M8: blocks given back as written, and what From graph puts at the top of the file.
+  const rt = compiled.roundTrip;
+  if (rt) {
+    if (rt.components.length) meta.components = rt.components;
+    if (rt.imports.length) meta.imports = rt.imports;
+    if (Object.keys(rt.blocks).length) meta.blocks = rt.blocks;
+  }
+  const libClasses = [...compiled.classes].filter(([, d]) => d.lib).map(([n]) => n);
+  const libColors = [...(compiled.colors ?? [])].filter(([, d]) => d.lib).map(([n]) => n);
+  if (libClasses.length) meta.libClasses = libClasses;
+  if (libColors.length) meta.libColors = libColors;
   if (Object.keys(colors).length) meta.colors = colors;
   if (compiled.settingsSource?.length) meta.settings = compiled.settingsSource;
   if (compiled.tickerSource && ticker?.handlerLatex) {
@@ -136,7 +164,7 @@ export function readMeta(list) {
   if (!item) return null;
   try {
     const meta = JSON.parse(item.text.slice(META_HEADER.length).trim());
-    return meta && meta.v === 1 ? { item, meta } : { item, meta: null, error: `unsupported version ${meta?.v}` };
+    return meta && (meta.v === 1 || meta.v === 2) ? { item, meta } : { item, meta: null, error: `unsupported version ${meta?.v}` };
   } catch (e) {
     return { item, meta: null, error: `metadata note is not valid JSON (${e.message})` };
   }

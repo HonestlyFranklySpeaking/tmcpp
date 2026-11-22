@@ -136,6 +136,7 @@ function toStatements(source) {
         && !isHeader(cur.text)) {
       cur.text += " " + code;
       if (comment) cur.comments.push(comment);
+      cur.end = i + 1;
       continue;
     }
 
@@ -143,13 +144,14 @@ function toStatements(source) {
       // Still inside an unfinished statement: append.
       if (code) cur.text += " " + code;
       if (comment) cur.comments.push(comment);
+      cur.end = i + 1;
     } else {
       if (!code) {
         if (comment) pendingComments.push(comment);
         continue;
       }
       flush();
-      cur = { text: code, line: i + 1, indent, comments: pendingComments, open: false };
+      cur = { text: code, line: i + 1, end: i + 1, indent, comments: pendingComments, open: false };
       if (comment) cur.comments.push(comment);
       pendingComments = [];
     }
@@ -373,6 +375,42 @@ function styleToTmc(style, rawInner) {
 
 // Watermark: the graph's randomSeed starts with "TMC++" in ASCII hex, then a version byte.
 // It looks like any Desmos seed (32 hex chars) and is never shown in the UI.
+// ---------- round trip (M8): the source of blocks that expand to several items ----------
+
+/** Lines a to b of the source, with the comment lines right above a. */
+function blockSource(source, a, b) {
+  const raw = source.split(/\r?\n/);
+  let start = a - 1;
+  while (start > 0 && /^\s*\/\//.test(raw[start - 1])) start--;
+  const lines = raw.slice(start, b);
+  const pad = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^\s*/)[0].length));
+  return lines.map((l) => l.slice(pad)).join("\n");
+}
+
+/** Component definitions, imports and top-level `new` lines, as written. */
+function roundTripSources(source, parsed) {
+  const out = { components: [], imports: [], instances: new Map(), blocks: {} };
+  let depth = 0, comp = null;
+  for (const st of parsed) {
+    if (st.orphan) continue;
+    if (st.text.startsWith("}")) depth--;
+    if (comp && depth === comp.depth && st.text === "}") { out.components.push(blockSource(source, comp.line, st.end)); comp = null; }
+    else if (!comp && depth === 0 && COMPONENT_HEAD.test(st.text)) comp = { line: st.line, depth };
+    else if (!comp && depth === 0 && /^import\b/.test(st.text)) out.imports.push(blockSource(source, st.line, st.end));
+    else if (!comp && /^new\b/.test(st.text)) out.instances.set(st.line, blockSource(source, st.line, st.end));
+    if (st.text.endsWith("{")) depth++;
+  }
+  return out;
+}
+
+function finishRoundTrip(rt, instances = []) {
+  for (const inst of instances) {
+    const src = rt.instances.get(inst.line);
+    if (src !== undefined) rt.blocks[`i:${inst.key}`] = src;
+  }
+  return { components: rt.components, imports: rt.imports, blocks: rt.blocks };
+}
+
 export const WATERMARK = "544d432b2b"; // T M C + +
 export const WATERMARK_VERSION = "01";
 export const isWatermarkSeed = (seed) => typeof seed === "string" && seed.startsWith(WATERMARK);
@@ -437,11 +475,13 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const errors = [], warnings = [];
   const parse = (text) => {
     const sts = toStatements(text);
-    for (const st of sts) st.text = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
+    for (const st of sts) st.text = st.src = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
     return sts;
   };
+  const parsed = parse(source);
+  const roundTrip = roundTripSources(source, parsed);
   // import resolves first: library definitions join the file under collision-free names.
-  const imported = lowerImports(parse(source), { libraries, std: STD, from, parse }, errors, warnings);
+  const imported = lowerImports(parsed, { libraries, std: STD, from, parse }, errors, warnings);
   const expanded = expandComponents(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings);
   const statements = expanded.statements;
   const classes = new Map();
@@ -457,7 +497,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     if (NAMED_COLORS[name]) { errors.push({ line: st.line, message: `'${m[1]}' is a built-in colour; pick another name` }); continue; }
     if (/^([0-9a-f]{3}|[0-9a-f]{6})$/.test(name)) { errors.push({ line: st.line, message: `'${m[1]}' looks like a hex code; pick a name that isn't one` }); continue; }
     if (colors.has(name)) { errors.push({ line: st.line, message: `Color '${m[1]}' is already defined on line ${colors.get(name).line}` }); continue; }
-    colors.set(name, { hex: "#" + m[2].toLowerCase(), line: st.line });
+    colors.set(name, { hex: "#" + m[2].toLowerCase(), line: st.line, lib: st.lib });
   }
 
   // Hoist class definitions.
@@ -475,7 +515,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
       errors.push({ line: st.line, message: `Class '${m[1]}' is already defined on line ${classes.get(m[1]).line}` });
       continue;
     }
-    classes.set(m[1], { tokens: tokenizeTail(m[2]), line: st.line });
+    classes.set(m[1], { tokens: tokenizeTail(m[2]), line: st.line, lib: st.lib });
   }
   // Validate class bodies once, at their definition.
   for (const [, def] of classes) {
@@ -486,7 +526,17 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const out = [], lineMap = [];
   // One entry per graph item, in emission order: what the metadata note remembers about it.
   const items = [];
+  // Which source block an item came from, so From graph can give the block back (M8).
+  let current = null;
+  const tag = (item) => {
+    const st = current;
+    if (st?.lib) item.block = `lib:${st.lib}`;
+    else if (st?.instance) item.block = `i:${st.instance}`;
+    else if (st?.cond) { item.block = st.cond.key; roundTrip.blocks[st.cond.key] ??= blockSource(source, st.cond.line, st.cond.end); }
+    return item;
+  };
   const record = (item) => {
+    tag(item);
     const table = folderStack.at(-1)?.kind === "table" ? folderStack.at(-1).item : null;
     if (table && item.kind === "expr") table.columns.push(item);
     else items.push(item);
@@ -499,6 +549,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
 
   for (const st of statements) {
     if (st.skip || st.orphan) continue;
+    current = st;
     const { text, line } = st;
 
     // Folder open
@@ -515,7 +566,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
         if (f === "collapsed" || f === "hidden") style[f] = "true";
         else errors.push({ line, message: `Unknown folder flag '${f}' (use collapsed, hidden)` });
       }
-      const item = { kind: "folder", line, comments: st.comments };
+      const item = tag({ kind: "folder", line, comments: st.comments });
       items.push(item);
       folderStack.push({ line, style, kind: "folder", item });
       push(`folder ${fm[1]} {`, line);
@@ -531,7 +582,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
         if (f === "pinned" || f === "secret") style[f] = "true";
         else errors.push({ line, message: `Unknown table flag '${f}' (use pinned, secret)` });
       }
-      const item = { kind: "table", line, comments: st.comments, columns: [] };
+      const item = tag({ kind: "table", line, comments: st.comments, columns: [] });
       items.push(item);
       folderStack.push({ line, style, kind: "table", item });
       push("table {", line);
@@ -647,7 +698,21 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     let styled = "";
     try { styled = styleToTmc(style, rawInner); }
     catch (e) { errors.push({ line, message: e.message }); }
-    record({ kind: "expr", line, comments: st.comments, tags, math: mathWritten, tail: text.slice(mathWritten.length).trim() });
+    // The math as the author wrote it (amber.turns, not t_urnsamber), when a pass rewrote it. Lines
+    // from instances, libraries and if blocks come back through their block instead.
+    const compiledTail = text.slice(mathWritten.length).trim();
+    let written, writtenTail, writtenTags;
+    if (st.src && st.src !== text && !st.instance && !st.lib && !st.cond) {
+      const src = st.src.trim(), at = findTailStart(src);
+      const w = (at === -1 ? src : src.slice(0, at)).trim().replace(/\s+\[([^\[\],]*:[^\[\],]*)\]$/, "");
+      const wt = src.slice(w.length).trim();
+      if (w !== mathWritten) written = w;
+      if (wt !== compiledTail) {
+        writtenTail = wt;
+        writtenTags = tokenizeTail(wt.slice(wt.search(/(^|\s)[.#@]|$/))).filter((t) => /^\.[A-Za-z_]/.test(t)).map((t) => t.slice(1));
+      }
+    }
+    record({ kind: "expr", line, comments: st.comments, tags, math: mathWritten, written, tail: compiledTail, writtenTail, writtenTags });
     push(`${math}${styled};`, line);
   }
 
@@ -670,5 +735,6 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   }
   errors.sort((a, b) => a.line - b.line);
   return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource, imports: imported.imports,
+    roundTrip: finishRoundTrip(roundTrip, expanded.instances),
     components: expanded.components, instances: expanded.instances };
 }

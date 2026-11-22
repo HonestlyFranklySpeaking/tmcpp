@@ -180,7 +180,7 @@ Blocks chain with `} else if condition {`, which becomes a nested piecewise
 (`y = {m = 1: x, {m = 2: 2x, 3x}}`). Sliders, folders, classes and other blocks can't
 go inside an `if` block: define the slider outside and use it inside.
 
-“From graph” currently returns the lowered piecewise expressions.
+“From graph” gives an `if` block back as written while its lines are untouched in Desmos; after an edit it comes back as the piecewise lines, with a warning. An inline `if` comes back as written until its line is edited.
 
 ## Style tails
 
@@ -314,7 +314,7 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
 
   Arguments that use a loop variable become hidden lists (`i_cells`, `j_cells`), and each body line is written once; Desmos repeats it for every copy. A local that doesn't depend on the lists (`m = 0`) becomes one entry per copy. A click changes only the clicked copy, through Desmos's `index`. `cells.m` is the whole list and `cells.m[k]` one copy.
   Limits: Desmos has no lists of lists, so a local that is itself a list can't be part of a list instance; a list instance can't go inside a component, and a component that uses other components can't be one, yet.
-- Not yet: "From graph" giving back `new` lines instead of the expanded folders (milestone M8).
+- "From graph" gives back the `new` lines and the component definitions (see [Rebuilding source from a graph](#rebuilding-source-from-a-graph)).
 
 ## Libraries
 
@@ -515,11 +515,16 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 | a graph made without TMC++ | every item with its colours (including colour variables, as `#(c_1)`), fills and other styling |
 | a deleted item that had comments | the comments, at the end under `// orphaned comments` |
 | a parametric's or polar curve's range (`t` from 0 to 360) | a raw block: `@{ domain: @{ min: 0, max: 360 } }` |
+| a component instance you haven't touched | its `new ... as ...` line, as written |
+| an instance with an edited or deleted line | **detached**: its folder as plain lines, with a warning; other instances still come back as `new` lines |
+| a line you added to an instance's folder | that line, right after the `new` line |
+| an untouched `if` block | the block, as written; edited, its piecewise lines with a warning |
+| items from an imported library | nothing: the `import` line brings them back. An edit to one is dropped, with a warning: change the library instead |
 | a table, image or value TMC++ can't convert | skipped with a warning and a `// (left out: ...)` comment, never failing the whole rebuild |
 
 `settings` lines come back as written, so panning or zooming in Desmos doesn't change your source. Comments are placed above the item they belonged to.
 
-Component instances come back as their expanded folders for now; giving back the `new ... as ...` lines is milestone M8.
+Imports and component definitions always go at the top of the rebuilt file, after `settings`. Members keep the spelling you wrote (`s1.d`, `sp.lerp`, `.sp-spring`), never the generated Desmos names. Moving a slider or clicking something that changes a value inside an instance counts as an edit, so that instance comes back detached.
 
 ## Errors and warnings
 

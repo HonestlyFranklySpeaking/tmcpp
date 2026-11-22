@@ -135,7 +135,7 @@ for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
       const ls = t.split("\n").filter((l) => !l.startsWith("settings"));
       return [...ls.filter((l) => !l.startsWith("ticker")), ...ls.filter((l) => l.startsWith("ticker"))].join("\n");
     };
-    const again = compile(source);
+    const again = compile(source, options);
     assert.deepEqual(again.errors, []);
     assert.equal(strip(again.tmc), strip(compile(src, options).tmc));
   });
@@ -241,4 +241,77 @@ test("a slider with only a max, and a parametric's t range, survive From graph",
   const [{ diagnostics }, st] = textToRaw(buildConfig({}), r.tmc);
   assert.deepEqual(diagnostics.map((d) => d.message), []);
   assert.deepEqual(st.expressions.list[1].parametricDomain, { min: "0", max: "360" });
+});
+
+// ---------- M8: components, if blocks and imports come back as written ----------
+const M8 = `color steel #6b7b8c
+// a spring between two points
+component Spring(A, B) {
+  d = B - A . hidden
+  A + t * d  #steel
+}
+
+m = 1
+new Spring((0, 0), (4, 1)) as s1   // the first
+new Spring((0, 2), (3, 3)) as s2
+if m = 1 {
+  y = x^2 . #red
+  P = (2, 4)
+} else {
+  y = -x . #red
+}
+z = s1.d.x + 1`;
+const rebuild = (state) => decompile(state, { latexToText: latexToTmc });
+
+test("M8: intact instances, if blocks and definitions come back as written", () => {
+  const { state } = graph(M8);
+  const { source, warnings } = rebuild(state);
+  assert.deepEqual(warnings, []);
+  assert.match(source, /^\/\/ a spring between two points\ncomponent Spring\(A, B\) \{\n  d = B - A \. hidden\n  A \+ t \* d  #steel\n\}/m);
+  assert.match(source, /^new Spring\(\(0, 0\), \(4, 1\)\) as s1   \/\/ the first$/m);
+  assert.match(source, /^new Spring\(\(0, 2\), \(3, 3\)\) as s2$/m);
+  assert.match(source, /^if m = 1 \{\n  y = x\^2 \. #red\n  P = \(2, 4\)\n\} else \{\n  y = -x \. #red\n\}$/m);
+  assert.match(source, /^z = s1\.d\.x \+ 1$/m);           // members as written, not d_s1
+  assert.doesNotMatch(source, /folder "s1"|d_s1|\{m = 1:/);
+  const same = (a, b) => assert.equal(compile(a, { watermark: false }).tmc, compile(b, { watermark: false }).tmc);
+  same(source, M8);
+});
+
+test("M8: an edited instance or if block comes back expanded, with a warning", () => {
+  const { state, item } = graph(M8);
+  item("d_{s2}=\\left(3,3\\right)-\\left(0,2\\right)").latex = "d_{s2}=\\left(5,5\\right)";
+  item("y=\\left\\{m=1:x^{2},-x\\right\\}").latex = "y=\\left\\{m=1:x^{3},-x\\right\\}";
+  const { source, warnings } = rebuild(state);
+  assert.match(warnings.join("\n"), /'s2' was edited in Desmos/);
+  assert.match(warnings.join("\n"), /if block on line 11 was edited/);
+  assert.match(source, /^new Spring\(\(0, 0\), \(4, 1\)\) as s1/m);   // the other instance is untouched
+  assert.match(source, /^folder "s2" \{\n  d_s2 = \(5, 5\)  \. hidden\n  \(0, 2\) \+ t \* d_s2  #steel\n\}/m);
+  assert.match(source, /^y = \{m = 1: x\^3, -x\}  \. #red\nP = \{m = 1: \(2, 4\)\}$/m);
+  assert.deepEqual(compile(source).errors, []);
+});
+
+test("M8: a line added to an instance's folder in Desmos follows its new line", () => {
+  const { state } = graph(M8);
+  const folder = state.expressions.list.find((e) => e.type === "folder" && e.title === "s1");
+  state.expressions.list.splice(state.expressions.list.indexOf(folder) + 1, 0, { id: "added", type: "expression", latex: "q=7", folderId: folder.id, color: "#2d70b3" });
+  const { source, warnings } = rebuild(state);
+  assert.deepEqual(warnings, []);
+  assert.match(source, /^new Spring\(\(0, 0\), \(4, 1\)\) as s1.*\nq = 7$/m);
+});
+
+test("M8: imports come back as import lines; library edits are dropped with a warning", () => {
+  const libraries = { springs: "color steel #6b7b8c\nclass spring { #steel width 2 }\nlerp(a, b, t) = a + (b - a) * t\ncomponent Dot(P) {\n  P .spring point 8\n}" };
+  const src = 'import "springs" as sp\nnew sp.Dot((1, 2)) as d\ny = sp.lerp(0, 2, x) .sp-spring';
+  const { state, item } = graph(src, { libraries });
+  let { source, warnings } = rebuild(state);
+  assert.deepEqual(warnings, []);
+  assert.match(source, /^import "springs" as sp$/m);
+  assert.match(source, /^new sp\.Dot\(\(1, 2\)\) as d$/m);
+  assert.match(source, /^y = sp\.lerp\(0, 2, x\)  \.sp-spring$/m);
+  assert.doesNotMatch(source, /class spring|color steel|folder "springs"|l_erp/);
+  assert.equal(compile(source, { libraries, watermark: false }).tmc, compile(src, { libraries, watermark: false }).tmc);
+  item("l_{erp}\\left(a,b,t\\right)=a+\\left(b-a\\right)\\cdot t").latex = "l_{erp}\\left(a,b,t\\right)=a";
+  ({ source, warnings } = rebuild(state));
+  assert.match(warnings.join("\n"), /edits to items from 'springs' were dropped/);
+  assert.match(source, /^import "springs" as sp$/m);
 });

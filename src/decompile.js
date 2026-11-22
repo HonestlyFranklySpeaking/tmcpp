@@ -9,7 +9,7 @@
 
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
 import { compile, isWatermarkSeed } from "./compile.js";
-import { readMeta, fnv1a, META_ID } from "./meta.js";
+import { readMeta, fnv1a, itemHash, META_ID } from "./meta.js";
 
 const AUTO_COLORS = new Set(["#c74440", "#2d70b3", "#388c46", "#6042a6", "#fa7e19", "#000000"]);
 const BUILTIN = { "#c74440": "red", "#2d70b3": "blue", "#388c46": "green", "#6042a6": "purple", "#fa7e19": "orange", "#000000": "black" };
@@ -215,16 +215,57 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
     if (parts.length) lines.push(`settings ${parts.join(" ")}`);
   }
   if (lines.length) lines.push("");
-  for (const [n, h] of Object.entries(colors)) lines.push(`color ${n} ${h}`);
-  for (const [n, toks] of Object.entries(classes)) lines.push(`class ${n} { ${toks} }`);
-  if (Object.keys(colors).length || Object.keys(classes).length) lines.push("");
+  // M8: imports and component definitions go at the top, as written.
+  for (const src of meta?.imports ?? []) lines.push(src);
+  if (meta?.imports?.length) lines.push("");
+  for (const src of meta?.components ?? []) lines.push(src, "");
+  // A library's classes and colours come back through its import, not as copies.
+  const libClasses = new Set(meta?.libClasses ?? []), libColors = new Set(meta?.libColors ?? []);
+  const ownColors = Object.entries(colors).filter(([n]) => !libColors.has(n));
+  const ownClasses = Object.entries(classes).filter(([n]) => !libClasses.has(n));
+  for (const [n, h] of ownColors) lines.push(`color ${n} ${h}`);
+  for (const [n, toks] of ownClasses) lines.push(`class ${n} { ${toks} }`);
+  if (ownColors.length || ownClasses.length) lines.push("");
+
+  // Blocks (M8): every item a block produced, and whether all of them are still as compiled.
+  const byId = new Map(list.map((e) => [e.id, e]));
+  const blockIds = new Map();
+  for (const [id, e] of Object.entries(exprs)) if (e.b) (blockIds.get(e.b) ?? blockIds.set(e.b, []).get(e.b)).push(id);
+  const intact = new Map();
+  for (const [key, ids] of blockIds) intact.set(key, ids.every((id) => byId.has(id) && exprs[id].ih === itemHash(byId.get(id))));
+  const warned = new Set(), given = new Set();
+  const warnOnce = (key, text) => { if (!warned.has(key)) { warned.add(key); warnings.push(text); } };
+  const indented = (src, indent) => src.split("\n").map((l) => (l ? indent + l : l));
+  /**
+   * An item from a block: the block's source the first time (and nothing after) if it's intact,
+   * otherwise null so the item is written out plainly. Library items never come back.
+   */
+  const fromBlock = (item, indent) => {
+    const key = exprs[item.id]?.b;
+    if (!key) return null;
+    if (key.startsWith("lib:")) {
+      if (!intact.get(key)) warnOnce(key, `edits to items from '${key.slice(4)}' were dropped; change the library instead`);
+      return [];
+    }
+    const src = meta.blocks?.[key];
+    if (src === undefined) return null;
+    if (!intact.get(key)) {
+      warnOnce(key, key.startsWith("i:")
+        ? `'${key.slice(2)}' was edited in Desmos, so it comes back as plain lines instead of its new line`
+        : `the if block on line ${key.slice(2)} was edited in Desmos, so it comes back as piecewise lines`);
+      return null;
+    }
+    if (given.has(key)) return [];
+    given.add(key);
+    return indented(src, indent);
+  };
 
   const comments = (id, indent) => (exprs[id]?.comments ?? []).map((c) => `${indent}// ${c}`);
 
   const mathOf = (item) => {
     const e = exprs[item.id];
-    if (e?.m !== undefined && e.lh === fnv1a(item.latex)) return { math: e.m, original: true };
-    try { return { math: latexToText(item.latex), original: false }; }
+    if (e?.m !== undefined && e.lh === fnv1a(item.latex)) return { math: e.m, checkMath: e.mc ?? e.m, original: true };
+    try { const math = latexToText(item.latex); return { math, checkMath: math, original: false }; }
     catch { warnings.push(`couldn't convert ${item.id}: ${item.latex}`); return { math: `// ${item.latex}`, original: false }; }
   };
 
@@ -239,17 +280,17 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
     const bound = (x, d) => (x === undefined || x === null || String(x).trim() === "" ? d : valueText(x, latexToText));
     const lo = pd ? bound(pd.min, d0) : d0, hi = pd ? bound(pd.max, d1) : d1;
     ctx.extraRaw = lo !== d0 || hi !== d1 ? [`domain: @{ min: ${lo}, max: ${hi} }`] : [];
-    const { math } = mathOf(item);
+    const { math, checkMath } = mathOf(item);
     const actual = styleView(item);
     const join = (tail) => `${indent}${math}${tail ? "  " + tail : ""}`;
 
     if (e?.tail !== undefined) {
       // Unchanged since compiling: the tail exactly as written.
-      const full = probe(header, `${math} ${e.tail}`);
+      const full = probe(header, `${checkMath} ${e.tc ?? e.tail}`);
       if (full && sameStyle(full, actual) && sliderView(full.item.slider) === sliderView(item.slider)) return join(e.tail);
       // Restyled in Desmos: keep the classes, override only what changed.
       const tags = (e.tags ?? []).map((t) => `.${t}`);
-      const base = probe(header, `${math} ${tags.join(" ")}`.trim());
+      const base = probe(header, `${checkMath} ${(e.tagsc ?? e.tags ?? []).map((t) => `.${t}`).join(" ")}`.trim());
       const from = base ? styleView(base.item) : {};
       if (!(base?.explicitColor) && AUTO_COLORS.has((actual.color ?? "").toLowerCase())) { delete from.color; delete actual.color; }
       const over = overrideTokens(from, actual, ctx);
@@ -259,7 +300,7 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
 
     // No metadata: math plus what differs from TMC's defaults. On a TMC++ graph this item was added
     // in Desmos, so an automatic colour is noise; on a hand-made graph every colour was chosen.
-    const base = probe("", math);
+    const base = probe("", checkMath);
     const from = base ? styleView(base.item) : {};
     if (meta && AUTO_COLORS.has((actual.color ?? "").toLowerCase())) { delete from.color; delete actual.color; }
     else delete from.color; // always state the colour of a hand-made item
@@ -268,6 +309,8 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
   };
 
   const itemLines = (item, indent) => {
+    const block = fromBlock(item, indent);
+    if (block) return block;
     const out = comments(item.id, indent);
     if (item.type === "text") out.push(`${indent}${q(item.text ?? "")}`);
     else if (item.type === "expression") {
@@ -295,6 +338,13 @@ export function decompile(state, { latexToText, itemToTmc = null }) {
 
   const top = list.filter((e) => e.id !== META_ID && !e.folderId);
   for (const item of top) {
+    const block = item.type === "folder" ? fromBlock(item, "") : null;
+    if (block) {
+      // An intact instance: its new line. Lines added to its folder in Desmos follow it.
+      lines.push(...block);
+      for (const child of list.filter((e) => e.folderId === item.id && !exprs[e.id]?.b)) lines.push(...itemLines(child, ""));
+      continue;
+    }
     if (item.type === "folder") {
       const flags = [item.collapsed && "collapsed", item.hidden && "hidden"].filter(Boolean).join(" ");
       lines.push(...comments(item.id, ""));

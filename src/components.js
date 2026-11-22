@@ -81,7 +81,7 @@ function wrap(arg) {
  * inside `${...}`; names right after `.` (P.x, .class) or `#` (#colour) are never touched.
  * `member(head, props) -> text | undefined` handles a path like `s1.a.d` first.
  */
-function substitute(text, lookup, member = null) {
+export function substitute(text, lookup, member = null) {
   let out = "";
   for (let i = 0; i < text.length;) {
     const c = text[i];
@@ -124,11 +124,11 @@ function substitute(text, lookup, member = null) {
   return out;
 }
 
-const identifiers = (text) =>
+export const identifiers = (text) =>
   (text.replace(/"(?:[^"\\]|\\.)*"/g, " ").match(/(?<![.#\w])[A-Za-z][A-Za-z0-9_]*/g) ?? []);
 
 /** Name on the left of `=`: `d = ...` -> {name:"d"}, `f(u, v) = ...` -> {name:"f", args:["u","v"]}. */
-function assigned(text) {
+export function assigned(text) {
   const m = text.match(/^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^()]*)\))?\s*=(?!=)/);
   if (!m) return null;
   return { name: m[1], args: m[2] ? m[2].split(",").map((s) => s.trim()) : [] };

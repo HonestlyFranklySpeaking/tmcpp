@@ -8,6 +8,8 @@ import { fnv1a } from "./meta.js";
 import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
 import { expandComponents } from "./components.js";
 import { unicodeToTmc } from "./greek.js";
+import { lowerImports } from "./imports.js";
+import { STD } from "./std/index.js";
 
 const NAMED_COLORS = {
   red: "RED", blue: "BLUE", green: "GREEN",
@@ -430,12 +432,17 @@ function applySettings(text, settings, errors, line) {
  *             lineMap: number[], classes: Map }}
  * lineMap[i] = TMC++ source line for TMC output line i (0-based).
  */
-export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true } = {}) {
+export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed, watermark = true, libraries, from = "" } = {}) {
   renamed = new Map();
   const errors = [], warnings = [];
-  const parsed = toStatements(source);
-  for (const st of parsed) st.text = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
-  const expanded = expandComponents(lowerConditionals(parsed, errors, warnings, findTailStart), errors, warnings);
+  const parse = (text) => {
+    const sts = toStatements(text);
+    for (const st of sts) st.text = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
+    return sts;
+  };
+  // import resolves first: library definitions join the file under collision-free names.
+  const imported = lowerImports(parse(source), { libraries, std: STD, from, parse }, errors, warnings);
+  const expanded = expandComponents(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings);
   const statements = expanded.statements;
   const classes = new Map();
 
@@ -662,6 +669,6 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     }
   }
   errors.sort((a, b) => a.line - b.line);
-  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource,
+  return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource, imports: imported.imports,
     components: expanded.components, instances: expanded.instances };
 }

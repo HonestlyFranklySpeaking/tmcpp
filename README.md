@@ -52,8 +52,6 @@ npm run preview -- examples/hello.tmcpp --sweep s=0..=1/5 --out hello.png   # ..
 
 The parser only proves the equations are valid; the preview shows the composition, such as a moving shape crossing a title at some slider values. It renders with Desmos itself (`Calc.asyncScreenshot`) in your installed Chrome or Edge, headless, so it needs internet access to desmos.com but no extra browser download. Add `--show` to watch it, `--width` and `--cols` to size the output.
 
-The preview tool currently compiles a `.tmcpp` file without resolving imports. Use it with self-contained examples or an already compiled `.tmc` file.
-
 Paste the printed TMC into DesModder's Text Mode (the T button above the expression list), or use the extension below.
 
 ## Browser extension

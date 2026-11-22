@@ -48,6 +48,8 @@ export function ghUrl(id) {
   if (!m) return null;
   return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[4] ?? "HEAD"}/${m[3]}`;
 }
+/** Folder title for a library's helpers: std/ui stays, lib/parts/ui.tmcpp@abc becomes ui. */
+export const libTitle = (id) => (id.startsWith("std/") ? id : id.replace(/@[^/]*$/, "").split("/").pop().replace(/\.tmcpp$/, "") || id);
 export const isRemote = (id) => /^(gh:|https:\/\/)/.test(id);
 
 function joinPath(dir, rel) {
@@ -174,7 +176,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     if (libs.has(id)) return libs.get(id);
     const source = get(id);
     if (typeof source !== "string") {
-      report(isRemote(id) ? `'${id}' hasn't been fetched yet; open Library to fetch it` : `Can't find library '${id}'`);
+      report(isRemote(id) ? `'${id}' hasn't been fetched yet (in the extension: Library, then Fetch)` : `Can't find library '${id}'`);
       return null;
     }
     const lib = { id, at, statements: [], imports: [], defs: Object.fromEntries(KINDS.map((k) => [k, new Map()])), internal: Object.fromEntries(KINDS.map((k) => [k, new Map()])) };
@@ -384,7 +386,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
       else out.push(st);
     }
     if (helpers.length) {
-      out.push({ text: `folder ${JSON.stringify(lib.id)} collapsed {`, line: lib.at, comments: [], lib: lib.id });
+      out.push({ text: `folder ${JSON.stringify(libTitle(lib.id))} collapsed {`, line: lib.at, comments: [], lib: lib.id });
       out.push(...helpers);
       out.push({ text: "}", line: lib.at, comments: [], lib: lib.id });
     }

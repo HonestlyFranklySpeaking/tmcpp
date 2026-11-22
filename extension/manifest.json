@@ -13,7 +13,26 @@
       ],
       "world": "MAIN",
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.desmos.com/calculator*"
+      ],
+      "js": [
+        "dist/bridge.js"
+      ],
+      "run_at": "document_start"
     }
   ],
-  "homepage_url": "https://github.com/IkeaSourPatches/tmcpp"
+  "homepage_url": "https://github.com/IkeaSourPatches/tmcpp",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*",
+    "https://gist.githubusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "dist/background.js"
+  }
 }

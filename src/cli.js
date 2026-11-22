@@ -2,31 +2,16 @@
 // Usage: node src/cli.js graph.tmcpp   (or pipe source on stdin)
 // Imports resolve before compiling: ./relative files from disk, gh:user/repo/path@ref and
 // https:// URLs from the network, std/... from the bundled libraries.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { compile } from "./compile.js";
 import { decodeSource } from "./decode.js";
-import { resolveImports, ghUrl } from "./imports.js";
-
-async function load(id) {
-  const url = id.startsWith("gh:") ? ghUrl(id) : /^https:\/\//.test(id) ? id : null;
-  if (url) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return await res.text();
-      console.error(`${id}: ${url} answered ${res.status}`);
-    } catch (e) {
-      console.error(`${id}: couldn't reach ${url} (${e.cause?.code ?? e.message}); behind a proxy, run with NODE_USE_ENV_PROXY=1`);
-    }
-    return undefined;
-  }
-  if (id.startsWith("std/")) return undefined; // bundled, the compiler has them
-  return existsSync(id) ? decodeSource(readFileSync(id)) : undefined;
-}
+import { resolveImports } from "./imports.js";
+import { loadNode } from "./load-node.js";
 
 const path = process.argv[2];
 const source = decodeSource(readFileSync(path ?? 0));
 const from = (path ?? "").replace(/\\/g, "/");
-const libraries = await resolveImports(source, load, from);
+const libraries = await resolveImports(source, loadNode, from);
 const { tmc, errors, warnings } = compile(source, { libraries, from });
 const name = path ?? "<stdin>";
 

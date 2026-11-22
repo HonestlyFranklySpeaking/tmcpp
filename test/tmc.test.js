@@ -8,9 +8,11 @@ import { compile } from "../src/compile.js";
 const cfg = buildConfig({});
 const parse = (tmc) => textToRaw(cfg, tmc)[0].diagnostics.map((d) => d.message);
 
+// Libraries the examples import, by the id they resolve to.
+const exampleLibs = Object.fromEntries(readdirSync("examples/lib").map((f) => [`examples/lib/${f}`, readFileSync(`examples/lib/${f}`, "utf8")]));
 for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
   test(`examples/${f} parses in TMC`, () => {
-    const r = compile(readFileSync(`examples/${f}`, "utf8"));
+    const r = compile(readFileSync(`examples/${f}`, "utf8"), { libraries: exampleLibs, from: `examples/${f}` });
     assert.deepEqual(r.errors, []);
     assert.deepEqual(parse(r.tmc), []);
   });

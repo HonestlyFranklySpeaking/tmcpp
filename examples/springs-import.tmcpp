@@ -1,0 +1,8 @@
+// The springs example with the component imported from a library (examples/lib/springs.tmcpp).
+settings x [-2 : 8] y [-2 : 5]
+import "./lib/springs.tmcpp" as sp
+
+Q = (5, 3)  . drag xy
+new sp.Spring((0, 0), (4, 1)) as s1
+new sp.Spring((0, 2), Q, coils = 12) as s2  . #red
+mid = sp.lerp(s2.A, s2.B, 0.5)  .sp-spring point 8

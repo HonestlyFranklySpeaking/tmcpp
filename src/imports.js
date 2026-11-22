@@ -42,12 +42,9 @@ export function parseImport(text) {
 
 // ---------- library ids ----------
 
-/** `gh:user/repo/path.tmcpp@ref` -> the raw file URL. The ref defaults to HEAD. */
-export function ghUrl(id) {
-  const m = id.match(/^gh:([^/@]+)\/([^/@]+)\/([^@]+?)(?:@(.+))?$/);
-  if (!m) return null;
-  return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[4] ?? "HEAD"}/${m[3]}`;
-}
+export { ghUrl } from "./ghurl.js";
+import { ghUrl } from "./ghurl.js";
+
 /** Folder title for a library's helpers: std/ui stays, lib/parts/ui.tmcpp@abc becomes ui. */
 export const libTitle = (id) => (id.startsWith("std/") ? id : id.replace(/@[^/]*$/, "").split("/").pop().replace(/\.tmcpp$/, "") || id);
 export const isRemote = (id) => /^(gh:|https:\/\/)/.test(id);

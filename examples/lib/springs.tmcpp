@@ -1,0 +1,16 @@
+// A library: definitions only. Import it with
+//   import "./lib/springs.tmcpp"                                    (CLI, from examples/)
+//   import "gh:IkeaSourPatches/tmcpp/examples/lib/springs.tmcpp@main"  (extension or CLI)
+color steel #6b7b8c
+class spring { #steel width 2 }
+
+// Point on the segment from A to B, t from 0 to 1.
+lerp(A, B, t) = (1 - t) * A + t * B
+
+component Spring(A, B, coils = 8) {
+  d = B - A  . hidden
+  w = (-d.y, d.x) / distance(A, B) * 0.3  . hidden
+  lerp(A, B, t) + sin(2 * pi * coils * t) * w  .spring
+  A  . point 6
+  B  . point 6
+}

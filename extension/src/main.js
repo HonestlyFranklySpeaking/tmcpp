@@ -6,6 +6,7 @@ import { compile, isWatermarkSeed } from "../../src/compile.js";
 import { decodeSource } from "../../src/decode.js";
 import { restoreGreek } from "../../src/greek.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
+import { createLibrary, libraryCss } from "./library.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
 import STARTER from "../../examples/hello.tmcpp";
@@ -23,7 +24,7 @@ const css = `
   flex-direction: column; background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
   font: 13px system-ui, sans-serif; overflow: hidden; }
 #tmcpp-panel.open { display: flex; }
-#tmcpp-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #eee; }
+#tmcpp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #eee; }
 #tmcpp-head b { flex: 1; }
 #tmcpp-head button { font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 6px; border: 1px solid #2d70b3;
   background: #2d70b3; color: #fff; cursor: pointer; }
@@ -42,7 +43,7 @@ const css = `
 
 function mount(Calc, Desmos) {
   const style = document.createElement("style");
-  style.textContent = css;
+  style.textContent = css + libraryCss;
   document.head.append(style);
 
   const toggle = Object.assign(document.createElement("button"), { id: "tmcpp-toggle", textContent: "TMC++" });
@@ -56,8 +57,10 @@ function mount(Calc, Desmos) {
       <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
       <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden>
       <button class="ghost" id="tmcpp-tmc" title="Copy the compiled TMC">Copy TMC</button>
+      <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library</button>
       <button id="tmcpp-run" title="Ctrl+Enter">Compile</button></div>
     <div id="tmcpp-info"></div>
+    <div id="tmcpp-lib" hidden></div>
     <textarea id="tmcpp-src" spellcheck="false"></textarea>
     <div id="tmcpp-out"></div>`;
   document.body.append(toggle, panel);
@@ -65,6 +68,7 @@ function mount(Calc, Desmos) {
   const src = panel.querySelector("#tmcpp-src");
   const out = panel.querySelector("#tmcpp-out");
   const info = panel.querySelector("#tmcpp-info");
+  const libBox = panel.querySelector("#tmcpp-lib");
 
   // What the open graph says about itself. Checked whenever the panel opens or a compile finishes,
   // because Desmos loads saved graphs after Calc exists and swaps graphs without reloading the page.
@@ -132,12 +136,16 @@ function mount(Calc, Desmos) {
     }
   };
 
+  const library = createLibrary({ box: libBox, src, report: (items, ok) => report(items, ok), rerun: () => run() });
+  panel.querySelector("#tmcpp-libbtn").onclick = () => { libBox.hidden = !libBox.hidden; };
+
   function run() {
     localStorage.setItem(STORE(), src.value);
     hasLocalSource = true;
     // Keep this graph's TMC++ seed so random() results don't reshuffle on every compile.
     const seed = Calc.getState().randomSeed;
-    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined });
+    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined, libraries: library.sources() });
+    library.notePending(src.value);
     const notes = r.warnings.map((w) => ({ ...w, kind: "warn" }));
     if (r.errors.length) {
       report([...r.errors.map((e) => ({ ...e, kind: "err" })), ...notes], "");

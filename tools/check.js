@@ -7,11 +7,14 @@ import { restoreGreek } from "../src/greek.js";
 import { readFileSync } from "node:fs";
 import { compile } from "../src/compile.js";
 import { decodeSource } from "../src/decode.js";
+import { resolveImports } from "../src/imports.js";
+import { loadNode } from "../src/load-node.js";
 
 const path = process.argv[2];
 let tmc = decodeSource(readFileSync(path));
 if (path.endsWith(".tmcpp")) {
-  const r = compile(tmc);
+  const from = path.replace(/\\/g, "/");
+  const r = compile(tmc, { libraries: await resolveImports(tmc, loadNode, from), from });
   for (const e of r.errors) console.error(`${path}:${e.line}: tmc++ error: ${e.message}`);
   if (r.errors.length) process.exit(1);
   tmc = r.tmc;

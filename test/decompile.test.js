@@ -20,8 +20,8 @@ function desmosLoad(state) {
 }
 
 /** Compile like the extension does and return the graph state Desmos would hold, plus a LaTeX->text stub. */
-function graph(src) {
-  const r = compile(src);
+function graph(src, options = {}) {
+  const r = compile(src, options);
   assert.deepEqual(r.errors, []);
   const [{ diagnostics }, state] = textToRaw(buildConfig({}), r.tmc);
   assert.deepEqual(diagnostics, []);
@@ -121,10 +121,13 @@ test("a graph without TMC++ metadata still decompiles", () => {
 });
 
 import { readFileSync, readdirSync } from "node:fs";
+// Libraries the examples import, by the id they resolve to.
+const exampleLibs = Object.fromEntries(readdirSync("examples/lib").map((f) => [`examples/lib/${f}`, readFileSync(`examples/lib/${f}`, "utf8")]));
 for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
   test(`round trip: examples/${f} decompiles to source that compiles identically`, () => {
     const src = readFileSync(`examples/${f}`, "utf8");
-    const { state, latexToText } = graph(src);
+    const options = { libraries: exampleLibs, from: `examples/${f}` };
+    const { state, latexToText } = graph(src, options);
     const { source, warnings } = decompile(state, { latexToText });
     assert.deepEqual(warnings, []);
     // Desmos keeps one ticker per graph, so its position in the file doesn't matter: compare it last.
@@ -134,7 +137,7 @@ for (const f of readdirSync("examples").filter((f) => f.endsWith(".tmcpp"))) {
     };
     const again = compile(source);
     assert.deepEqual(again.errors, []);
-    assert.equal(strip(again.tmc), strip(compile(src).tmc));
+    assert.equal(strip(again.tmc), strip(compile(src, options).tmc));
   });
 }
 

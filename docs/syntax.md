@@ -302,6 +302,54 @@ stretch = distance(s2.A, s2.B) - distance(s1.A, s1.B)
   Limits: Desmos has no lists of lists, so a local that is itself a list can't be part of a list instance; a list instance can't go inside a component, and a component that uses other components can't be one, yet.
 - Not yet: "From graph" giving back `new` lines instead of the expanded folders (milestone M8).
 
+## Libraries
+
+A library is a `.tmcpp` file of definitions that other files `import`. The compiler resolves imports itself; nothing is pasted in. A library may only define **components, classes, colours, functions and constants**. A line that draws or a slider is an error there, since it would have nowhere to go: wrap it in a component, and the importing file decides where it appears with `new`.
+
+```js
+// springs: a library
+color steel #6b7b8c
+class spring { #steel width 2 }
+lerp(a, b, t) = a + (b - a) * t
+component Spring(A, B, coils = 8) {
+  d = B - A
+  w = (-d.y, d.x) / distance(A, B) * 0.3
+  lerp(A, B, t) + sin(2 * pi * coils * t) * w  .spring
+}
+```
+
+Three ways to import it:
+
+| Form | Brings in | Written as |
+| --- | --- | --- |
+| `import "springs"` | everything, unprefixed | `new Spring(...)`, `lerp(...)`, `.spring`, `#steel` |
+| `import "springs" as sp` | everything, behind the name | `new sp.Spring(...)`, `sp.lerp(...)`, `.sp-spring`, `#sp-steel` |
+| `import { Spring, lerp, .spring, #steel } from "springs"` | only what's listed | as listed |
+
+- **Nothing collides.** If the file (or another library) already uses a name, the library's copy gets another Desmos name (`lerp` becomes `lerp2`) and every use is rewritten. Parameters, function arguments and `for` variables are never touched.
+- **Only what's used reaches Desmos.** Components, classes and colours cost nothing until used, as in one file. Functions and constants are emitted only if something uses them, with whatever they use in turn, in one collapsed folder named after the library.
+- Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
+
+**Where libraries come from:**
+
+| Import | Where it works |
+| --- | --- |
+| `"./parts/ui.tmcpp"`, relative to the importing file | CLI |
+| `"springs"`, a name saved in the extension's Library panel | extension |
+| `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension and CLI |
+| `"https://gist.githubusercontent.com/..."`, a raw gist (any `https://` URL in the CLI) | extension and CLI |
+| `"std/..."`, built-in libraries | none yet |
+
+Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
+
+**In the extension**, the **Library** button opens the panel:
+
+- **Save as library** checks the editor's file as a library and stores it under the name you type, in the browser (`chrome.storage.local`, 10 MB). Nothing is saved if the check fails; the problems are listed as usual.
+- **Import** adds `import "name"` to the top of the file. **Delete** asks once more before removing a library.
+- A GitHub import isn't downloaded until you press **Fetch** next to it. The panel lists these after a compile. The copy is kept, so graphs compile offline; **Refetch** downloads it again.
+
+The extension can only fetch from `raw.githubusercontent.com` and `gist.githubusercontent.com`, through its background worker. The CLI fetches `gh:` and `https://` imports itself; behind a proxy, run it with `NODE_USE_ENV_PROXY=1`.
+
 ## Token reference
 
 ### Colour
@@ -477,6 +525,11 @@ Every message names the TMC++ line. Common ones:
 | `s1 (a Spring) has no member 'dd'` | `s1.dd`: no local or parameter of that name |
 | `A uses B uses A: a component can't contain itself` | components may nest, but not in a loop |
 | `Unknown keyword 'compoment' (did you mean 'component'?)` | misspelt keyword |
+| `Can't find library 'x'` / `'gh:...' hasn't been fetched yet` | not saved, not on disk, or not fetched yet |
+| `In 'x' line 3: A library can only define components, classes, colours, functions and constants` | a library line that would draw |
+| `'v' is imported from both 'p' and 'q'` | two plain imports bring the same name; use `as` |
+| `'lerp' is defined in this file and also imported from 'x'` | rename yours, or import with `as` |
+| `Import cycle: a imports b imports a` | libraries can't import each other in a loop |
 | `TMC: ...` (extension) | DesModder's parser rejected the compiled line |
 
 In the extension, **Copy all** at the top of the message list copies every message with its source line.

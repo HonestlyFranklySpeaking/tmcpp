@@ -9,4 +9,8 @@ await build({
   legalComments: "eof",
   loader: { ".tmcpp": "text" },
 });
-console.log("built extension/dist/tmcpp.js");
+// The storage bridge (isolated world) and the background worker that fetches GitHub libraries.
+for (const name of ["bridge", "background"]) {
+  await build({ entryPoints: [`extension/src/${name}.js`], bundle: true, format: "iife", target: "chrome111", outfile: `extension/dist/${name}.js` });
+}
+console.log("built extension/dist/tmcpp.js, bridge.js, background.js");

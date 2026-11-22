@@ -59,8 +59,18 @@ function joinPath(dir, rel) {
   return parts.join("/");
 }
 
+/**
+ * A github.com page link, the one a browser shows (…/blob/main/x.tmcpp, or …/raw/main/x.tmcpp),
+ * as the raw file it shows. Anything else is returned unchanged.
+ */
+export function rawGithub(spec) {
+  const m = spec.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+?)(?:[?#].*)?$/);
+  return m ? `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}` : spec;
+}
+
 /** A spec as written, made absolute against the file that imports it. */
 export function normalizeId(spec, from = "") {
+  spec = rawGithub(spec);
   if (!/^\.\.?\//.test(spec)) return spec;
   if (/^https:\/\//.test(from)) return new URL(spec, from).href;
   const gh = from.match(/^(gh:[^/@]+\/[^/@]+\/)([^@]*?)(@.+)?$/);
@@ -74,7 +84,8 @@ export function normalizeId(spec, from = "") {
 export function findImports(source, from = "") {
   const out = [];
   for (const line of source.split(/\r?\n/)) {
-    const t = line.replace(/\/\/.*$/, "").trim();
+    // A // comment, but not the // inside "https://...".
+    const t = line.replace(/("(?:[^"\\]|\\.)*")|\/\/.*$/g, (all, str) => str ?? "").trim();
     if (!isImport(t)) continue;
     const p = parseImport(t);
     if (p.spec !== undefined) out.push(normalizeId(p.spec, from));

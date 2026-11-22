@@ -359,7 +359,8 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 | `"./parts/ui.tmcpp"`, relative to the importing file | CLI, `tools/check.js` and `npm run preview` |
 | `"springs"`, a name saved in the extension's Library panel | extension |
 | `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
-| `"https://gist.githubusercontent.com/..."`, a raw gist (any `https://` URL in the CLI) | extension and CLI |
+| `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL in the CLI) | extension, CLI, check and preview |
+| `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
 | `"std/..."`, built-in libraries | none yet |
 
 Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.

@@ -125,10 +125,16 @@ test("ids, GitHub shorthand and async resolution", async () => {
   assert.equal(normalizeId("./c.tmcpp", "gh:u/r/lib/b.tmcpp@abc123"), "gh:u/r/lib/c.tmcpp@abc123");
   assert.equal(normalizeId("./c.tmcpp", "https://example.com/l/b.tmcpp"), "https://example.com/l/c.tmcpp");
   assert.equal(normalizeId("std/ui", "lib/b.tmcpp"), "std/ui");
+  // A github.com page link, as copied from the browser, imports the raw file it shows.
+  assert.equal(normalizeId("https://github.com/u/r/blob/main/lib/b.tmcpp"), "https://raw.githubusercontent.com/u/r/main/lib/b.tmcpp");
+  assert.equal(normalizeId("github.com/u/r/raw/abc123/b.tmcpp?plain=1"), "https://raw.githubusercontent.com/u/r/abc123/b.tmcpp");
+  assert.equal(normalizeId("https://github.com/u/r"), "https://github.com/u/r"); // not a file: left alone
+  assert.equal(normalizeId("./c.tmcpp", normalizeId("https://github.com/u/r/blob/main/lib/b.tmcpp")), "https://raw.githubusercontent.com/u/r/main/lib/c.tmcpp");
   assert.equal(ghUrl("gh:u/r/lib/b.tmcpp@abc123"), "https://raw.githubusercontent.com/u/r/abc123/lib/b.tmcpp");
   assert.equal(ghUrl("gh:u/r/b.tmcpp"), "https://raw.githubusercontent.com/u/r/HEAD/b.tmcpp");
   assert.deepEqual(parseImport('import { A, .b, #c } from "x"'), { spec: "x", names: ["A", ".b", "#c"] });
   assert.deepEqual(findImports('import "a" // note\nx = 1\nimport "./b" as b', "dir/main.tmcpp"), ["a", "dir/b"]);
+  assert.deepEqual(findImports('import "https://github.com/u/r/blob/main/x.tmcpp" as x // a comment'), ["https://raw.githubusercontent.com/u/r/main/x.tmcpp"]);
   const store = { a: 'import "b"\nv = 1', b: "w = 2" };
   const got = await resolveImports('import "a"\nimport "missing"', async (id) => store[id]);
   assert.deepEqual([...got.keys()], ["a", "b"]);

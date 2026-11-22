@@ -210,6 +210,7 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M8 round trip: "From graph" gives back `new` lines, `if` blocks, imports and component definitions | done |
 | M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
+| M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
 | M11 ship v2 (Tritime showcase) | planned |
 | M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports | done; std libraries to come |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |

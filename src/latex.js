@@ -11,7 +11,7 @@ const KEYWORDS = new Set(["for", "with", "and", "or", "in"]);
 const SYMBOLS = { cdot: " * ", times: " * ", le: " <= ", ge: " >= ", leq: " <= ", geq: " >= ", to: " -> ",
   ldots: "...", cdots: "...", infty: "infinity", div: " / " };
 
-export function latexToTmc(src) {
+function convert(src) {
   let i = 0;
   let glue = 0; // > 0 inside a subscript or \operatorname, where letters form one name
   const peek = () => src[i];
@@ -135,4 +135,14 @@ export function latexToTmc(src) {
   }
   const out = seq(undefined);
   return out.replace(/\s+/g, " ").replace(/\( /g, "(").replace(/ \)/g, ")").replace(/ ,/g, ",").replace(/\[ /g, "[").replace(/ \]/g, "]").trim();
+}
+
+/**
+ * Desmos LaTeX -> TMC math. 3\cdot10^{-3} comes back as 3e-3, and Euler's e right after a
+ * number gets a gap (2 e-1) so it can never be read as scientific notation (M10).
+ */
+export function latexToTmc(src) {
+  return convert(src)
+    .replace(/(\d)([eE])(?=[+-]?\d)/g, "$1 $2")
+    .replace(/(?<![\w.^])(\d+(?:\.\d+)?) \* 10\^(?:\((-\d+)\)|(\d+))(?![\w.(^])/g, (all, m, neg, pos) => `${m}e${neg ?? pos}`);
 }

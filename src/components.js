@@ -63,7 +63,7 @@ function levenshtein(a, b) {
   }
   return d[a.length][b.length];
 }
-const closest = (w, list) => {
+export const closest = (w, list) => {
   let best = null, score = Infinity;
   for (const c of list) { const s = levenshtein(w.toLowerCase(), c.toLowerCase()); if (s < score) { best = c; score = s; } }
   return score <= Math.max(1, Math.floor(w.length / 3)) ? best : null;

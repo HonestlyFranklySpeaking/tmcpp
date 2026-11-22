@@ -9,7 +9,7 @@
 //
 // Components, classes and colours cost nothing until used. Functions and constants reach
 // Desmos only if something uses them, in one collapsed folder per library.
-import { substitute, identifiers, assigned } from "./components.js";
+import { substitute, identifiers, assigned, closest } from "./components.js";
 
 const STR = /"(?:[^"\\]|\\.)*"/;
 const NAME = "[A-Za-z][A-Za-z0-9_]*";
@@ -275,10 +275,17 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
         else scope.ns.set(imp.ns, imp.lib.internal);
       } else if (imp.names) {
         for (const n of imp.names) {
-          const k = n[0] === "." ? "classes" : n[0] === "#" ? "colors" : imp.lib.defs.comps.has(n) ? "comps" : "values";
+          // .glow is only the class and #steel only the colour; a bare name brings whatever the
+          // library defines under it (a component, function or constant, class, colour).
           const name = n.replace(/^[.#]/, "");
-          if (!imp.lib.defs[k].has(name)) { reportAt(imp, `'${imp.id}' has no '${n}'`); continue; }
-          bring(k, name, imp.lib.internal[k].get(name), imp);
+          const kinds = n[0] === "." ? ["classes"] : n[0] === "#" ? ["colors"] : KINDS.filter((k) => imp.lib.defs[k].has(name));
+          const found = kinds.filter((k) => imp.lib.defs[k].has(name));
+          if (!found.length) {
+            const near = closest(name, KINDS.flatMap((k) => [...imp.lib.defs[k].keys()]));
+            reportAt(imp, `'${imp.id}' has no '${n}'${near ? ` (did you mean '${near}'?)` : ""}`);
+            continue;
+          }
+          for (const k of found) bring(k, name, imp.lib.internal[k].get(name), imp);
         }
       } else {
         for (const k of KINDS) for (const [name, internal] of imp.lib.internal[k]) bring(k, name, internal, imp);

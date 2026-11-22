@@ -338,7 +338,7 @@ Three ways to import it:
 | --- | --- | --- |
 | `import "springs"` | everything, unprefixed | `new Spring(...)`, `lerp(...)`, `.spring`, `#steel` |
 | `import "springs" as sp` | everything, behind the name | `new sp.Spring(...)`, `sp.lerp(...)`, `.sp-spring`, `#sp-steel` |
-| `import { Spring, lerp, .spring, #steel } from "springs"` | only what's listed | as listed |
+| `import { Spring, lerp, spring, steel } from "springs"` | only what's listed; a bare name brings everything the library defines under it (`.spring` or `#steel` picks just the class or colour) | as listed |
 
 See [the spring library](../examples/lib/springs.tmcpp) and [a graph that imports it](../examples/springs-import.tmcpp) for a complete example.
 

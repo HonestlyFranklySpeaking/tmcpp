@@ -61,6 +61,12 @@ test("selective import brings only the listed names, and dependencies still reso
   assert.match(tmc, /R = \(0, 1\) @\{ color: "#6b7b8c"/);
   assert.match(errorsOf(`import { Spring } from "springs"\nz = lerp(1, 2, 3)`, { springs: SPRINGS }).join(), /^$/);
   assert.deepEqual(errorsOf(`import { Foo } from "springs"`, { springs: SPRINGS }), ["'springs' has no 'Foo'"]);
+  assert.deepEqual(errorsOf(`import { steal } from "springs"`, { springs: SPRINGS }), ["'springs' has no 'steal' (did you mean 'steel'?)"]);
+  assert.deepEqual(errorsOf(`import { .steel } from "springs"`, { springs: SPRINGS }), ["'springs' has no '.steel' (did you mean 'steel'?)"]);
+  // A bare name brings a class or colour too: no need to write .spring or #steel.
+  const bare = clean(build(`import { spring, steel } from "springs"\nP = (1, 1) .spring\nQ = (2, 2) #steel`));
+  assert.match(bare.tmc, /P = \(1, 1\) @\{ color: "#6b7b8c", lines: @\{ width: 2 \} \}/);
+  assert.match(bare.tmc, /Q = \(2, 2\) @\{ color: "#6b7b8c" \}/);
 });
 
 test("parameters, arguments and comprehension variables shadow library names", () => {

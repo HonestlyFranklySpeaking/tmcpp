@@ -77,7 +77,9 @@ export function normalizeId(spec, from = "") {
   if (gh) return gh[1] + joinPath(gh[2].split("/").slice(0, -1).join("/"), spec) + (gh[3] ?? "");
   const dir = from.includes("/") ? from.slice(0, from.lastIndexOf("/")) : "";
   const prefix = from.startsWith("/") ? "/" : "";
-  return prefix + joinPath(dir.replace(/^\//, ""), spec);
+  const id = prefix + joinPath(dir.replace(/^\//, ""), spec);
+  // Inside a built-in library, ./styles.tmcpp is std/styles.
+  return id.startsWith("std/") ? id.replace(/\.tmcpp$/, "") : id;
 }
 
 /** Library ids a source imports directly (well-formed lines only). */

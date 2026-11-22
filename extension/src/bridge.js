@@ -56,7 +56,12 @@ window.addEventListener("message", async (e) => {
   const msg = e.data;
   if (e.source !== window || msg?.tmcpp !== "req" || !ops[msg.op]) return;
   try {
-    if (!chrome.runtime?.id) throw new Error("The extension was reloaded; reload this page too");
+    // An old copy of this script, left in a tab after the extension was reloaded: say so in the
+    // panel, but it's expected, so don't log it as a warning (Chrome lists those as errors).
+    if (!chrome.runtime?.id) {
+      window.postMessage({ tmcpp: "res", seq: msg.seq, ok: false, error: "The extension was reloaded; reload this page too" }, location.origin);
+      return;
+    }
     const data = await ops[msg.op](msg.args ?? {});
     window.postMessage({ tmcpp: "res", seq: msg.seq, ok: true, data }, location.origin);
   } catch (err) {

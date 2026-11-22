@@ -1,5 +1,6 @@
 // Bundle the extension: node tools/build-ext.js
 import { build } from "esbuild";
+await import("./build-std.js"); // the built-in libraries go into the bundle
 await build({
   entryPoints: ["extension/src/main.js"],
   bundle: true,

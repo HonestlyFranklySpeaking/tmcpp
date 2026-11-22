@@ -361,7 +361,9 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 | `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
 | `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL in the CLI) | extension, CLI, check and preview |
 | `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
-| `"std/..."`, built-in libraries | none yet |
+| `"std/styles"`, `"std/ui"`, `"std/shapes"`, `"std/easing"`: the built-in libraries | everywhere, offline; nothing to fetch |
+
+The built-in libraries are the files in [`library/std`](../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…) and `std/easing` (easing curves). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
 
 Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
 

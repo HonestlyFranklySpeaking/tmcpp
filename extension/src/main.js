@@ -24,8 +24,22 @@ const css = `
   flex-direction: column; background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
   font: 13px system-ui, sans-serif; overflow: hidden; }
 #tmcpp-panel.open { display: flex; }
-#tmcpp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #eee; }
-#tmcpp-head b { flex: 1; }
+#tmcpp-head { position: relative; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid #eee; }
+#tmcpp-head b { flex: 1; font-size: 14px; letter-spacing: .02em; }
+#tmcpp-head kbd { font: 10px ui-monospace, Consolas, monospace; opacity: .75; margin-left: 4px; }
+#tmcpp-libbtn .badge { display: inline-block; min-width: 14px; margin-left: 4px; padding: 0 4px; border-radius: 7px;
+  background: #e7f1fb; color: #2d70b3; font-size: 10px; line-height: 14px; text-align: center; }
+#tmcpp-libbtn.on { background: #e7f1fb; }
+#tmcpp-libbtn.pending .badge { background: #f5a623; color: #fff; }
+#tmcpp-more { padding: 5px 9px !important; font-size: 14px !important; line-height: 1; }
+#tmcpp-menu { position: absolute; right: 10px; top: 40px; z-index: 2; min-width: 190px; padding: 4px; background: #fff;
+  border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+#tmcpp-menu[hidden] { display: none; }
+#tmcpp-menu button { display: flex; width: 100%; justify-content: space-between; gap: 12px; border: 0 !important; border-radius: 5px;
+  background: #fff !important; color: #222 !important; font-weight: 500 !important; padding: 7px 10px !important; text-align: left; }
+#tmcpp-menu button:hover { background: #f0f5fb !important; }
+#tmcpp-menu button span { color: #888; font-size: 11px; }
+#tmcpp-menu hr { border: 0; border-top: 1px solid #eee; margin: 4px 2px; }
 #tmcpp-head button { font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 6px; border: 1px solid #2d70b3;
   background: #2d70b3; color: #fff; cursor: pointer; }
 #tmcpp-head button.ghost { background: #fff; color: #2d70b3; }
@@ -52,13 +66,17 @@ function mount(Calc, Desmos) {
   panel.innerHTML = `
     <div id="tmcpp-head"><b>TMC++</b>
       <button class="ghost" id="tmcpp-fromgraph" title="Rebuild TMC++ from the graph as it is now, including edits made in Desmos">From graph</button>
-      <button class="ghost" id="tmcpp-open" title="Open a .tmcpp file (or drop one on the editor)">Open</button>
-      <button class="ghost" id="tmcpp-save" title="Download the editor text as a .tmcpp file">Save</button>
-      <button class="ghost" id="tmcpp-example" title="Replace the editor text with the hello-world example">Example</button>
-      <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden>
-      <button class="ghost" id="tmcpp-tmc" title="Copy the compiled TMC">Copy TMC</button>
-      <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library</button>
-      <button id="tmcpp-run" title="Ctrl+Enter">Compile</button></div>
+      <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library<span class="badge" hidden></span></button>
+      <button class="ghost" id="tmcpp-more" title="Open, save, copy and the example" aria-haspopup="true">⋯</button>
+      <button id="tmcpp-run" title="Compile into the graph (Ctrl+Enter)">Compile<kbd>⌃↵</kbd></button>
+      <div id="tmcpp-menu" role="menu" hidden>
+        <button id="tmcpp-open" role="menuitem">Open file… <span>or drop on editor</span></button>
+        <button id="tmcpp-save" role="menuitem">Save as .tmcpp</button>
+        <button id="tmcpp-tmc" role="menuitem">Copy compiled TMC</button>
+        <hr>
+        <button id="tmcpp-example" role="menuitem">Load example <span>replaces text</span></button>
+      </div>
+      <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden></div>
     <div id="tmcpp-info"></div>
     <div id="tmcpp-lib" hidden></div>
     <textarea id="tmcpp-src" spellcheck="false"></textarea>
@@ -136,8 +154,25 @@ function mount(Calc, Desmos) {
     }
   };
 
-  const library = createLibrary({ box: libBox, src, report: (items, ok) => report(items, ok), rerun: () => run() });
-  panel.querySelector("#tmcpp-libbtn").onclick = () => { libBox.hidden = !libBox.hidden; };
+  const library = createLibrary({ box: libBox, src, report: (items, ok) => report(items, ok), rerun: () => run(),
+    // The Library button shows how many are saved, in orange when an import still needs fetching.
+    onState: ({ saved, pending }) => {
+      const badge = panel.querySelector("#tmcpp-libbtn .badge");
+      badge.hidden = !saved && !pending;
+      badge.textContent = pending ? `${pending} to fetch` : String(saved);
+      panel.querySelector("#tmcpp-libbtn").classList.toggle("pending", pending > 0);
+    } });
+  const libBtn = panel.querySelector("#tmcpp-libbtn");
+  libBtn.onclick = () => { libBox.hidden = !libBox.hidden; libBtn.classList.toggle("on", !libBox.hidden); };
+  libBox.addEventListener("opened", () => libBtn.classList.add("on"));
+
+  // The ⋯ menu: closes on a choice, a click elsewhere, or Escape.
+  const menu = panel.querySelector("#tmcpp-menu"), more = panel.querySelector("#tmcpp-more");
+  const closeMenu = () => { menu.hidden = true; more.setAttribute("aria-expanded", "false"); };
+  more.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; more.setAttribute("aria-expanded", String(!menu.hidden)); };
+  menu.addEventListener("click", (e) => { if (e.target.closest("button")) closeMenu(); });
+  document.addEventListener("click", (e) => { if (!menu.hidden && !menu.contains(e.target) && e.target !== more) closeMenu(); });
+  panel.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) { e.stopPropagation(); closeMenu(); more.focus(); } });
 
   function run() {
     localStorage.setItem(STORE(), src.value);

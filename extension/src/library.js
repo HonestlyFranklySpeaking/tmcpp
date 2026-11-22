@@ -57,7 +57,7 @@ export const libraryCss = `
  * box: the panel section to draw into. src: the editor. report(items, okText): the panel's
  * message list. rerun(): compile again (after a fetch).
  */
-export function createLibrary({ box, src, report, rerun }) {
+export function createLibrary({ box, src, report, rerun, onState = () => {} }) {
   let libs = {};
   let pending = [];
   let available = true;
@@ -130,6 +130,7 @@ export function createLibrary({ box, src, report, rerun }) {
   nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
 
   function draw() {
+    onState({ saved: Object.keys(libs).length, pending: pending.length });
     box.replaceChildren();
     if (!available) {
       box.append(el("div", { className: "status err", textContent: "Libraries need the storage bridge. Reload the extension (chrome://extensions) and this page." }));
@@ -168,7 +169,7 @@ export function createLibrary({ box, src, report, rerun }) {
     /** After a compile: list the remote libraries still to fetch, and open the section if any. */
     notePending(text) {
       pending = missingRemote(text);
-      if (pending.length) box.hidden = false;
+      if (pending.length) { box.hidden = false; box.dispatchEvent(new Event("opened")); }
       draw();
     },
   };

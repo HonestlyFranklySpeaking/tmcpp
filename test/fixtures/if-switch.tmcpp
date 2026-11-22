@@ -1,0 +1,10 @@
+// Click the origin to switch between a parabola and a straight line.
+m = 0 [0 : 1 : 1]
+if m = 1 {
+  y = x^2 . #red
+  P = (2, 4)
+} else {
+  y = -x . #red
+  x^2 + y^2 < 4 {x > 0} . #blue
+}
+(0, 0) . #black point 18 click(if m = 0 then m -> 1 else m -> 0)

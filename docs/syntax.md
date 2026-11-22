@@ -134,6 +134,36 @@ gamma = 3
 
 Because Greek names are recognised, a two-letter variable like `mu`, `nu`, `xi`, `pi` or `eta` means the Greek letter, not two letters multiplied.
 
+## Conditionals
+
+Use `if condition then value else fallback` wherever you need a piecewise value or action.
+An inline `if` needs both arms. Chain alternatives with `else if`, or use parentheses
+to put a conditional inside a larger expression.
+
+```js
+y = if x < 0 then -x else if x < 2 then x else 2
+(0, 0) . click(if m = 0 then m -> 1 else m -> 0)
+```
+
+A block can guard several math statements, including inside a component:
+
+```js
+if m = 1 {
+  y = x^2 . #red
+  P = (2, 4)
+} else {
+  y = -x . #red
+  x^2 + y^2 < 4
+}
+```
+
+Here the calculator gets one red curve, `y = {m = 1: x^2, -x}`. The point exists only
+when `m = 1`, and the disk is drawn only in the other branch. A block may omit its
+`else` or contain nested blocks. Matching assignments take the first branch's style.
+A different style in the other branch produces a warning at that line.
+
+“From graph” currently returns the lowered piecewise expressions.
+
 ## Style tails
 
 Everything after the math that styles it is the tail. It starts at the first of these that follows a space:

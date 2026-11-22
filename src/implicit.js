@@ -73,8 +73,37 @@ export function desmosNames(math, seen = null) {
   return out;
 }
 
+/**
+ * Scientific notation (M10): a number glued to e or E and an integer exponent, 3e-3 or 1.5E8,
+ * becomes 3 * 10^(-3). Euler's e needs a gap or no digits after it: 3 e - 3, 2e, e^x.
+ * Bracketed when a / or ^ before it, or a ^ after it, would otherwise bind tighter.
+ */
+/** mant x 10^shift as an exact decimal string, by moving the point: decimal("1.5", -3) = "0.0015". */
+function decimal(mant, shift) {
+  const [int, frac = ""] = mant.split(".");
+  let digits = int + frac, point = int.length + shift;
+  if (point <= 0) { digits = "0".repeat(1 - point) + digits; point = 1; }
+  if (point > digits.length) digits += "0".repeat(point - digits.length);
+  const whole = digits.slice(0, point).replace(/^0+(?=\d)/, ""), rest = digits.slice(point).replace(/0+$/, "");
+  return rest ? `${whole}.${rest}` : whole;
+}
+
+export function sciNotation(math) {
+  // A number starts at the beginning, after a non-name character, or right after `...` ([1...3e2]).
+  return math.replace(/"(?:[^"\\]|\\.)*"|(?<=^|[^\w.]|\.\.\.)(\d+\.?\d*|\.\d+)[eE]([+-]?)(\d+)(?![\w.])/g, (all, mant, sign, exp, at, s) => {
+    if (mant === undefined) return all; // a string
+    const before = s.slice(0, at);
+    const shift = (sign === "-" ? -1 : 1) * Number(exp);
+    // Up to 12 places either way: the exact decimal, so `k = 5e-3 [0 : 1]` is still a slider.
+    if (Math.abs(shift) <= 12) return decimal(mant, shift);
+    const power = sign === "-" ? `10^(-${exp})` : `10^${exp}`;
+    const value = Number(mant) === 1 ? power : `${mant} * ${power}`;
+    return /[/^]\s*$/.test(before) || /^\s*\^/.test(s.slice(at + all.length)) ? `(${value})` : value;
+  });
+}
+
 export function implicitMultiply(math, seen = null) {
-  math = desmosNames(math, seen);
+  math = desmosNames(sciNotation(math), seen);
   const toks = math.match(TOKEN) ?? [];
   let out = "", gap = false;
   const sig = [];            // recent significant tokens: { t, k }

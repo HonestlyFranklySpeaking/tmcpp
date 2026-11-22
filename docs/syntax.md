@@ -133,6 +133,12 @@ The parser TMC++ uses can't read restrictions, so each becomes a piecewise aroun
 
 **Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number, an expression written without spaces (`fill 0.8*(1-t)^2`), or an expression in brackets, which may contain spaces (`opacity (a pi)`). A number may skip its leading zero: `fill .95`.
 
+### Scientific notation
+
+A number glued to `e` or `E` and a whole-number exponent is scientific notation: `3e-3` is 0.003, `1.5E8` is 150000000, `k = 5e-3 [0 : 1e-2 : 1e-4]` is a slider. It compiles to the plain decimal (so sliders still work), or to `2.5 * 10^(-13)` beyond twelve places.
+
+Euler's number stays `e` whenever it isn't glued to a number with an exponent after it: `2e`, `e^x`, `2.5e^x`, `3 e - 3`. From graph writes `3\cdot10^{-3}` back as `3e-3`, and puts a space after a number before Euler's e (`2 e - 1`), so the two never get mixed up.
+
 ### Greek letters and Unicode
 
 Write Greek letters by name: `alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi pi rho sigma tau upsilon phi chi psi omega`, the capitals `Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega`, and `varphi vartheta varepsilon`. A subscript works as usual: `lambda_1`. All of them reach Desmos as real Greek letters, labels included (`label "${gamma}"`).

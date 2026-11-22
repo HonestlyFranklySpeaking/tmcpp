@@ -83,7 +83,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 - One statement per line. A `;` at the end is optional.
 - A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
-- `//` comments are allowed anywhere and are never sent to TMC.
+- `//` comments are allowed anywhere and are never sent to TMC. If you want your comments to be saved, use the notes that Desmos provides, these comments are recommended for programming purposes.
 - Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls and keywords stay intact. The compiler keeps the body of `sum`/`product`/`integral` and the expression after `(d/d x)` attached to their operators, while still inserting multiplication within those expressions. `.5` becomes `0.5`.
 - Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
 - Name variables freely: `score`, `hello_world` and even `total` become names Desmos accepts (`s_core`, `h_elloworld`, `t_otal`), including inside `${...}` in labels.
@@ -210,6 +210,7 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M8 round trip: "From graph" gives back `new` lines, `if` blocks, imports and component definitions | done |
 | M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
+| M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
 | M11 ship v2 (Tritime showcase) | planned |
 | M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports | done; std libraries to come |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |

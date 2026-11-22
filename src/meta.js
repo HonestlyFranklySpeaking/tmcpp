@@ -141,6 +141,7 @@ export function buildMeta(compiled, list, ticker = null) {
     if (rt.imports.length) meta.imports = rt.imports;
     if (Object.keys(rt.blocks).length) meta.blocks = rt.blocks;
   }
+  if (compiled.names && Object.keys(compiled.names).length) meta.names = compiled.names;
   const libClasses = [...compiled.classes].filter(([, d]) => d.lib).map(([n]) => n);
   const libColors = [...(compiled.colors ?? [])].filter(([, d]) => d.lib).map(([n]) => n);
   if (libClasses.length) meta.libClasses = libClasses;

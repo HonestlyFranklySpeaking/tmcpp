@@ -10,6 +10,7 @@
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
 import { compile, isWatermarkSeed } from "./compile.js";
 import { readMeta, fnv1a, itemHash, META_ID } from "./meta.js";
+import { substitute } from "./components.js";
 
 const AUTO_COLORS = new Set(["#c74440", "#2d70b3", "#388c46", "#6042a6", "#fa7e19", "#000000"]);
 const BUILTIN = { "#c74440": "red", "#2d70b3": "blue", "#388c46": "green", "#6042a6": "purple", "#fa7e19": "orange", "#000000": "black" };
@@ -180,11 +181,17 @@ const q = (s) => JSON.stringify(s);
  * @param {(item:object)=>string} [opts.itemToTmc]   a whole raw item -> TMC text (tables, images)
  * @returns {{ source: string, warnings: string[], fromMeta: boolean }}
  */
-export function decompile(state, { latexToText, itemToTmc = null }) {
+export function decompile(state, { latexToText: fromLatex, itemToTmc = null }) {
   const warnings = [];
   const list = state.expressions?.list ?? [];
   const found = readMeta(list);
   const meta = found?.meta ?? null;
+  // Math converted back from Desmos uses Desmos's names (s_coreval); give back the names as
+  // written (score_val) from the table the compiler kept.
+  const names = meta?.names ?? {};
+  const latexToText = Object.keys(names).length
+    ? (latex) => substitute(fromLatex(latex), (n) => names[n])
+    : fromLatex;
   const exprs = meta?.exprs ?? {};
   const classes = meta?.classes ?? {};
   const colors = meta?.colors ?? {};

@@ -524,7 +524,7 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 
 `settings` lines come back as written, so panning or zooming in Desmos doesn't change your source. Comments are placed above the item they belonged to.
 
-Imports and component definitions always go at the top of the rebuilt file, after `settings`. Members keep the spelling you wrote (`s1.d`, `sp.lerp`, `.sp-spring`), never the generated Desmos names. Moving a slider or clicking something that changes a value inside an instance counts as an edit, so that instance comes back detached.
+Imports and component definitions always go at the top of the rebuilt file, after `settings`. A line edited in Desmos gets your names back (`score_val`, not `s_coreval`); members keep the spelling you wrote (`s1.d`, `sp.lerp`, `.sp-spring`), never the generated Desmos names. Moving a slider or clicking something that changes a value inside an instance counts as an edit, so that instance comes back detached.
 
 ## Errors and warnings
 

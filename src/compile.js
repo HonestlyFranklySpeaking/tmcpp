@@ -736,5 +736,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   errors.sort((a, b) => a.line - b.line);
   return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource, imports: imported.imports,
     roundTrip: finishRoundTrip(roundTrip, expanded.instances),
+    // Desmos spelling -> the name as written (s_coreval -> score_val), for lines edited in Desmos.
+    names: Object.fromEntries([...renamed].filter(([d, from]) => from.size === 1 && !from.has(d)).map(([d, from]) => [d, [...from][0]])),
     components: expanded.components, instances: expanded.instances };
 }

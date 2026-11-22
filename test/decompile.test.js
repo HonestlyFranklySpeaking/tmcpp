@@ -315,3 +315,12 @@ test("M8: imports come back as import lines; library edits are dropped with a wa
   assert.match(warnings.join("\n"), /edits to items from 'springs' were dropped/);
   assert.match(source, /^import "springs" as sp$/m);
 });
+
+test("M8: lines edited in Desmos give back the names as written", () => {
+  const { state, item } = graph('score_val = 42\nlabel_y = score_val + 1\n(1, label_y) . label "${score_val}"');
+  item("s_{coreval}=42").latex = "s_{coreval}=100";
+  item("l_{abely}=s_{coreval}+1").latex = "l_{abely}=s_{coreval}\\cdot 2";
+  const { source } = rebuild(state);
+  assert.match(source, /^score_val = 100$/m);
+  assert.match(source, /^label_y = score_val \* 2$/m);
+});

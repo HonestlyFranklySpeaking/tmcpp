@@ -1,0 +1,132 @@
+// std/shapes.tmcpp
+// Geometric components and shape helpers for TMC++
+import { solid-fill } from "./styles.tmcpp"
+
+// ==========================================
+// 1. ARROWS & VECTORS
+// ==========================================
+
+// Directed line segment from A to B with a filled arrowhead
+// head: arrowhead length in graph units (e.g., 0.35)
+component Arrow(A, B, head) {
+  d = B - A
+  L = hypot(d.x, d.y)
+  u = d / max(L, 1e-6)
+  n = (-u.y, u.x)
+  tip = B
+  left = B - head * u + 0.45 * head * n
+  right = B - head * u - 0.45 * head * n
+
+  segment(A, B - 0.8 * head * u)
+  polygon([tip, left, right]) .solid-fill
+}
+
+// Double-headed dimension / measurement arrow
+component DoubleArrow(A, B, head) {
+  d = B - A
+  L = hypot(d.x, d.y)
+  u = d / max(L, 1e-6)
+  n = (-u.y, u.x)
+
+  segment(A + 0.8 * head * u, B - 0.8 * head * u)
+  polygon([B, B - head * u + 0.45 * head * n, B - head * u - 0.45 * head * n]) .solid-fill
+  polygon([A, A + head * u + 0.45 * head * n, A + head * u - 0.45 * head * n]) .solid-fill
+}
+
+// ==========================================
+// 2. BOXES & POLYGONS
+// ==========================================
+
+// Axis-aligned rectangle centered at C with width w and height h
+component Box(C, w, h) {
+  hw = w / 2
+  hh = h / 2
+  polygon([
+    (C.x - hw, C.y - hh),
+    (C.x + hw, C.y - hh),
+    (C.x + hw, C.y + hh),
+    (C.x - hw, C.y + hh)
+  ])
+}
+
+// Rotated rectangle centered at C, size (w, h), rotated by theta (radians)
+component RotatedBox(C, w, h, theta) {
+  hw = w / 2
+  hh = h / 2
+  ux = (cos(theta), sin(theta))
+  uy = (-sin(theta), cos(theta))
+  polygon([
+    C - hw * ux - hh * uy,
+    C + hw * ux - hh * uy,
+    C + hw * ux + hh * uy,
+    C - hw * ux + hh * uy
+  ])
+}
+
+// Filled & outlined rounded rectangle (great for UI buttons and cards)
+component RoundedBox(C, w, h, r) {
+  rc = min(r, min(w / 2, h / 2))
+  dx = abs(x - C.x) - (w / 2 - rc)
+  dy = abs(y - C.y) - (h / 2 - rc)
+  hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - rc <= 0
+}
+
+// Regular n-sided polygon centered at C with circumradius r and rotation rot
+component RegularPolygon(C, r, n, rot) {
+  angles = rot + 2 * pi * [0 ... n - 1] / n
+  polygon(C + r * (cos(angles), sin(angles)))
+}
+
+// ==========================================
+// 3. ARCS, SECTORS & ANGLE MARKERS
+// ==========================================
+
+// Circular arc centered at C, radius r, from angle a0 to a1 (radians)
+component Arc(C, r, a0, a1) {
+  t_arc = [0 ... 64] / 64
+  ang = a0 + (a1 - a0) * t_arc
+  path(C + r * (cos(ang), sin(ang)))
+}
+
+// Pie wedge / sector centered at C, radius r, from a0 to a1
+component Sector(C, r, a0, a1) {
+  t_sec = [0 ... 64] / 64
+  ang = a0 + (a1 - a0) * t_sec
+  pts = join([C], C + r * (cos(ang), sin(ang)))
+  polygon(pts)
+}
+
+// Angle arc marker at vertex B between rays BA and BC
+component AngleMarker(A, B, C, r) {
+  a0 = arctan(A.y - B.y, A.x - B.x)
+  raw = arctan(C.y - B.y, C.x - B.x) - a0
+  da = mod(raw + pi, 2 * pi) - pi
+  t_ang = [0 ... 32] / 32
+  ang = a0 + da * t_ang
+  path(B + r * (cos(ang), sin(ang)))
+}
+
+// Right-angle square symbol at vertex B between rays BA and BC
+component RightAngle(A, B, C, size) {
+  u = (A - B) / max(hypot(A.x - B.x, A.y - B.y), 1e-6)
+  v = (C - B) / max(hypot(C.x - B.x, C.y - B.y), 1e-6)
+  path([B + size * u, B + size * (u + v), B + size * v])
+}
+
+// ==========================================
+// 4. GRIDS & CROSSHAIRS
+// ==========================================
+
+// Crosshair reticle centered at C with arm half-length r
+component Crosshair(C, r) {
+  segment(C - (r, 0), C + (r, 0))
+  segment(C - (0, r), C + (0, r))
+}
+
+// Bounded rectangular grid from (x0, y0) to (x1, y1) with spacing step
+component Grid(x0, y0, x1, y1, step) {
+  xs = [x0, x0 + step ... x1]
+  ys = [y0, y0 + step ... y1]
+  segment((xs, y0), (xs, y1))
+  segment((x0, ys), (x1, ys))
+}

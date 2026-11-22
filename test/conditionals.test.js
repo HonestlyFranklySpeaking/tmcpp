@@ -84,6 +84,15 @@ test("block else-if chains nest, and sliders are refused inside blocks", () => {
   assert.equal(error.line, 3);
 });
 
+test("text arms and blocks inside if blocks give one clear error", () => {
+  const text = compile('a = 1\ny = if a = 1 then x else "no"').errors;
+  assert.equal(text.length, 1);
+  assert.match(text[0].message, /text/);
+  const folder = compile('f = 0\nif f = 0 {\n  folder "x" {\n    y = x\n  }\n}').errors;
+  assert.equal(folder.length, 1);
+  assert.equal(folder[0].line, 3);
+});
+
 test("malformed conditionals report the original source line", () => {
   for (const [source, message] of [
     ["p = if then 1 else 0", /condition/],

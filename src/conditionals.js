@@ -57,6 +57,8 @@ function inline(text) {
     let no;
     if (tokens[pos] === "if") { pos++; no = conditional(); }
     else no = required("else expression");
+    for (const arm of [yes, no]) if (/^"(?:\\.|[^"\\])*"$/.test(arm))
+      throw Error("An if can't give text: Desmos piecewise values must be numbers, points or lists");
     return condition + ": " + yes + ", " + no;
   }
   return sequence(false);
@@ -105,8 +107,14 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
     for (const row of no) if (!used.has(row)) emit(row, inverse);
   }
 
+  let skip = 0; // body of a rejected block inside an if, so its `}` doesn't close the if
   for (let i = 0; i < statements.length; i++) {
     const st = statements[i], frame = stack.at(-1);
+    if (skip) {
+      if (/\{$/.test(st.text)) skip++;
+      else if (st.text === "}") skip--;
+      continue;
+    }
     try {
       if (isConditionalHeader(st.text) && /^if\b/.test(st.text)) {
         const header = st.text.match(blockHead);
@@ -138,8 +146,10 @@ export function lowerConditionals(statements, errors, warnings, findTailStart) {
           do { closing = stack.pop(); merge(closing); } while (closing.chained && stack.length);
         }
       } else {
-        if (frame && /^(?:folder|component|new|class|color|table|ticker|settings|image)\b|^"/.test(st.text))
+        if (frame && /^(?:folder|component|new|class|color|table|ticker|settings|image)\b|^"/.test(st.text)) {
+          if (/\{$/.test(st.text)) skip = 1;
           throw Error("An if block accepts math statements and nested if blocks");
+        }
         if (/^(?:}\s*)?else\b/.test(st.text)) throw Error("Unexpected else; expected an else block");
         if (!/\bif\b/.test(st.text) || st.orphan) { current().push(st); continue; }
         const at = findTailStart(st.text);

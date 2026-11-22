@@ -2,6 +2,9 @@
 // On-canvas interactive UI controls and HUD components for TMC++
 import "./styles.tmcpp"
 
+// Used by Stepper, CanvasSlider and ProgressBar.
+clamp(z, lo, hi) = min(hi, max(lo, z))
+
 // ==========================================
 // 1. BUTTONS & TRIGGERS
 // ==========================================

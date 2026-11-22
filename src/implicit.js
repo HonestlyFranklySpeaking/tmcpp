@@ -11,7 +11,7 @@ import { greekPlaceholder } from "./greek.js";
 const BIG_OPS = new Set(["sum", "product", "integral"]);
 const BIG_OPS_SET = BIG_OPS;
 // Desmos's own variables: index is the item clicked in a clickable list.
-const BUILTIN_VARS = new Set(["index"]);
+const BUILTIN_VARS = new Set(["index", "dt"]);
 const KEYWORDS = new Set(["for", "with", "in", "else", "if", "and", "or", "from", "to", "of", "true", "false"]);
 
 // Desmos only accepts one-letter names, optionally with a subscript (s_core, X_1). Its built-in

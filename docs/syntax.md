@@ -57,7 +57,7 @@ Math is TMC math with a few conveniences.
 | `2(x)` | `2 * (x)` |
 | `.5` | `0.5` (TMC needs the leading zero) |
 
-Left alone: function calls `f(x)`, multi-letter names `total`, keywords such as `for`, the body of `sum n=(1...5) n`, `product` and `integral x=(0 ... 5) x^2`, and whatever follows `(d/d x)`.
+Function calls `f(x)` are kept as calls, and keywords such as `for` are not treated as factors. After the bounds of `sum`, `product` or `integral`, the body is not multiplied by the closing `)`; multiplication *inside* the body is still inserted where needed. For example, `product n=(1...5) 2n` becomes `product n=(1...5) 2 * n`. The expression after `(d/d x)` is likewise not multiplied by the derivative operator. Multi-letter names are handled by the name conversion below.
 
 **Variable names.** Desmos only accepts one-letter names with an optional subscript (`a`, `X_1`, `s_{core}`). TMC++ lets you write real names and renames them consistently everywhere (math, slider bounds, style values, tickers and `${...}` in labels):
 
@@ -144,6 +144,7 @@ Everything after the math that styles it is the tail. It starts at the first of 
 | `#` (a colour) | `y = x #red` |
 | a lone `.` | `y = x . dashed` |
 | `label "` | `(1, 2) label "A"` |
+| `click(` | `(1, 2) click(n -> n + 1)` |
 | `@{` | `y = x @{ color: RED }` |
 
 Slider bounds come between the math and the tail: `a = 1 [0 : 5] . play`.

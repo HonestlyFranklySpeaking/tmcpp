@@ -32,10 +32,12 @@ Requires Node 22+.
 
 ```sh
 npm install
-npm test                                  # 200 tests, including DesModder's real parser
+npm test                                  # compiler and DesModder parser tests
 node src/cli.js examples/sunset.tmcpp     # print TMC, or errors with line numbers
 node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModder's parser
 ```
+
+The CLI also reads TMC++ from standard input when no file is given. `tools/check.js` accepts either a `.tmcpp` source file or an already compiled `.tmc` file. Compile diagnostics identify source lines; parser diagnostics from `tools/check.js` identify lines in the generated TMC.
 
 ### Preview in real Desmos
 
@@ -79,7 +81,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 - One statement per line. A `;` at the end is optional.
 - A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
 - `//` comments are allowed anywhere and are never sent to TMC.
-- Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls, keywords, `sum`/`product`/`integral` bodies and `(d/d x)` are left alone, and `.5` becomes `0.5`.
+- Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls and keywords stay intact. The compiler keeps the body of `sum`/`product`/`integral` and the expression after `(d/d x)` attached to their operators, while still inserting multiplication within those expressions. `.5` becomes `0.5`.
 - Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
 - Name variables freely: `score`, `hello_world` and even `total` become names Desmos accepts (`s_core`, `h_elloworld`, `t_otal`), including inside `${...}` in labels.
 - Double inequalities work on anything: Desmos only draws `a < f < b` when `f` is `x` or `y`, so TMC++ rewrites the rest to `max(a - f, f - b) < 0`. `2.49 < r(x,y) < 2.98` draws a ring, and the bounds can be piecewise.
@@ -89,7 +91,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ### Style tails
 
-A tail starts at the first whitespace-preceded `.name`, `#`, `label "`, lone `.` or `@{`. Tokens apply left to right: classes, then inline tokens, then a raw `@{ }`; later wins.
+A tail starts at the first whitespace-preceded `.name`, `#`, `label "`, `click(`, lone `.` or `@{`. Tokens apply left to right: classes, then inline tokens, then a raw `@{ }`; later wins.
 
 ```js
 class curve { #c74440 dashed width 3 }   // define once (hoisted; ; separators allowed)
@@ -157,7 +159,7 @@ TMC++ --compile--> TMC --text-mode-core textToRaw--> Desmos state --Calc.setStat
 
 Going back, `src/decompile.js` rebuilds TMC++ from a graph state using the metadata note, recompiling each tail to compare it with what Desmos holds, and `src/latex.js` turns Desmos LaTeX back into TMC math.
 
-The compiler (`src/compile.js`) is a line-based preprocessor; all math parsing is left to DesModder's text-mode-core. In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
+The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some math syntax, including implicit multiplication and restrictions, before DesModder's text-mode-core parses the generated TMC. In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
 
 ## Known limits
 

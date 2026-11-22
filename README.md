@@ -182,8 +182,9 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M6 components inside components, `p.a.n` paths, stacked tails | done |
 | M7 list instances: `new Cell(i, j) for i = [1...9], j = [1...9] as cells` | done |
 | M8 round trip: "From graph" gives back `new` lines | planned |
-| M9, M10 `if` statements to piecewise, merged ticker actions | planned |
-| M11 ship v2 (Tritime and Minesweeper showcases); M12 libraries | planned |
+| M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
+| M10 merged ticker actions | planned |
+| M11 ship v2 (Tritime showcase); M12 libraries | planned |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |
 
 ## License

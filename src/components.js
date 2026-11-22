@@ -39,7 +39,7 @@ function matchClose(s, open) {
   return -1;
 }
 
-function splitArgs(s) {
+function splitArgs(s, separator = ",") {
   const out = [];
   let depth = 0, inStr = false, start = 0;
   for (let i = 0; i < s.length; i++) {
@@ -48,7 +48,7 @@ function splitArgs(s) {
     if (c === '"') inStr = true;
     else if ("([{".includes(c)) depth++;
     else if (")]}".includes(c)) depth--;
-    else if (c === "," && depth === 0) { out.push(s.slice(start, i).trim()); start = i + 1; }
+    else if (c === separator && depth === 0) { out.push(s.slice(start, i).trim()); start = i + 1; }
   }
   const last = s.slice(start).trim();
   if (last || out.length) out.push(last);
@@ -421,6 +421,12 @@ export function expandComponents(statements, errors, warnings) {
       inst.abstractDefs.push(`${name} = ${value}` + (/^-?\d*\.?\d+$/.test(value.trim()) ? p.bounds : " . hidden"));
     }
     for (const local of comp.locals.keys()) inst.names.set(local, allocate(local, suffix));
+    if (inst.list) {
+      // Desmos definitions can be forward-referenced, including from an earlier click.
+      for (const b of comp.body) {
+        if (b.fnArgs?.length === 0) inst.list.names.add(inst.names.get(assigned(b.text).name));
+      }
+    }
     const anon = new Map();
     comp.body.forEach((b, k) => {
       if (!b.nested || cyclic.has(comp.name)) return;
@@ -493,18 +499,38 @@ export function expandComponents(statements, errors, warnings) {
       if (/^\s*\[/.test(rhs) && !isList(rhs)) {
         errors.push({ line: b.line, message: `'${a.name}' is a list, and Desmos has no lists of lists, so it can't be part of a list instance` });
       }
-      L.names.add(name);
     }
-    tail = tail.replace(/click\(((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)/g, (all, body) => {
+    // A conditional action must test the clicked element and update only that element.
+    // Walk whole action groups, leaving piecewise expressions on the RHS of an arrow intact.
+    function clickBody(body) {
       const k = allocate("k", inst.key.replace(/[^A-Za-z0-9]/g, "") + "i");
-      const atIndex = (e) => substitute(e, (id) => (L.names.has(id) ? `${id}[index]` : undefined));
-      const acts = splitArgs(body).map((act) => {
+      const atIndex = e => substitute(e, id => L.names.has(id) ? `${id}[index]` : undefined);
+      function action(act) {
+        if (act.startsWith("{") && matchClose(act, 0) === act.length - 1) {
+          const arms = splitArgs(act.slice(1, -1)).map(arm => {
+            const [guard, value] = splitArgs(arm, ":");
+            return value === undefined ? action(guard) : `${atIndex(guard)}: ${action(value)}`;
+          });
+          return "{" + arms.join(", ") + "}";
+        }
+        if (act.startsWith("(") && matchClose(act, 0) === act.length - 1)
+          return "(" + splitArgs(act.slice(1, -1)).map(action).join(", ") + ")";
         const m = act.match(/^([A-Za-z][A-Za-z0-9_]*)\s*->\s*([\s\S]+)$/);
-        if (!m || !L.names.has(m[1])) return act;
+        if (!m) return act;
+        if (!L.names.has(m[1])) return act;
         return `${m[1]} -> [{${k} = index: ${atIndex(m[2])}, ${m[1]}[${k}]} for ${k} = [1...length(${m[1]})]]`;
-      });
-      return `click(${acts.join(", ")})`;
-    });
+      }
+      return splitArgs(body).map(action).join(", ");
+    }
+    const clickTokens = /"(?:\\.|[^"\\])*"|\bclick\(/g;
+    for (let match; (match = clickTokens.exec(tail));) {
+      if (match[0] !== "click(") continue;
+      const open = clickTokens.lastIndex - 1, close = matchClose(tail, open);
+      if (close < 0) break;
+      const body = clickBody(tail.slice(open + 1, close));
+      tail = tail.slice(0, open + 1) + body + tail.slice(close);
+      clickTokens.lastIndex = open + body.length + 2;
+    }
     return tail ? `${math} ${tail}` : math;
   };
 

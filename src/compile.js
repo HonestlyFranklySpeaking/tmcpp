@@ -5,6 +5,7 @@ import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
+import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
 import { expandComponents } from "./components.js";
 import { unicodeToTmc } from "./greek.js";
 
@@ -103,7 +104,7 @@ function splitTopLevelCommas(s) {
 // `component` and near-misses of it (compoment, componet) open a block; the misspelling is
 // reported by the component pass rather than gluing the whole body into one statement.
 const COMPONENT_HEAD = /^(component|compoment|componet|compnent|componnet|comp)\s+[A-Za-z]\w*\s*\(/;
-const isHeader = (s) => /^(folder|class|table)\b/.test(s) || COMPONENT_HEAD.test(s);
+const isHeader = (s) => /^(folder|class|table)\b/.test(s) || COMPONENT_HEAD.test(s) || isConditionalHeader(s);
 const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
 
 // ---------- pass 1: join physical lines into logical statements ----------
@@ -434,7 +435,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const errors = [], warnings = [];
   const parsed = toStatements(source);
   for (const st of parsed) st.text = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
-  const expanded = expandComponents(parsed, errors, warnings);
+  const expanded = expandComponents(lowerConditionals(parsed, errors, warnings, findTailStart), errors, warnings);
   const statements = expanded.statements;
   const classes = new Map();
 

@@ -57,11 +57,11 @@ window.addEventListener("message", async (e) => {
   if (e.source !== window || msg?.tmcpp !== "req" || !ops[msg.op]) return;
   try {
     if (!chrome.runtime?.id) throw new Error("The extension was reloaded; reload this page too");
-    const data = await ops[msg.op](msg);
-    window.postMessage({ tmcpp: "res", id: msg.id, ok: true, data }, location.origin);
+    const data = await ops[msg.op](msg.args ?? {});
+    window.postMessage({ tmcpp: "res", seq: msg.seq, ok: true, data }, location.origin);
   } catch (err) {
     console.warn(`[TMC++] ${msg.op} failed:`, err);
-    window.postMessage({ tmcpp: "res", id: msg.id, ok: false, error: String(err?.message ?? err) }, location.origin);
+    window.postMessage({ tmcpp: "res", seq: msg.seq, ok: false, error: String(err?.message ?? err) }, location.origin);
   }
 });
 

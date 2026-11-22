@@ -10,9 +10,9 @@ const listeners = new Set();
 window.addEventListener("message", (e) => {
   if (e.source !== window) return;
   const m = e.data;
-  if (m?.tmcpp === "res" && waiting.has(m.id)) {
-    const w = waiting.get(m.id);
-    waiting.delete(m.id);
+  if (m?.tmcpp === "res" && waiting.has(m.seq)) {
+    const w = waiting.get(m.seq);
+    waiting.delete(m.seq);
     clearTimeout(w.timer);
     m.ok ? w.resolve(m.data) : w.reject(new Error(m.error));
   } else if (m?.tmcpp === "changed") {
@@ -21,13 +21,14 @@ window.addEventListener("message", (e) => {
 });
 function ask(op, args = {}, ms = op === "fetch" ? 30000 : 8000) {
   return new Promise((resolve, reject) => {
-    const id = ++seq;
+    const n = ++seq;
     const timer = setTimeout(() => {
-      waiting.delete(id);
+      waiting.delete(n);
       reject(new Error(`The TMC++ storage bridge didn't answer '${op}' in ${ms / 1000}s; reload the extension and the page`));
     }, ms);
-    waiting.set(id, { resolve, reject, timer });
-    window.postMessage({ tmcpp: "req", id, op, ...args }, location.origin);
+    waiting.set(n, { resolve, reject, timer });
+    // The request number travels as `seq`, apart from the arguments, so an argument can't overwrite it.
+    window.postMessage({ tmcpp: "req", seq: n, op, args }, location.origin);
   });
 }
 

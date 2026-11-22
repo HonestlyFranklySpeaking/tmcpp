@@ -19,3 +19,11 @@ export async function loadNode(id) {
   if (id.startsWith("std/")) return undefined;
   return existsSync(id) ? decodeSource(readFileSync(id)) : undefined;
 }
+
+/** Compile a file on disk with its imports resolved: what the CLI, check and preview share. */
+export async function compileFile(source, path = "", options = {}) {
+  const { resolveImports } = await import("./imports.js");
+  const { compile } = await import("./compile.js");
+  const from = path.replace(/\\/g, "/");
+  return compile(source, { ...options, libraries: await resolveImports(source, loadNode, from), from });
+}

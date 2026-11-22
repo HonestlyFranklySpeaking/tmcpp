@@ -1,6 +1,6 @@
 # TMC with Classes (TMC++)
 
-**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand and reusable components, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
+**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand, reusable components, conditionals and libraries, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
 
 The name is a nod to C++, which started life as "C with Classes".
 
@@ -39,6 +39,8 @@ node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModde
 
 The CLI also reads TMC++ from standard input when no file is given. `tools/check.js` accepts either a `.tmcpp` source file or an already compiled `.tmc` file. Compile diagnostics identify source lines; parser diagnostics from `tools/check.js` identify lines in the generated TMC.
 
+To check a file with imports, pass the entry file to the CLI or `tools/check.js`; both resolve relative files and `gh:` or HTTPS imports. For example, `node tools/check.js examples/springs-import.tmcpp` checks the spring library together with the graph that imports it.
+
 ### Preview in real Desmos
 
 ```sh
@@ -49,6 +51,8 @@ npm run preview -- examples/hello.tmcpp --sweep s=0..=1/5 --out hello.png   # ..
 ```
 
 The parser only proves the equations are valid; the preview shows the composition, such as a moving shape crossing a title at some slider values. It renders with Desmos itself (`Calc.asyncScreenshot`) in your installed Chrome or Edge, headless, so it needs internet access to desmos.com but no extra browser download. Add `--show` to watch it, `--width` and `--cols` to size the output.
+
+The preview tool currently compiles a `.tmcpp` file without resolving imports. Use it with self-contained examples or an already compiled `.tmc` file.
 
 Paste the printed TMC into DesModder's Text Mode (the T button above the expression list), or use the extension below.
 
@@ -64,6 +68,7 @@ The panel:
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
+- **Library** saves definition-only source for reuse, inserts imports, and fetches GitHub libraries for offline use
 - saves your source per graph in the browser and follows you when you switch graphs
 - **From graph** rebuilds TMC++ from the graph as it is now. Untouched lines come back exactly as you wrote them; lines you restyled in Desmos come back as their classes plus only the changed tokens (`.curve width 5`); math edited in Desmos is converted back; items added in Desmos appear without their automatic colour. Opening a TMC++ graph this browser has no source for rebuilds it automatically.
 - watermarks the graph: its hidden `randomSeed` starts with `544d432b2b`, which is "TMC++" in ASCII hex, and is kept across recompiles so `random()` doesn't reshuffle (a seed you set in `settings` always wins)
@@ -88,6 +93,27 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 - Drawing level curves of a function you defined just works: `q(x,y) = [0.5, 0.6]` after `q(x,y) = ...` would redefine `q` in Desmos, so it becomes `q(x,y) - ([0.5, 0.6]) = 0` (with a warning saying so).
 - `segment(A, B)` and `path(P)` draw straight lines between points or lists of points (Desmos's graphing calculator has no `segment()`).
 - Files can be UTF-8 or UTF-16 (what Windows PowerShell's `>` writes).
+
+### Conditionals and libraries
+
+An inline `if` has both arms and can be used in expressions or actions. A block guards several math statements; matching assignments become one piecewise expression. See [conditionals](docs/syntax.md#conditionals) for `else if`, nested blocks and block limits.
+
+```js
+k = 1
+a = if k = 1 then 2 else 3
+if k = 1 {
+  y = x^2 . #red
+} else {
+  y = -x . #red
+}
+```
+
+Move reusable classes, colours, functions, constants and components into a library, then import them by name or with a namespace. The CLI accepts relative `.tmcpp` files; the extension uses libraries saved in its **Library** panel. Both accept `gh:user/repo/path.tmcpp@ref` imports. See [libraries](docs/syntax.md#libraries) for selective imports, name conflicts and remote fetching.
+
+```js
+import "./lib/springs.tmcpp" as sp
+new sp.Spring((0, 0), (4, 1)) as s1
+```
 
 ### Style tails
 
@@ -150,6 +176,8 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `examples/sunset.tmcpp` | a sunset scene driven by one time-of-day slider |
 | `examples/demo.tmcpp` | a parabola with a draggable focus |
 | `examples/prism-post.tmcpp` | PRISM POST, a seven-route pulse-routing puzzle. Rotate the brass mirrors, then dispatch a pulse through both diamond stamps and into the cyan mail slot. The first six routes use eight mirrors; the final route adds seven more. `Mirror` and `Stamp` components track each mirror's turns and each stamp's state, while a ticker advances the pulse. The counter shows turns and par; returned pulses can be retried, and **Reset** clears the current route. |
+| `examples/springs.tmcpp` | two instances of a reusable spring component with local variables and an instance style override |
+| `examples/springs-import.tmcpp` and `examples/lib/springs.tmcpp` | the same spring component moved into a relative library and imported as `sp` |
 
 ## How it works
 
@@ -184,8 +212,8 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M8 round trip: "From graph" gives back `new` lines | planned |
 | M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
-| M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports | in progress: compiler and CLI done, extension panel needs a live check, std libraries to come |
 | M11 ship v2 (Tritime showcase) | planned |
+| M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports | done; std libraries to come |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |
 
 ## License

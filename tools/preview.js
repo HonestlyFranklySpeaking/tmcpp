@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
 import { restoreGreek } from "../src/greek.js";
-import { compile } from "../src/compile.js";
+import { compileFile } from "../src/load-node.js";
 import { decodeSource } from "../src/decode.js";
 import { renderFrames } from "../src/preview-page.js";
 
@@ -66,7 +66,7 @@ opt.out ??= file.replace(/\.(tmcpp|tmc|txt)$/i, "") + ".preview.png";
 // ---- compile to a Desmos state ----
 let tmc = decodeSource(readFileSync(file));
 if (!/\.tmc$/i.test(file)) {
-  const r = compile(tmc);
+  const r = await compileFile(tmc, file); // imports: ./files from disk, gh: and https from the network
   for (const e of r.errors) console.error(`${file}:${e.line}: error: ${e.message}`);
   if (r.errors.length) process.exit(1);
   tmc = r.tmc;

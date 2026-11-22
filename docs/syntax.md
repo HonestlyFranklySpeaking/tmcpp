@@ -12,7 +12,21 @@ This page covers only what TMC++ adds to or changes in DesModder's Text Mode (TM
 
 A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without a TMC++ word is still one line away.
 
-Contents: [Lines](#lines) · [Math](#math) · [Style tails](#style-tails) · [Classes](#classes) · [Named colours](#named-colours) · [Components](#components) · [Token reference](#token-reference) · [Blocks](#blocks) · [What the compiler adds](#what-the-compiler-adds) · [Errors and warnings](#errors-and-warnings) · [Cheat sheet](#cheat-sheet)
+## Contents
+
+- [Lines](#lines)
+- [Math](#math) · [Greek letters and Unicode](#greek-letters-and-unicode)
+- [Conditionals](#conditionals)
+- [Style tails](#style-tails)
+- [Classes](#classes)
+- [Named colours](#named-colours)
+- [Components](#components)
+- [Libraries](#libraries)
+- [Token reference](#token-reference): [Colour](#colour), [Lines and fill](#lines-and-fill), [Points](#points), [Labels](#labels), [Sliders](#sliders), [Click actions](#click-actions), [Item flags](#item-flags)
+- [Blocks](#blocks) · [Settings](#settings)
+- [What the compiler adds](#what-the-compiler-adds) · [Rebuilding source from a graph](#rebuilding-source-from-a-graph)
+- [Errors and warnings](#errors-and-warnings)
+- [Cheat sheet](#cheat-sheet)
 
 ## Lines
 
@@ -326,7 +340,9 @@ Three ways to import it:
 | `import "springs" as sp` | everything, behind the name | `new sp.Spring(...)`, `sp.lerp(...)`, `.sp-spring`, `#sp-steel` |
 | `import { Spring, lerp, .spring, #steel } from "springs"` | only what's listed | as listed |
 
-- **Nothing collides.** If the file (or another library) already uses a name, the library's copy gets another Desmos name (`lerp` becomes `lerp2`) and every use is rewritten. Parameters, function arguments and `for` variables are never touched.
+See [the spring library](../examples/lib/springs.tmcpp) and [a graph that imports it](../examples/springs-import.tmcpp) for a complete example.
+
+- **Internal names stay distinct.** If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
 - **Only what's used reaches Desmos.** Components, classes and colours cost nothing until used, as in one file. Functions and constants are emitted only if something uses them, with whatever they use in turn, in one collapsed folder named after the library.
 - Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
 
@@ -334,9 +350,9 @@ Three ways to import it:
 
 | Import | Where it works |
 | --- | --- |
-| `"./parts/ui.tmcpp"`, relative to the importing file | CLI |
+| `"./parts/ui.tmcpp"`, relative to the importing file | CLI, `tools/check.js` and `npm run preview` |
 | `"springs"`, a name saved in the extension's Library panel | extension |
-| `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension and CLI |
+| `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
 | `"https://gist.githubusercontent.com/..."`, a raw gist (any `https://` URL in the CLI) | extension and CLI |
 | `"std/..."`, built-in libraries | none yet |
 

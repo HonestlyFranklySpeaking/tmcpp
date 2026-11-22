@@ -311,3 +311,9 @@ test("abstract parameters work in list instances and nested components", () => {
   assert.match(nested, /^a_oi = 2 \+ 1 @\{ hidden: true \};/m);
   assert.match(nested, /^q = a_oi;/m);
 });
+
+test("a string parameter used inside another string is spliced in as text", () => {
+  const r = compile('component Tag(P, text, v) {\n  P . label "${text}: ${v}"\n}\nspeed = 3\nnew Tag((1, 1), "Speed", speed) as t', { watermark: false, defaultSettings: {} });
+  assert.deepEqual(r.errors, []);
+  assert.match(r.tmc, /text: "Speed: \$\{s_peed\}"/);
+});

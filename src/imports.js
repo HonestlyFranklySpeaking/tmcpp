@@ -141,7 +141,7 @@ function shadows(statements) {
   }
   statements.forEach((st, i) => {
     for (const n of assigned(st.text)?.args ?? []) out[i].add(n);
-    for (const m of st.text.matchAll(/\bfor\s+([A-Za-z][A-Za-z0-9_]*)\s*=/g)) out[i].add(m[1]);
+    for (const m of st.text.matchAll(/\b(?:for|with)\s+([A-Za-z][A-Za-z0-9_]*)\s*=/g)) out[i].add(m[1]);
     for (const m of st.text.matchAll(/,\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*\[/g)) out[i].add(m[1]);
   });
   return out;

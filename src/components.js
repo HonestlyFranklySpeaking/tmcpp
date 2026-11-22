@@ -81,6 +81,9 @@ function wrap(arg) {
  * inside `${...}`; names right after `.` (P.x, .class) or `#` (#colour) are never touched.
  * `member(head, props) -> text | undefined` handles a path like `s1.a.d` first.
  */
+/** A string parameter used inside another string, "${text}: ${v}", is spliced in as its text. */
+const spliceStrings = (text) => text.replace(/\$\{\s*"((?:[^"\\]|\\.)*)"\s*\}/g, (all, body) => body.replace(/\\"/g, '"'));
+
 export function substitute(text, lookup, member = null) {
   let out = "";
   for (let i = 0; i < text.length;) {
@@ -381,12 +384,12 @@ export function expandComponents(statements, errors, warnings) {
     return r === null ? undefined : r;
   };
   // Text in an instance's body, written in terms of its parameters, locals and children.
-  const inScope = (inst, text, fnArgs) => substitute(text, (name) => {
+  const inScope = (inst, text, fnArgs) => spliceStrings(substitute(text, (name) => {
     if (fnArgs?.includes(name)) return undefined;
     if (inst.names.has(name)) return inst.names.get(name);
     if (inst.bound.has(name)) return wrap(inst.bound.get(name));
     return undefined;
-  }, memberFor(inst, null));
+  }, memberFor(inst, null)));
 
   const plan = (comp, bound, key, title, tail, line, forText = null) => {
     const inst = { comp, name: null, title, key, bound, tail, line, names: new Map(), children: new Map(), nested: new Map() };

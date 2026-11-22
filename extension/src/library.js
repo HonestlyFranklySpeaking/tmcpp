@@ -19,13 +19,13 @@ window.addEventListener("message", (e) => {
     for (const fn of listeners) fn(m.data);
   }
 });
-function ask(op, args = {}) {
+function ask(op, args = {}, ms = op === "fetch" ? 30000 : 8000) {
   return new Promise((resolve, reject) => {
     const id = ++seq;
     const timer = setTimeout(() => {
       waiting.delete(id);
-      reject(new Error("The TMC++ storage bridge didn't answer; reload the extension and the page"));
-    }, 8000);
+      reject(new Error(`The TMC++ storage bridge didn't answer '${op}' in ${ms / 1000}s; reload the extension and the page`));
+    }, ms);
     waiting.set(id, { resolve, reject, timer });
     window.postMessage({ tmcpp: "req", id, op, ...args }, location.origin);
   });

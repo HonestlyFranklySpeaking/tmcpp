@@ -26,6 +26,16 @@ folder "Curves" {
 
 The same graph in plain TMC needs a nested `@{ }` style block on almost every line. If you already know TMC, most of it works as is, and a raw `@{ ... }` is always accepted. The exceptions come from TMC++'s line rules: put each statement on its own line (no one-line folders like `folder "A" { y = x; }`), and start a style block on the same line as its math.
 
+## Install
+
+```sh
+npx @ikeasourpatches/tmcpp graph.tmcpp        # compile once, nothing to install
+npm install -g @ikeasourpatches/tmcpp         # or install the tmcpp command
+tmcpp graph.tmcpp > graph.tmc
+```
+
+In code: `import { compile } from "@ikeasourpatches/tmcpp"`. The browser extension and the VS Code extension are below.
+
 ## Quick start
 
 Requires Node 22+.

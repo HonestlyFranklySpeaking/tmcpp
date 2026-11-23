@@ -17,6 +17,7 @@ v2 adds structure on top of v1's styles: components, conditionals, actions and l
 - **Library panel.** Save the current file as a library, fetch GitHub libraries (kept offline), and insert imports.
 - **VS Code extension** (`vscode/`): syntax highlighting, live compile errors, and the commands "Show compiled TMC" and "Copy compiled TMC".
 - **Packaging.** `npm run pack` builds `release/tmcpp-extension-<version>.zip`.
+- **On npm** as `@ikeasourpatches/tmcpp`: `npx @ikeasourpatches/tmcpp graph.tmcpp`, or install it to get the `tmcpp` command.
 
 ### Changed
 

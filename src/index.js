@@ -1,4 +1,4 @@
-// TMC++ as a library: import { compile, decompile, resolveImports } from "tmcpp"
+// TMC++ as a library: import { compile, decompile, resolveImports } from "@ikeasourpatches/tmcpp"
 export { compile, isWatermarkSeed, DEFAULT_SETTINGS } from "./compile.js";
 export { decompile } from "./decompile.js";
 export { resolveImports, findImports, normalizeId } from "./imports.js";

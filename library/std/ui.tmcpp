@@ -1,6 +1,7 @@
 // std/ui.tmcpp
 // On-canvas interactive UI controls and HUD components for TMC++
 import "./styles.tmcpp"
+import { roundedRect } from "./shapes.tmcpp"
 
 // Used by Stepper, CanvasSlider and ProgressBar.
 clamp(z, lo, hi) = min(hi, max(lo, z))
@@ -21,17 +22,13 @@ component Button(C, w, h, text, action) {
     (C.x - hw, C.y + hh)
   ]) . hidden
   box . #sky fill 0.16 width 2 click(action)
-  C . #ink point 0 no-outline label "${text}"
+  C . #ink point 0 no-outline center label "${text}"
 }
 
-// Pill / rounded-corner clickable button using SDF inequality
+// Pill-shaped clickable button
 component PillButton(C, w, h, text, action) {
-  rc = h / 2
-  dx = abs(x - C.x) - (w / 2 - rc)
-  dy = abs(y - C.y) - (h / 2 - rc)
-  hit = hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - rc <= 0
-  hit . #indigo fill 0.18 width 2 click(action)
-  C . #ink point 0 no-outline label "${text}"
+  polygon(roundedRect(C, w, h, h / 2)) . #indigo fill 0.18 width 2 click(action)
+  C . #ink point 0 no-outline center label "${text}"
 }
 
 // ==========================================
@@ -40,11 +37,7 @@ component PillButton(C, w, h, text, action) {
 
 // Binary switch bound to variable v (0 = OFF, 1 = ON)
 component Toggle(C, w, h, text, v) {
-  rc = h / 2
-  dx = abs(x - C.x) - (w / 2 - rc)
-  dy = abs(y - C.y) - (h / 2 - rc)
-  track = hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - rc <= 0
-  track . #(rgb(5 + 220 * (1 - v), 150 + 60 * (1 - v), 105 + 120 * (1 - v))) fill 0.35 width 1.5 click(v -> 1 - v)
+  polygon(roundedRect(C, w, h, h / 2)) . #(rgb(148 - 143 * v, 163 - 13 * v, 184 - 79 * v)) fill 0.9 width 0 click(v -> 1 - v)
 
   knobX = C.x + (v - 0.5) * (w - h)
   (knobX, C.y) . #paper point 14 click(v -> 1 - v)
@@ -54,8 +47,8 @@ component Toggle(C, w, h, text, v) {
 // Minus / Value / Plus stepper bound to variable v clamped to [lo, hi]
 component Stepper(C, w, h, text, v, step, lo, hi) {
   bw = h
-  leftC = (C.x - w / 2 + bw / 2, C.y)
-  rightC = (C.x + w / 2 - bw / 2, C.y)
+  leftC = (C.x - w / 2 + bw / 2, C.y) . hidden
+  rightC = (C.x + w / 2 - bw / 2, C.y) . hidden
   lhw = bw / 2
   lhh = h / 2
 
@@ -66,7 +59,7 @@ component Stepper(C, w, h, text, v, step, lo, hi) {
     (leftC.x + lhw, leftC.y + lhh),
     (leftC.x - lhw, leftC.y + lhh)
   ]) . #slate fill 0.15 width 1.5 click(v -> max(lo, v - step))
-  leftC . #ink point 0 no-outline label "-"
+  leftC . #ink point 0 no-outline center label "−"
 
   // Plus button
   polygon([
@@ -75,24 +68,24 @@ component Stepper(C, w, h, text, v, step, lo, hi) {
     (rightC.x + lhw, rightC.y + lhh),
     (rightC.x - lhw, rightC.y + lhh)
   ]) . #slate fill 0.15 width 1.5 click(v -> min(hi, v + step))
-  rightC . #ink point 0 no-outline label "+"
+  rightC . #ink point 0 no-outline center label "+"
 
   // Center readout
-  C . #ink point 0 no-outline label "${text}: ${v}"
+  C . #ink point 0 no-outline center label "${text}: ${v}"
 }
 
 // ==========================================
 // 3. ON-CANVAS SLIDER & PROGRESS BAR
 // ==========================================
 
-// Horizontal draggable slider track from (x0, y0) of length len, mapping to [lo, hi]
-// Exposes handle point H; read normalized value via norm or compute val externally
+// Horizontal slider drawn on the canvas, from (x0, y0) with length len, giving a value in [lo, hi].
+// Drag the knob. Read the value as name.val (name.s is the position, 0 to 1).
 component CanvasSlider(x0, y0, len, lo, hi) {
+  s = 0.5 [0 : 1]
+  val = lo + (hi - lo) * s
   segment((x0, y0), (x0 + len, y0)) . #mist width 4
-  H = (x0 + len * 0.5, y0) . #sky point 13 drag x
-  norm = clamp((H.x - x0) / max(len, 1e-6), 0, 1)
-  val = lo + (hi - lo) * norm
-  segment((x0, y0), (x0 + len * norm, y0)) . #sky width 4
+  segment((x0, y0), (x0 + len * s, y0)) . #sky width 4
+  (x0 + len * s, y0) . #sky point 13 drag x
 }
 
 // Read-only progress / health bar centered at C, size (w, h), fill fraction p in [0, 1]
@@ -132,6 +125,6 @@ component HudCard(C, w, h, titleText) {
     (C.x + hw, C.y - hh),
     (C.x + hw, C.y + hh),
     (C.x - hw, C.y + hh)
-  ]) . #paper fill 0.85 width 1.5
+  ]) . #slate fill 0.08 width 1.5
   (C.x - hw + 0.3, C.y + hh - 0.45) . #ink point 0 no-outline right label-size 1.15 label "${titleText}"
 }

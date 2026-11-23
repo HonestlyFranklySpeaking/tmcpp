@@ -317,3 +317,9 @@ test("a string parameter used inside another string is spliced in as text", () =
   assert.deepEqual(r.errors, []);
   assert.match(r.tmc, /text: "Speed: \$\{s_peed\}"/);
 });
+
+test("a member of one instance passed as an argument to another resolves", () => {
+  const r = compile('component S(v) {\n  val = v * 2\n}\ncomponent Bar(p) {\n  q = p + 1\n}\nnew S(3) as sl\nnew Bar(sl.val / 100) as bar', { watermark: false, defaultSettings: {} });
+  assert.deepEqual(r.errors, []);
+  assert.match(r.tmc, /q_bar = \(v_alsl \/ 100\) \+ 1/);
+});

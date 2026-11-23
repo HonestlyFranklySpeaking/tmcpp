@@ -489,6 +489,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   // (After if: an inline if's branches are then piecewise arms the pass can see into.)
   const acted = lowerActions(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings, findTailStart);
   const expanded = expandComponents(acted, errors, warnings);
+  // Again after expansion: an action passed as an argument (new Button(..., n++)) only reaches
+  // its click(...) now. Already-lowered text passes through unchanged.
+  expanded.statements = lowerActions(expanded.statements, errors, warnings, findTailStart);
   const statements = expanded.statements;
   const classes = new Map();
 

@@ -8,15 +8,12 @@
 // Clamp t to [0, 1]
 clamp01(t) = min(max(t, 0), 1)
 
-// Remap t from [t0, t1] into, clamped outside the window
+// Remap t from [t0, t1] into [0, 1], clamped outside the window
 // Essential for multi-stage animations driven by a single master slider
 window(t, t0, t1) = clamp01((t - t0) / max(t1 - t0, 1e-6))
 
 // Smooth Hermite interpolation between 0 and 1 over [edge0, edge1]
-smoothstep(edge0, edge1, t) = {
-  u = window(t, edge0, edge1);
-  u * u * (3 - 2 * u)
-}
+smoothstep(edge0, edge1, t) = u * u * (3 - 2 * u) with u = window(t, edge0, edge1)
 
 // ==========================================
 // 2. QUADRATIC & CUBIC EASING (t in)

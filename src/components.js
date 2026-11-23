@@ -387,9 +387,13 @@ export function expandComponents(statements, errors, warnings) {
   const inScope = (inst, text, fnArgs) => spliceStrings(substitute(text, (name) => {
     if (fnArgs?.includes(name)) return undefined;
     if (inst.names.has(name)) return inst.names.get(name);
-    if (inst.bound.has(name)) return wrap(inst.bound.get(name));
+    if (inst.bound.has(name)) return wrap(argText(inst, inst.bound.get(name)));
     return undefined;
   }, memberFor(inst, null)));
+  // An argument of a top-level instance is written at file level, so another instance's member
+  // in it (new ProgressBar(..., sl.val / 100)) resolves the way it would on a line of its own.
+  const argText = (inst, arg) => (inst.key.includes(".") || !/[A-Za-z]\.[A-Za-z]/.test(arg) ? arg
+    : substitute(arg, () => undefined, (head, props) => (instances.has(head) && instances.get(head) !== inst ? memberFor(null, inst.line)(head, props) : undefined)));
 
   const plan = (comp, bound, key, title, tail, line, forText = null) => {
     const inst = { comp, name: null, title, key, bound, tail, line, names: new Map(), children: new Map(), nested: new Map() };

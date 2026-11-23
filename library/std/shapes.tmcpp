@@ -1,6 +1,16 @@
 // std/shapes.tmcpp
 // Geometric components and shape helpers for TMC++
-import { solid-fill } from "./styles.tmcpp"
+import { solid-fill, gridline, ink, sky } from "./styles.tmcpp"
+
+// Angles are in radians: set a graph to radians (the default) when you use these.
+// Locals that hold a point are marked hidden, or Desmos would draw them as stray dots.
+
+// Points around a rounded rectangle centred at C, size (w, h), corner radius r: a list for polygon().
+roundK = [0...35]
+roundAngle(k) = pi / 2 * floor(k / 9) + pi / 2 * mod(k, 9) / 8
+roundSx(k) = [1, -1, -1, 1][floor(k / 9) + 1]
+roundSy(k) = [1, 1, -1, -1][floor(k / 9) + 1]
+roundedRect(C, w, h, r) = (C.x + roundSx(roundK) * (w / 2 - r) + r * cos(roundAngle(roundK)), C.y + roundSy(roundK) * (h / 2 - r) + r * sin(roundAngle(roundK)))
 
 // ==========================================
 // 1. ARROWS & VECTORS
@@ -9,28 +19,19 @@ import { solid-fill } from "./styles.tmcpp"
 // Directed line segment from A to B with a filled arrowhead
 // head: arrowhead length in graph units (e.g., 0.35)
 component Arrow(A, B, head) {
-  d = B - A
-  L = hypot(d.x, d.y)
-  u = d / max(L, 1e-6)
-  n = (-u.y, u.x)
-  tip = B
-  left = B - head * u + 0.45 * head * n
-  right = B - head * u - 0.45 * head * n
-
-  segment(A, B - 0.8 * head * u)
-  polygon([tip, left, right]) .solid-fill
+  u = (B - A) / max(distance(A, B), 1e-6) . hidden
+  n = (-u.y, u.x) . hidden
+  segment(A, B - 0.8 * head * u) #ink width 2.5
+  polygon(B, B - head * u + 0.45 * head * n, B - head * u - 0.45 * head * n) .solid-fill #ink
 }
 
 // Double-headed dimension / measurement arrow
 component DoubleArrow(A, B, head) {
-  d = B - A
-  L = hypot(d.x, d.y)
-  u = d / max(L, 1e-6)
-  n = (-u.y, u.x)
-
-  segment(A + 0.8 * head * u, B - 0.8 * head * u)
-  polygon([B, B - head * u + 0.45 * head * n, B - head * u - 0.45 * head * n]) .solid-fill
-  polygon([A, A + head * u + 0.45 * head * n, A + head * u - 0.45 * head * n]) .solid-fill
+  u = (B - A) / max(distance(A, B), 1e-6) . hidden
+  n = (-u.y, u.x) . hidden
+  segment(A + 0.8 * head * u, B - 0.8 * head * u) #ink width 2.5
+  polygon(B, B - head * u + 0.45 * head * n, B - head * u - 0.45 * head * n) .solid-fill #ink
+  polygon(A, A + head * u + 0.45 * head * n, A + head * u - 0.45 * head * n) .solid-fill #ink
 }
 
 // ==========================================
@@ -46,35 +47,32 @@ component Box(C, w, h) {
     (C.x + hw, C.y - hh),
     (C.x + hw, C.y + hh),
     (C.x - hw, C.y + hh)
-  ])
+  ]) #sky fill 0.18 width 2
 }
 
 // Rotated rectangle centered at C, size (w, h), rotated by theta (radians)
 component RotatedBox(C, w, h, theta) {
   hw = w / 2
   hh = h / 2
-  ux = (cos(theta), sin(theta))
-  uy = (-sin(theta), cos(theta))
+  ux = (cos(theta), sin(theta)) . hidden
+  uy = (-sin(theta), cos(theta)) . hidden
   polygon([
     C - hw * ux - hh * uy,
     C + hw * ux - hh * uy,
     C + hw * ux + hh * uy,
     C - hw * ux + hh * uy
-  ])
+  ]) #sky fill 0.18 width 2
 }
 
-// Filled & outlined rounded rectangle (great for UI buttons and cards)
+// Filled & outlined rounded rectangle (great for UI buttons and cards); clickable like any polygon
 component RoundedBox(C, w, h, r) {
-  rc = min(r, min(w / 2, h / 2))
-  dx = abs(x - C.x) - (w / 2 - rc)
-  dy = abs(y - C.y) - (h / 2 - rc)
-  hypot(max(dx, 0), max(dy, 0)) + min(max(dx, dy), 0) - rc <= 0
+  polygon(roundedRect(C, w, h, min(r, w / 2, h / 2))) #sky fill 0.18 width 2
 }
 
 // Regular n-sided polygon centered at C with circumradius r and rotation rot
 component RegularPolygon(C, r, n, rot) {
   angles = rot + 2 * pi * [0 ... n - 1] / n
-  polygon(C + r * (cos(angles), sin(angles)))
+  polygon(C + r * (cos(angles), sin(angles))) #sky fill 0.18 width 2
 }
 
 // ==========================================
@@ -85,15 +83,14 @@ component RegularPolygon(C, r, n, rot) {
 component Arc(C, r, a0, a1) {
   t_arc = [0 ... 64] / 64
   ang = a0 + (a1 - a0) * t_arc
-  path(C + r * (cos(ang), sin(ang)))
+  path(C + r * (cos(ang), sin(ang))) #ink width 2
 }
 
 // Pie wedge / sector centered at C, radius r, from a0 to a1
 component Sector(C, r, a0, a1) {
   t_sec = [0 ... 64] / 64
   ang = a0 + (a1 - a0) * t_sec
-  pts = join([C], C + r * (cos(ang), sin(ang)))
-  polygon(pts)
+  polygon(join([C], C + r * (cos(ang), sin(ang)))) #sky fill 0.3 width 2
 }
 
 // Angle arc marker at vertex B between rays BA and BC
@@ -103,14 +100,14 @@ component AngleMarker(A, B, C, r) {
   da = mod(raw + pi, 2 * pi) - pi
   t_ang = [0 ... 32] / 32
   ang = a0 + da * t_ang
-  path(B + r * (cos(ang), sin(ang)))
+  path(B + r * (cos(ang), sin(ang))) #ink width 2
 }
 
 // Right-angle square symbol at vertex B between rays BA and BC
 component RightAngle(A, B, C, size) {
-  u = (A - B) / max(hypot(A.x - B.x, A.y - B.y), 1e-6)
-  v = (C - B) / max(hypot(C.x - B.x, C.y - B.y), 1e-6)
-  path([B + size * u, B + size * (u + v), B + size * v])
+  u = (A - B) / max(distance(A, B), 1e-6) . hidden
+  v = (C - B) / max(distance(C, B), 1e-6) . hidden
+  path([B + size * u, B + size * (u + v), B + size * v]) #ink width 2
 }
 
 // ==========================================
@@ -119,14 +116,14 @@ component RightAngle(A, B, C, size) {
 
 // Crosshair reticle centered at C with arm half-length r
 component Crosshair(C, r) {
-  segment(C - (r, 0), C + (r, 0))
-  segment(C - (0, r), C + (0, r))
+  segment(C - (r, 0), C + (r, 0)) #ink
+  segment(C - (0, r), C + (0, r)) #ink
 }
 
 // Bounded rectangular grid from (x0, y0) to (x1, y1) with spacing step
 component Grid(x0, y0, x1, y1, step) {
   xs = [x0, x0 + step ... x1]
   ys = [y0, y0 + step ... y1]
-  segment((xs, y0), (xs, y1))
-  segment((x0, ys), (x1, ys))
+  segment((xs, y0), (xs, y1)) .gridline
+  segment((x0, ys), (x1, ys)) .gridline
 }

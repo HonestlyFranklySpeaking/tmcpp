@@ -51,3 +51,9 @@ test("comparisons and math are left alone; double updates warn", () => {
   const w = compile(head + "P = (0, 0) click(score++, score += 2)").warnings;
   assert.match(w[0].message, /'score' is updated twice in one action/);
 });
+
+test("an action passed as a component argument is lowered too", () => {
+  const { tmc } = tmcOf('n = 0\ncomponent B(P, act) {\n  P . point 9 click(act)\n}\nnew B((0, 0), n++) as b\nnew B((1, 0), n += 2) as c');
+  assert.match(tmc, /onClick: \(n -> n \+ 1\)/);
+  assert.match(tmc, /onClick: \(n -> n \+ 2\)/);
+});

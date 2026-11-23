@@ -426,7 +426,8 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
       else if (keep(st)) out.push(st);
     }
     if (helpers.length) {
-      out.push({ text: `folder ${JSON.stringify(libTitle(lib.id))} collapsed {`, line: lib.at, comments: [], lib: lib.id });
+      // Hidden as well as collapsed: a helper like wave(x) = sin(x) would otherwise draw a curve.
+      out.push({ text: `folder ${JSON.stringify(libTitle(lib.id))} collapsed hidden {`, line: lib.at, comments: [], lib: lib.id });
       out.push(...helpers);
       out.push({ text: "}", line: lib.at, comments: [], lib: lib.id });
     }

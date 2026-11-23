@@ -38,6 +38,7 @@ test("acceptance: a component moved into a library compiles to the same graph", 
   assert.deepEqual(math(imported.graph), math(single.graph).filter((m) => !/^(u_{nused}|h_{alf})/.test(m[0])));
   const folder = imported.graph.find((e) => e.type === "folder" && e.title === "springs");
   assert.equal(folder.collapsed, true);
+  assert.equal(folder.hidden, true); // a helper of x mustn't draw
 });
 
 test("namespaced import: members, classes and colours behind the name, clashes renamed", () => {

@@ -7,6 +7,7 @@ import { decodeSource } from "../../src/decode.js";
 import { restoreGreek } from "../../src/greek.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 import { createLibrary, libraryCss } from "./library.js";
+import { createEditor } from "./editor.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
 import STARTER from "../../examples/hello.tmcpp";
@@ -44,8 +45,8 @@ const css = `
   background: #2d70b3; color: #fff; cursor: pointer; }
 #tmcpp-head button.ghost { background: #fff; color: #2d70b3; }
 #tmcpp-src.drop { outline: 2px dashed #2d70b3; outline-offset: -6px; background: #f3f8fd; }
-#tmcpp-src { flex: 1; resize: none; border: 0; outline: 0; padding: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace;
-  tab-size: 2; white-space: pre; }
+#tmcpp-editor { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+#tmcpp-editor .cm-editor { width: 100%; }
 #tmcpp-info { padding: 6px 10px; border-bottom: 1px solid #eee; color: #555; font-size: 12px; }
 #tmcpp-info:empty { display: none; }
 #tmcpp-out { max-height: 30%; overflow: auto; border-top: 1px solid #eee; padding: 6px 10px; user-select: text; -webkit-user-select: text; }
@@ -79,11 +80,21 @@ function mount(Calc, Desmos) {
       <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden></div>
     <div id="tmcpp-info"></div>
     <div id="tmcpp-lib" hidden></div>
-    <textarea id="tmcpp-src" spellcheck="false"></textarea>
+    <div id="tmcpp-editor"></div>
     <div id="tmcpp-out"></div>`;
   document.body.append(toggle, panel);
 
-  const src = panel.querySelector("#tmcpp-src");
+  // The editor (CodeMirror): compile errors show as squiggles while you type.
+  const src = createEditor(panel.querySelector("#tmcpp-editor"), {
+    run: () => run(),
+    libraries: () => library.sources(),
+    check: (text) => {
+      try {
+        const r = compile(text, { libraries: library.sources(), watermark: false });
+        return [...r.errors.map((e) => ({ ...e, kind: "err" })), ...r.warnings.map((w) => ({ ...w, kind: "warn" }))];
+      } catch { return []; }
+    },
+  });
   const out = panel.querySelector("#tmcpp-out");
   const info = panel.querySelector("#tmcpp-info");
   const libBox = panel.querySelector("#tmcpp-lib");
@@ -328,15 +339,8 @@ function mount(Calc, Desmos) {
     await navigator.clipboard.writeText(r.tmc);
     report([], "Compiled TMC copied to the clipboard.");
   };
-  src.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); }
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const { selectionStart: a, selectionEnd: b } = src;
-      src.setRangeText("  ", a, b, "end");
-    }
-    e.stopPropagation(); // keep Desmos shortcuts out of the editor
-  });
+  // Ctrl+Enter, Tab and Ctrl+/ are the editor's own keys; keep Desmos's shortcuts out of it.
+  src.addEventListener("keydown", (e) => e.stopPropagation());
   src.addEventListener("input", () => { localStorage.setItem(STORE(), src.value); hasLocalSource = true; });
 
   // Follow the graph. Desmos switches graphs without reloading the page (the URL path changes)

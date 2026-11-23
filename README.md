@@ -63,6 +63,8 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 
 The panel:
 
+- the editor highlights TMC++ (classes, colours, style words, `${}` in labels, keywords), underlines compile errors and warnings while you type, and completes class names after `.`, colours after `#`, components after `new` (imported ones too, `sp.Spring`), style words in a tail, your variables, and library names inside `import "`. Ctrl+Enter compiles, Ctrl+/ comments lines, Ctrl+F searches, and Tab indents
+- the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Example) and **Compile**
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
@@ -74,6 +76,10 @@ The panel:
 - writes a hidden metadata note into the graph (classes, tags, tails, comments, hashes) so the graph remembers it was made with TMC++, and pops the panel open when you open such a graph
 
 After changing the compiler, run `npm run build:ext` again and click reload on the extension card.
+
+## VS Code
+
+[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Build it with `npm run build:vscode`, then `cd vscode && npx @vscode/vsce package` and install the `.vsix` (details in [vscode/README.md](vscode/README.md)).
 
 ## Language
 

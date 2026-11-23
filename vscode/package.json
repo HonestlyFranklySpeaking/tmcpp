@@ -1,0 +1,55 @@
+{
+  "name": "tmcpp",
+  "displayName": "TMC++",
+  "description": "TMC with Classes: syntax highlighting and live compile errors for .tmcpp files (Desmos via DesModder Text Mode).",
+  "version": "0.1.0",
+  "publisher": "IkeaSourPatches",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IkeaSourPatches/tmcpp"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:tmcpp"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tmcpp",
+        "aliases": [
+          "TMC++",
+          "tmcpp"
+        ],
+        "extensions": [
+          ".tmcpp"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tmcpp",
+        "scopeName": "source.tmcpp",
+        "path": "./syntaxes/tmcpp.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "tmcpp.showTmc",
+        "title": "TMC++: Show compiled TMC"
+      },
+      {
+        "command": "tmcpp.copyTmc",
+        "title": "TMC++: Copy compiled TMC"
+      }
+    ]
+  }
+}

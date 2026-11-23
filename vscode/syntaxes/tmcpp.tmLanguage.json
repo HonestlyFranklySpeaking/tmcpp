@@ -1,0 +1,159 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "TMC++",
+  "scopeName": "source.tmcpp",
+  "fileTypes": [
+    "tmcpp"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#line"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.tmcpp",
+      "match": "//.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.tmcpp",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.tmcpp",
+          "match": "\\\\."
+        },
+        {
+          "name": "meta.interpolation.tmcpp",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.begin.tmcpp"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.end.tmcpp"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#math"
+            }
+          ]
+        }
+      ]
+    },
+    "line": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "match": "^\\s*(component|new)\\s+([A-Za-z][\\w.]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.tmcpp"
+            },
+            "2": {
+              "name": "entity.name.type.tmcpp"
+            }
+          }
+        },
+        {
+          "match": "^\\s*(class|color)\\s+([A-Za-z_][\\w-]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.tmcpp"
+            },
+            "2": {
+              "name": "entity.name.type.class.tmcpp"
+            }
+          }
+        },
+        {
+          "comment": "The tail: from a class, a colour or a lone '. ' to the end of the line, style words are attributes",
+          "begin": "(?<=^|[\\s{(,])(?=\\.[A-Za-z_]|\\.(?:\\s|$)|#[A-Za-z0-9_])",
+          "end": "(?=//)|$",
+          "patterns": [
+            {
+              "include": "#string"
+            },
+            {
+              "include": "#tailbits"
+            },
+            {
+              "name": "support.type.property-name.style.tmcpp",
+              "match": "(?<![\\w-])(?:point\\-opacity|editable\\-math|auto\\-center|click\\-label|label\\-angle|center\\-auto|below\\-right|above\\-right|below\\-auto|label\\-size|below\\-left|auto\\-right|no\\-outline|above\\-auto|above\\-left|auto\\-left|collapsed|editable|fraction|default|opacity|reverse|forever|hidden|secret|pinned|center|dotted|dashed|bounce|hover|point|solid|below|above|cross|right|width|label|once|none|open|auto|fill|play|drag|left|loop|xy|x|y)(?![\\w-])"
+            },
+            {
+              "include": "#math"
+            }
+          ]
+        },
+        {
+          "include": "#math"
+        }
+      ]
+    },
+    "tailbits": {
+      "patterns": [
+        {
+          "name": "entity.other.attribute-name.class.tmcpp",
+          "match": "(?<=^|[\\s{(,])\\.[A-Za-z_][\\w-]*"
+        },
+        {
+          "name": "punctuation.definition.tail.tmcpp",
+          "match": "(?<=^|\\s)\\.(?=\\s|$)"
+        },
+        {
+          "name": "constant.other.color.tmcpp",
+          "match": "(?<=^|[\\s{(,:])#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}|[A-Za-z_][\\w-]*)"
+        }
+      ]
+    },
+    "math": {
+      "patterns": [
+        {
+          "include": "#string"
+        },
+        {
+          "name": "keyword.control.tmcpp",
+          "match": "\\b(?:if|then|else|for|with|import|from|as|abstract|folder|table|settings|ticker|click)\\b"
+        },
+        {
+          "name": "keyword.operator.action.tmcpp",
+          "match": "->"
+        },
+        {
+          "name": "meta.raw.tmcpp",
+          "match": "@\\{"
+        },
+        {
+          "name": "constant.numeric.tmcpp",
+          "match": "(?<![\\w.])(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?"
+        },
+        {
+          "name": "entity.name.function.tmcpp",
+          "match": "\\b[A-Za-z_]\\w*(?=\\()"
+        },
+        {
+          "name": "keyword.operator.tmcpp",
+          "match": "<=|>=|[=<>+\\-*/^:]"
+        },
+        {
+          "name": "variable.other.tmcpp",
+          "match": "\\b[A-Za-z_]\\w*"
+        }
+      ]
+    }
+  }
+}

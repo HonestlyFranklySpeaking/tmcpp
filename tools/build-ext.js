@@ -8,6 +8,9 @@ await build({
   target: "chrome111",
   outfile: "extension/dist/tmcpp.js",
   legalComments: "eof",
+  // CodeMirror is large unminified; keep names readable so error stack traces still make sense.
+  minifyWhitespace: true,
+  minifySyntax: true,
   loader: { ".tmcpp": "text" },
 });
 // The storage bridge (isolated world) and the background worker that fetches GitHub libraries.

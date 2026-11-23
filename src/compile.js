@@ -34,6 +34,8 @@ const VOCAB = [
   "play", "reverse", ...Object.keys(LOOP_MODES),
   "open", "cross", "point-opacity", "pinned", "secret", "fraction", "click-label",
 ];
+// For the editor's autocomplete and highlighting.
+export { VOCAB as STYLE_WORDS, NAMED_COLORS };
 const OPEN = "([{", CLOSE = ")]}";
 
 // ---------- small helpers ----------

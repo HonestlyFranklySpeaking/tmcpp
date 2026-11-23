@@ -9,6 +9,7 @@ import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
 import { expandComponents } from "./components.js";
 import { unicodeToTmc } from "./greek.js";
 import { lowerImports } from "./imports.js";
+import { lowerActions } from "./actions.js";
 import { STD } from "./std/index.js";
 
 const NAMED_COLORS = {
@@ -484,7 +485,10 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const roundTrip = roundTripSources(source, parsed);
   // import resolves first: library definitions join the file under collision-free names.
   const imported = lowerImports(parsed, { libraries, std: STD, from, parse }, errors, warnings);
-  const expanded = expandComponents(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings);
+  // Action shortcuts (n++, L[i] = v, reset()) become plain updates before if and components.
+  // (After if: an inline if's branches are then piecewise arms the pass can see into.)
+  const acted = lowerActions(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings, findTailStart);
+  const expanded = expandComponents(acted, errors, warnings);
   const statements = expanded.statements;
   const classes = new Map();
 

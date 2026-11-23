@@ -154,6 +154,7 @@ function completer(getLibraries) {
     const inTail = /(^|\s)(\.\s|\.[A-Za-z_]|#\w)/.test(before);
     const options = [
       ...[...KEYWORDS].map((k) => ({ label: k, type: "keyword" })),
+      ...["toggle", "reset"].map((f) => ({ label: f, type: "function", apply: f + "(", detail: "action" })),
       ...(inTail ? STYLE_WORDS.map((w) => ({ label: w, type: "property", detail: "style", boost: 2 })) : []),
       ...uniq(c.vars).map((v) => ({ label: v, type: "variable" })),
     ];

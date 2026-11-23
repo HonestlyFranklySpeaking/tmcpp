@@ -27,7 +27,7 @@ const isCurve = (a, b, body) => {
 const MISSPELT = /^(compoment|componet|compnent|componnet|comp)\s+[A-Za-z]/;
 const FORBIDDEN_IN_BODY = /^(component|folder|table|class|color|settings|ticker|image)\b/;
 
-function matchClose(s, open) {
+export function matchClose(s, open) {
   let depth = 0, inStr = false;
   for (let i = open; i < s.length; i++) {
     const c = s[i];
@@ -39,7 +39,7 @@ function matchClose(s, open) {
   return -1;
 }
 
-function splitArgs(s, separator = ",") {
+export function splitArgs(s, separator = ",") {
   const out = [];
   let depth = 0, inStr = false, start = 0;
   for (let i = 0; i < s.length; i++) {

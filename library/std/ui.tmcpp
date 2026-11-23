@@ -19,7 +19,7 @@ component Button(C, w, h, text, action) {
     (C.x + hw, C.y - hh),
     (C.x + hw, C.y + hh),
     (C.x - hw, C.y + hh)
-  ])
+  ]) . hidden
   box . #sky fill 0.16 width 2 click(action)
   C . #ink point 0 no-outline label "${text}"
 }

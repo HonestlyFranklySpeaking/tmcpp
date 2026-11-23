@@ -1,6 +1,6 @@
 {
   "name": "tmcpp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TMC with Classes: a preprocessor for DesModder's Text Mode for Desmos, adding CSS-style classes, one-word styles, labels and slider shorthand, compiled live by a browser extension.",
   "keywords": [
     "desmos",
@@ -28,6 +28,7 @@
     "build:ext": "node tools/build-ext.js",
     "build:std": "node tools/build-std.js",
     "build:vscode": "node tools/build-vscode.js",
+    "pack": "node tools/pack.js",
     "preview": "node tools/preview.js"
   },
   "dependencies": {

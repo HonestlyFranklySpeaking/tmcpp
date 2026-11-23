@@ -1,0 +1,27 @@
+# Security policy
+
+## Supported versions
+
+Only the latest release gets fixes.
+
+| Version | Supported |
+| --- | --- |
+| 0.2.x | yes |
+| 0.1.x | no |
+
+## Reporting a vulnerability
+
+**Don't open a public issue for a security problem.** Report it privately with GitHub's private vulnerability reporting instead: on the repository's **Security** tab, choose **Report a vulnerability**. Include the steps to reproduce it and what an attacker could do. Expect a reply within a week.
+
+## What's in scope
+
+- **The browser extension:**
+  - It runs on `desmos.com/calculator`.
+  - It stores libraries in `chrome.storage.local`.
+  - Its background worker fetches files only from `raw.githubusercontent.com` and `gist.githubusercontent.com`.
+
+  Anything that lets a graph, a library or a web page escape those limits is in scope. Examples: reaching other sites, running script code, or reading or changing another site's data.
+- **Libraries** compile to Desmos expressions only and never run as JavaScript. A library that can make the compiler or the extension run code is a vulnerability.
+- **The VS Code extension and the CLI** read local files that a `.tmcpp` file imports. They fetch `gh:` and `https://` imports.
+
+Problems in Desmos or DesModder themselves belong with those projects.

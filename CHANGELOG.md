@@ -1,0 +1,32 @@
+# Changelog
+
+## 0.2.0 (2026-11-23): v2
+
+v2 adds structure on top of v1's styles: components, conditionals, actions and libraries, plus a real editor.
+
+### Added
+
+- **Components.** `component Name(params) { ... }` and `new Name(args) as name`. Each instance gets its own folder and collision-free variable names. Includes members (`s1.d`), default and `abstract` parameters, nesting, stacked style tails, and list instances (`new Cell(i, j) for i = [1...9], j = [1...9] as cells`) that compile to one folder of Desmos lists.
+- **`if` statements.** Inline `if c then a else b`, with `else if` chains, and block `if c { ... } else { ... }`, both compiled to piecewise.
+- **Actions.** `n++`, `n--`, `n += e` (`-=`, `*=`, `/=`, `^=`), `mode++ % 3`, `on = 1` inside an action, `toggle(on)`, list element updates (`L[i] = v`, merged when one action changes several), `L.push(x)`, `L.pop()` and `reset()`. Warns when one action updates the same variable twice.
+- **Libraries.** `import "x"`, `import "x" as ns` and `import { A, b } from "x"`, with collision-free names and pruning of anything unused. Imports come from local files, `gh:user/repo/path@ref`, raw GitHub and gist URLs, and github.com page links.
+- **Built-in libraries:** `std/styles`, `std/ui`, `std/shapes`, `std/easing` and `std/3d`.
+- **Scientific notation.** `3e-3` and `1.5E8`. Euler's `e` keeps its meaning whenever it isn't glued to a number with an exponent.
+- **Round trip.** "From graph" gives back `new` lines, `if` blocks, imports and component definitions as written, while they're untouched in Desmos. Lines edited in Desmos get your variable names back.
+- **Editor.** The panel uses CodeMirror 6, with TMC++ highlighting, compile errors underlined as you type, autocomplete, Ctrl+/ and search.
+- **Library panel.** Save the current file as a library, fetch GitHub libraries (kept offline), and insert imports.
+- **VS Code extension** (`vscode/`): syntax highlighting, live compile errors, and the commands "Show compiled TMC" and "Copy compiled TMC".
+- **Packaging.** `npm run pack` builds `release/tmcpp-extension-<version>.zip`.
+
+### Changed
+
+- **A number glued to `e` or `E` followed by an exponent is now scientific notation.** `2e-1` used to mean `2·e − 1`. To keep the old meaning, write `2 e - 1`.
+- **`++`, `--` and `+=`-style operators are action syntax.** They weren't valid Desmos math before, so existing graphs are unaffected.
+- **The panel header is simpler:** From graph, Library, a ⋯ menu (Open, Save, Copy TMC, Example) and Compile.
+- **The metadata note is version 2.** Notes written by 0.1 still load.
+
+## 0.1.0 (2026-11-20): v1
+
+- **The compiler:** CSS-style classes, named colours, one-word style tokens, labels, slider shorthand and playback, settings, tables, tickers and folders.
+- **The browser extension** for desmos.com: live compile, stable ids, a metadata note, a watermark seed, and "From graph" with inline overrides for edits made in Desmos.
+- **Tools:** `tools/check.js` validates output with DesModder's own parser, and `npm run preview` renders a graph to a PNG.

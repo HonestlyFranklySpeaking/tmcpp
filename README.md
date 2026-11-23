@@ -217,7 +217,7 @@ The npm release of text-mode-core (0.1.1) is older than the DesModder extension.
 | M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
 | M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
-| M11 ship v2 (Tritime showcase) | planned |
+| M11 ship v2: version 0.2.0, changelog, packaged extension and VS Code extension | done |
 | M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d` | done |
 | v3 MCP server so AI assistants can write TMC++ graphs | planned |
 

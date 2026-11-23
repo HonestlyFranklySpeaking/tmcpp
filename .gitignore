@@ -4,3 +4,4 @@ extension/dist/
 
 vscode/dist/
 *.vsix
+release/

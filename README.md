@@ -34,7 +34,14 @@ npm install -g @ikeasourpatches/tmcpp         # or install the tmcpp command
 tmcpp graph.tmcpp > graph.tmc
 ```
 
-In code: `import { compile } from "@ikeasourpatches/tmcpp"`. The browser extension and the VS Code extension are below.
+In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
+
+| Where | Get it |
+| --- | --- |
+| Command line and Node | [npm: `@ikeasourpatches/tmcpp`](https://www.npmjs.com/package/@ikeasourpatches/tmcpp) |
+| VS Code | [VS Code Marketplace: TMC++](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or search "TMC++" in the Extensions view |
+| Cursor, VSCodium, Windsurf | [Open VSX: TMC++](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) |
+| Desmos in Chrome | the [browser extension](#browser-extension), loaded unpacked for now |
 
 ## Quick start
 
@@ -89,7 +96,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ## VS Code
 
-[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Build it with `npm run build:vscode`, then `cd vscode && npx @vscode/vsce package` and install the `.vsix` (details in [vscode/README.md](vscode/README.md)).
+[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp) or, for Cursor and VSCodium, [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp). To build it yourself, run `npm run build:vscode`; publishing steps are in [vscode/README.md](vscode/README.md).
 
 ## Language
 

@@ -1,0 +1,7 @@
+// WireCube | drag the three angle sliders to inspect the rotation order.
+import { WireCube } from "std/3d"
+settings x [-4 : 4] y [-3 : 3] radians no-grid @{ showXAxis: false, showYAxis: false }
+yaw = 0.55 [-pi : pi]
+pitch = 0.36 [-pi/2 : pi/2]
+roll = 0 [-pi : pi]
+new WireCube((0,0),3,yaw,pitch,roll) as cube . #348D97 width 2

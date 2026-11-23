@@ -1,0 +1,34 @@
+// std/3d | Right-handed rotations and camera projection for the 2D calculator.
+// Set the graph to radians. A single 3D vertex is [x,y,z]; Desmos indexes from 1.
+// Positive x points right, positive y up, and positive z towards the viewer.
+rotateX(p,a) = [p[1],p[2]*cos(a)-p[3]*sin(a),p[2]*sin(a)+p[3]*cos(a)]
+rotateY(p,a) = [p[1]*cos(a)+p[3]*sin(a),p[2],p[3]*cos(a)-p[1]*sin(a)]
+rotateZ(p,a) = [p[1]*cos(a)-p[2]*sin(a),p[1]*sin(a)+p[2]*cos(a),p[3]]
+ortho(p) = (p[1],p[2])
+
+// For whole meshes or parametric curves, pass three coordinate columns.
+// Apply yaw about Y, then pitch about X, then roll about Z (fixed world axes).
+// Scalars produce a point; three equal-length lists produce a list of 2D points.
+rollPlane(u,v,a) = (u*cos(a)-v*sin(a),u*sin(a)+v*cos(a))
+projectOrtho(u,v,w,az,el,tw) = rollPlane(u*cos(az)+w*sin(az),v*cos(el)-(w*cos(az)-u*sin(az))*sin(el),tw)
+
+// Camera-space depth after the same Y and X rotations. Screen roll leaves depth unchanged.
+// Use this value to order edges or shade particles.
+viewDepth(u,v,w,az,el) = v*sin(el)+(w*cos(az)-u*sin(az))*cos(el)
+
+// Eye at positive distance d on the camera Z axis; the image plane is z=0.
+// The scale is undefined at and behind the eye, or if d is nonpositive.
+// Cull or clip an edge crossing the eye plane before drawing it as a segment.
+perspectiveScale(z,d) = {d>0: {z<d: d/(d-z)}}
+projectPerspective(u,v,w,az,el,tw,d) = projectOrtho(u,v,w,az,el,tw)*perspectiveScale(viewDepth(u,v,w,az,el),d)
+
+// Twelve edges, no diagonals. C is a 2D screen point; size is the full side length.
+component WireCube(C,size,yaw=0.55,pitch=0.36,roll=0) {
+  vx = [-1,1,1,-1,-1,1,1,-1]
+  vy = [-1,-1,1,1,-1,-1,1,1]
+  vz = [-1,-1,-1,-1,1,1,1,1]
+  verts = C+(size/2)*projectOrtho(vx,vy,vz,yaw,pitch,roll) . hidden
+  starts = [1,2,3,4,5,6,7,8,1,2,3,4]
+  ends = [2,3,4,1,6,7,8,5,5,6,7,8]
+  segment(verts[starts],verts[ends])
+}

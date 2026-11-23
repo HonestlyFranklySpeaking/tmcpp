@@ -389,9 +389,21 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 | `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
 | `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL in the CLI) | extension, CLI, check and preview |
 | `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
-| `"std/styles"`, `"std/ui"`, `"std/shapes"`, `"std/easing"`: the built-in libraries | everywhere, offline; nothing to fetch |
+| `"std/styles"`, `"std/ui"`, `"std/shapes"`, `"std/easing"`, `"std/3d"`: the built-in libraries | everywhere, offline; nothing to fetch |
 
-The built-in libraries are the files in [`library/std`](../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…) and `std/easing` (easing curves). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
+The built-in libraries are the files in [`library/std`](../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…), `std/easing` (easing curves) and `std/3d` (camera projection and wireframes). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
+
+**3D geometry in the 2D calculator.** Use radians, with positive X pointing right, Y up and Z towards the viewer. `rotateX(p,a)`, `rotateY(p,a)` and `rotateZ(p,a)` each rotate one vertex stored as a three-number list. `ortho(p)` returns its drawable 2D point. For a mesh, store X, Y and Z in separate, equal-length lists.
+
+```js
+import { WireCube, projectOrtho } from "std/3d"
+settings radians no-grid
+turn = 0.5 [-pi : pi]
+new WireCube((0,0), 3, turn, 0.36, 0) as cube
+tip = projectOrtho(0, 0, 2, turn, 0.36, 0)
+```
+
+`projectOrtho(x,y,z,yaw,pitch,roll)` accepts scalars or coordinate columns. It rotates about the fixed Y axis, then X, then Z. `viewDepth(x,y,z,yaw,pitch)` gives the corresponding camera depth. `projectPerspective(x,y,z,yaw,pitch,roll,d)` places the eye at positive camera depth `d` and projects onto the plane at zero. Vertices at or beyond the eye have undefined projections. A segment that crosses the eye plane needs clipping by the caller. See [the wireframe cube](../examples/wire-cube.tmcpp).
 
 Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
 

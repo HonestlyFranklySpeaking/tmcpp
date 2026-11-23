@@ -1,0 +1,6 @@
+# Store text files with LF line endings whatever the editor saves; Windows checkouts still get CRLF
+# when core.autocrlf is on. Keeps line-ending-only changes out of diffs.
+* text=auto
+*.png binary
+*.gif binary
+*.vsix binary

@@ -1,0 +1,172 @@
+// PARALLAX | Projecting a tesseract into the 2D Desmos calculator.
+// Open with the TMC++ extension (bundled std/ui and action shorthand).
+// Click any vertex to emit a pulse. The gold edges connect the two cubic cells.
+import { Button, CanvasSlider } from "std/ui"
+settings x [-16 : 16] y [-10 : 10] radians no-grid lock @{ showXAxis: false, showYAxis: false }
+
+color ground #091623
+color paper #E7EEE9
+color cyan #83E8EB
+color amber #FFBB6E
+color white #EFF9F6
+color ruled #284351
+class caption { point-opacity 0 no-outline }
+class darkText { #153A40 point-opacity 0 no-outline }
+class hint { #527472 point-opacity 0 no-outline }
+class back { width 1.1 opacity 0.82 }
+class middle { width 1.8 opacity 0.95 }
+class front { width 2.65 opacity 1 }
+class tail { #75D8E0 point 4.2 point-opacity 0.43 }
+class bead { #FFFBDA point 6 }
+class vertex { #C8EFF0 point 5 }
+
+folder "Instrument" collapsed {
+  mode = 0                 // Tesseract, tetrahedron, cube, octahedron
+  selected = 1             // Local 1-based vertex ID, as in Desmos list indexing
+  age = 1.4                // Pulse travel is 0..1, then the tails clear
+  looped = 0
+  autoOrbit = 0
+  spin = 0
+  nextSolid = (mode++ % 4, selected -> 1, age -> 1.4)
+  emit = age -> 0
+  repeatPulse = (toggle(looped), age -> {looped=0: 0, age})
+  turn = toggle(autoOrbit)
+  progress = {age<1.4: min(1.4,age+0.025), looped=1: 0, 1.4}
+  step = {max(autoOrbit,looped)>0: (spin -> mod(spin+0.012*autoOrbit,2*pi), age -> progress), age<1.4: age -> progress}
+}
+ticker step . play 40ms
+
+folder "Print and frame" collapsed {
+  y > -100 . #ground fill 1 opacity 0
+  polygon((5.1,-10),(16,-10),(16,10),(5.1,10)) . #paper fill 1 width 0
+  segment((-14.8,7.85),(3.9,7.85)) . #ruled width 1
+  segment((-14.8,-7.28),(3.9,-7.28)) . #ruled width 1
+  (-14.7,8.98) .caption #white right label "PARALLAX" label-size 1.80
+  (3.9,8.90) .caption #cyan left label "GEOMETRY LAB" label-size 0.67
+}
+
+folder "View controls" collapsed {
+  (6.18,8.87) .hint right label "SOLID" label-size 0.68
+  ({mode=0:6.18},7.67) .darkText right label "Tesseract" label-size 1.5
+  ({mode=1:6.18},7.67) .darkText right label "Tetrahedron" label-size 1.5
+  ({mode=2:6.18},7.67) .darkText right label "Cube" label-size 1.5
+  ({mode=3:6.18},7.67) .darkText right label "Octahedron" label-size 1.5
+  (6.18,6.58) .hint right label "${nv} vertices   /   ${ne} edges" label-size 0.8
+  new Button((10.47,5.17),8.55,1.25,"Next solid",nextSolid) as nextButton
+  (6.18,3.62) .darkText right label "Orbit" label-size 0.85
+  new CanvasSlider(6.5,2.78,7.95,-pi,pi) as orbitKnob
+  (6.18,1.56) .darkText right label "Elevation" label-size 0.85
+  new CanvasSlider(6.5,0.72,7.95,-1.40,1.40) as tiltKnob
+  (6.18,-0.54) .darkText right label "XW rotation" label-size 0.85
+  (14.67,-0.54) .hint left label "4D ONLY" label-size 0.57
+  new CanvasSlider(6.5,-1.45,7.95,-pi,pi) as wKnob
+  new Button((8.30,-3.15),4.02,1.12,"Spin",turn) as spinButton
+  new Button((12.75,-3.15),4.02,1.12,"Loop",repeatPulse) as loopButton
+  ({autoOrbit=1:6.52},-3.15) . #238F79 point 6
+  ({looped=1:10.99},-3.15) . #238F79 point 6
+  new Button((10.48,-4.82),8.55,1.14,"Emit pulse",emit) as emitButton
+  new Button((10.48,-6.36),8.55,1.14,"Reset view",homeView) as resetButton
+  segment((6.18,-7.30),(14.77,-7.30)) . #A8BDB5 width 1
+  (6.18,-8.26) .darkText right label "Vertex ${selected}" label-size 1
+  (6.18,-9.05) .hint right label "${degree} connected neighbours" label-size 0.76
+}
+centreOrbit = orbitKnob.s -> 0.5
+centreTilt = tiltKnob.s -> 0.5
+centreW = wKnob.s -> 0.5
+homeView = (centreOrbit,centreTilt,centreW,reset(spin,autoOrbit))
+
+folder "Mesh catalogue" collapsed {
+  // Packed vertex and edge tables keep lists flat. All edge endpoints are local IDs.
+  // The tesseract flips one bit per edge: 1=X, 2=Y, 4=Z, 8=W.
+  nv = [16,4,8,6][mode+1]
+  ne = [32,6,12,12][mode+1]
+  vertexBase = [0,16,20,28][mode+1]
+  edgeBase = [0,32,38,50][mode+1]
+  allX = [-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,-1,1,1,1,-1,-1,-1,1,-1,1,-1,1,-1,1,-1.5,1.5,0,0,0,0]
+  allY = [-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,-1,1,-1,-1,-1,1,1,-1,-1,1,1,0,0,-1.5,1.5,0,0]
+  allZ = [-1,-1,-1,-1,1,1,1,1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,1,-1,-1,-1,-1,1,1,1,1,0,0,0,0,-1.5,1.5]
+  allW = [-1,-1,-1,-1,-1,-1,-1,-1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+  allA = [1,1,1,1,2,2,2,3,3,3,4,4,5,5,5,6,6,7,7,8,9,9,9,10,10,11,11,12,13,13,14,15,1,1,1,2,2,3,1,1,1,2,2,3,3,4,5,5,6,7,1,1,1,1,2,2,2,2,3,3,4,4]
+  allB = [2,3,5,9,4,6,10,4,7,11,8,12,6,7,13,8,14,8,15,16,10,11,13,12,14,12,15,16,14,15,16,16,2,3,4,3,4,4,2,3,5,4,6,4,7,8,6,7,8,8,3,4,5,6,3,4,5,6,5,6,5,6]
+  vi = vertexBase+[1 ... nv]
+  ei = edgeBase+[1 ... ne]
+  X = allX[vi]
+  Y = allY[vi]
+  Z = allZ[vi]
+  W = allW[vi]
+  A = allA[ei]
+  B = allB[ei]
+  copper = abs(W[A]-W[B])/2
+  neighbours = join(B[A=selected],A[B=selected])
+  degree = length(neighbours)
+}
+
+folder "Projection" collapsed {
+  // XW perspective (eye at w=4), then a right-handed 3D camera.
+  // Keep homogeneous coordinates: interpolate them before dividing for pulse travel.
+  yaw = orbitKnob.val+spin+0.51
+  pitch = tiltKnob.val-0.32
+  twist = if mode=0 then wKnob.val else 0
+  across = X*cos(twist)-W*sin(twist)
+  away = X*sin(twist)+W*cos(twist)
+  divisor = 4-away
+  horizontal = across*cos(yaw)+Z*sin(yaw)
+  forward = Z*cos(yaw)-across*sin(yaw)
+  vertical = Y*cos(pitch)-forward*sin(pitch)
+  depthNum = 4*(Y*sin(pitch)+forward*cos(pitch))
+  numer = 4*(horizontal,vertical) . hidden
+  centre = (-5.43,0.27) . hidden
+  zoom = {mode=0:3.05, mode=3:3.55, 3.4}
+  screen = centre+zoom*numer/divisor . hidden
+  blend(a,b,s) = (1-s)*a+s*b
+  sample(a,b,s) = centre+zoom*blend(numer[a],numer[b],s)/blend(divisor[a],divisor[b],s)
+  depthAt(a,b,s) = blend(depthNum[a],depthNum[b],s)/blend(divisor[a],divisor[b],s)
+}
+
+folder "Wireframe | far to near" collapsed {
+  // Four short spans per edge. A W-edge keeps its colour through every rotation.
+  pieces = [0...4*ne-1]
+  edgeId = 1+floor(pieces/4)
+  first = A[edgeId]
+  last = B[edgeId]
+  lo = mod(pieces,4)/4
+  hi = lo+0.25
+  nearDepth = depthAt(first,last,(lo+hi)/2)
+  band = {nearDepth < -0.38: 0, nearDepth < 0.38: 1, 2}
+  ink = 2*band+copper[edgeId]
+  S = sample(first,last,lo) . hidden
+  E = sample(first,last,hi) . hidden
+  segment(S[ink=0],E[ink=0]) .back #416B80
+  segment(S[ink=1],E[ink=1]) .back #996B49
+  segment(S[ink=2],E[ink=2]) .middle #4FAEBF
+  segment(S[ink=3],E[ink=3]) .middle #DE9A57
+  segment(S[ink=4],E[ink=4]) .front #cyan
+  segment(S[ink=5],E[ink=5]) .front #amber
+}
+
+// A vector of points is one clickable Desmos item; index is the clicked vertex ID.
+component VertexCloud(points) {
+  points .vertex
+  points . #white point 11 point-opacity 0.01 click(selected -> index, age -> 0)
+}
+folder "Vertices and particles" collapsed {
+  screen[selected] . #amber point 23 point-opacity 0.16 click(emit)
+  screen[selected] . #amber point 12 open click(emit)
+  // Undefined samples hide the tail until launch and clear it after arrival.
+  windowed(s) = {s<0: 0/0, s<=1.08: min(s,1), 0/0}
+  beadAt(s) = sample(selected,neighbours,windowed(s))
+  beadAt(age-0.14) . #5FBCCB point 3 point-opacity 0.25
+  beadAt(age-0.07) .tail
+  beadAt(age) . #FFC980 point 12 point-opacity 0.14
+  beadAt(age) .bead
+  // Topmost hit target lets a bead arriving at a different vertex yield to that vertex.
+  new VertexCloud(screen) as nodes
+}
+
+folder "Key" collapsed {
+  (-14.65,-8.05) .caption #white right label "Click a vertex to trace its edges." label-size 0.94
+  segment((-14.65,-9.03),(-13.76,-9.03)) . #cyan width 2.7
+  (-13.52,-9.03) .caption #cyan right label "Spatial edge" label-size 0.68
+  segment(({mode=0:-8.31},-9.03),(-7.42,-9.03)) . #amber width 2.7
+  ({mode=0:-7.16},-9.03) .caption #amber right label "Fourth-axis edge" label-size 0.68
+}

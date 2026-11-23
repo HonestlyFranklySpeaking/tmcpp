@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Syntax reference
+    url: https://github.com/IkeaSourPatches/tmcpp/blob/main/docs/syntax.md
+    about: Check whether it's already supported
+  - name: Security problem
+    url: https://github.com/IkeaSourPatches/tmcpp/security/advisories/new
+    about: Report vulnerabilities privately, not as an issue

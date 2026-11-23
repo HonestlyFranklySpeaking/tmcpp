@@ -1,0 +1,19 @@
+name: Feature request
+description: New syntax, a std library component, or an editor feature
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's painful today
+      description: Show what you have to write now, in TMC++ or plain Desmos.
+      render: js
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you'd like to write instead
+      description: Sketch the syntax or the component, and what it should compile to.
+    validations:
+      required: true

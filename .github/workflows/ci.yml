@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests (compiler, parser, round trip, std libraries)
+        run: npm test
+      - name: Every example compiles and passes DesModder's parser
+        run: for f in examples/*.tmcpp; do node tools/check.js "$f" || exit 1; done
+      - name: The CLI compiles an example
+        run: node src/cli.js examples/hello.tmcpp > /dev/null
+      - name: Build the browser and VS Code extensions
+        run: |
+          npm run pack
+          npm run build:vscode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tmcpp-extension
+          path: release/*.zip

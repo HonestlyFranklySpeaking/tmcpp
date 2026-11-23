@@ -1,0 +1,39 @@
+name: Bug report
+description: Something compiles wrong, errors when it shouldn't, or looks wrong in Desmos
+labels: [bug]
+body:
+  - type: textarea
+    id: source
+    attributes:
+      label: TMC++ source
+      description: The smallest source that shows the problem. Strip out everything that isn't needed.
+      render: js
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: Paste any error messages exactly (the panel's "Copy all" copies them with their lines).
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Browser extension
+        - CLI or tools/check.js
+        - VS Code extension
+        - "\"From graph\" (round trip)"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: TMC++ version
+      description: From the extension's manifest or package.json, such as 0.2.0
+  - type: input
+    id: graph
+    attributes:
+      label: Desmos graph link (if any)

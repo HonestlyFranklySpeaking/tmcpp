@@ -22,6 +22,22 @@
     "url": "https://github.com/IkeaSourPatches/tmcpp/issues"
   },
   "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "tmcpp": "src/cli.js"
+  },
+  "files": [
+    "src/",
+    "docs/syntax.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.js",

@@ -6,7 +6,28 @@ import { readFileSync } from "node:fs";
 import { decodeSource } from "./decode.js";
 import { compileFile } from "./load-node.js";
 
-const path = process.argv[2];
+function version() {
+  return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+}
+
+const arg = process.argv[2];
+if (arg === "--help" || arg === "-h") {
+  console.log(`tmcpp ${version()}: compile TMC++ to DesModder Text Mode (TMC)
+
+  tmcpp graph.tmcpp          print the compiled TMC, or errors with line numbers
+  tmcpp < graph.tmcpp        read the source from standard input
+  tmcpp --version
+
+Paste the output into DesModder's Text Mode, or use the browser extension.
+Syntax: https://github.com/IkeaSourPatches/tmcpp/blob/main/docs/syntax.md`);
+  process.exit(0);
+}
+if (arg === "--version" || arg === "-v") { console.log(version()); process.exit(0); }
+if (arg === undefined && process.stdin.isTTY) {
+  console.error("tmcpp: give a .tmcpp file, or pipe one in (tmcpp --help)");
+  process.exit(1);
+}
+const path = arg;
 const source = decodeSource(readFileSync(path ?? 0));
 const { tmc, errors, warnings } = await compileFile(source, path ?? "");
 const name = path ?? "<stdin>";

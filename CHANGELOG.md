@@ -9,6 +9,7 @@
 
 ### Added
 
+- **3D and orbital building blocks.** `std/3d` adds camera transforms and ray intersections. New `std/color` and `std/orbits` libraries provide palettes, lighting and Kepler motion. The solar-system example uses all three.
 - **Current Text Mode.** TMC++ now bundles a build of DesModder's Text Mode library from its November 2026 source instead of the npm release from 2023, so `|x|`, regression parameters and `@{ id }` work, and `tmcpp check` agrees with the extension. No runtime dependencies are left.
 - **Strings can span lines.** A note or label whose closing `"` is on a later line keeps its line breaks.
 - **Example:** `examples/solar-system.tmcpp`, a 3D solar system ChatGPT wrote through the MCP server.

@@ -1,3 +1,7 @@
+import "std/3d" as cam
+import "std/color" as paint
+import "std/orbits" as kepler
+
 "Made by ChatGPT-6.2 Sol Ultra.
 Prompt: Use tmcpp mcp to draw a cool looking physics realistic interpritation of the solar system in 3d. Dont put akward captions around the piece, instead the whole space should be used to present this piece of artwork, allow for movement in all directions via raycasting and other techniques using sliders."
 
@@ -52,32 +56,14 @@ folder "Keplerian orbits" collapsed hidden {
   W_orbit(q,j) = (W_epoch[j] - N_epoch[j] + (W_rate[j]-N_rate[j])*q/100)*pi/180
   M_orbit(q,j) = (mod(L_epoch[j] - W_epoch[j] + (L_rate[j]-W_rate[j])*q/100 + 180,360)-180)*pi/180
 
-  // Invert M = u - e*sin(u) using three Newton steps.
-  E_start(q,j) = M_orbit(q,j) + E_orbit(q,j)*sin(M_orbit(q,j))
-  E_step(u,m,c) = u + (m-u+c*sin(u))/(1-c*cos(u))
-  E_one(q,j) = E_step(E_start(q,j),M_orbit(q,j),E_orbit(q,j))
-  E_two(q,j) = E_step(E_one(q,j),M_orbit(q,j),E_orbit(q,j))
-  E_solve(q,j) = E_step(E_two(q,j),M_orbit(q,j),E_orbit(q,j))
+  E_solve(q,j) = kepler.eccentricAnomaly(M_orbit(q,j),E_orbit(q,j))
+  H_x(u,q,j) = kepler.orbitX(A_orbit(q,j),E_orbit(q,j),u,I_orbit(q,j),N_orbit(q,j),W_orbit(q,j))
+  H_y(u,q,j) = kepler.orbitY(A_orbit(q,j),E_orbit(q,j),u,I_orbit(q,j),N_orbit(q,j),W_orbit(q,j))
+  H_z(u,q,j) = kepler.orbitZ(A_orbit(q,j),E_orbit(q,j),u,I_orbit(q,j),N_orbit(q,j),W_orbit(q,j))
 
-  // Rotate from perihelion, tip the plane, then rotate about the ecliptic pole.
-  V_x(u,q,j) = A_orbit(q,j)*(cos(u)-E_orbit(q,j))
-  V_y(u,q,j) = A_orbit(q,j)*sqrt(1-E_orbit(q,j)^2)*sin(u)
-  V_node(u,q,j) = V_x(u,q,j)*cos(W_orbit(q,j)) - V_y(u,q,j)*sin(W_orbit(q,j))
-  V_perp(u,q,j) = V_x(u,q,j)*sin(W_orbit(q,j)) + V_y(u,q,j)*cos(W_orbit(q,j))
-  H_x(u,q,j) = V_node(u,q,j)*cos(N_orbit(q,j)) - V_perp(u,q,j)*cos(I_orbit(q,j))*sin(N_orbit(q,j))
-  H_y(u,q,j) = V_node(u,q,j)*sin(N_orbit(q,j)) + V_perp(u,q,j)*cos(I_orbit(q,j))*cos(N_orbit(q,j))
-  H_z(u,q,j) = V_perp(u,q,j)*sin(I_orbit(q,j))
-
-  // Scalar functions H_*(u,q,j) are also available for individual orbit traces.
-  Q_x(u,q) = [H_x(u,q,j) for j=[1...8]]
-  Q_y(u,q) = [H_y(u,q,j) for j=[1...8]]
-  Q_z(u,q) = [H_z(u,q,j) for j=[1...8]]
   P_x(q) = [H_x(E_solve(q,j),q,j) for j=[1...8]]
   P_y(q) = [H_y(E_solve(q,j),q,j) for j=[1...8]]
   P_z(q) = [H_z(E_solve(q,j),q,j) for j=[1...8]]
-  O_x(u) = Q_x(u,0)
-  O_y(u) = Q_y(u,0)
-  O_z(u) = Q_z(u,0)
 }
 // Static celestial background. Prepend before orbital curves and planets.
 class backgroundPaint { fill 1 opacity 0 }
@@ -162,17 +148,14 @@ folder "Scene geometry" collapsed hidden {
   C_fx = W_x[f_target+1]
   C_fy = W_y[f_target+1]
   C_fz = W_z[f_target+1]
-  C_h(u,w) = u*cos(C_a)+w*sin(C_a)
-  C_k(u,w) = w*cos(C_a)-u*sin(C_a)
-  C_v(u,v,w) = v*cos(C_e)-C_k(u,w)*sin(C_e)
-  C_right(u,v,w) = C_h(u,w)*cos(C_r)-C_v(u,v,w)*sin(C_r)
-  C_up(u,v,w) = C_h(u,w)*sin(C_r)+C_v(u,v,w)*cos(C_r)
-  C_forward(u,v,w) = -v*sin(C_e)-C_k(u,w)*cos(C_e)
+  C_right(u,v,w) = cam.viewX(u,v,w,C_a,C_e,C_r)
+  C_up(u,v,w) = cam.viewY(u,v,w,C_a,C_e,C_r)
+  C_forward(u,v,w) = -cam.viewDepth(u,v,w,C_a,C_e)
   C_posx(u,v,w) = C_right(u-C_fx,v-C_fy,w-C_fz)-x_truck
   C_posy(u,v,w) = C_up(u-C_fx,v-C_fy,w-C_fz)-y_pedestal
   C_posz(u,v,w) = C_d+C_forward(u-C_fx,v-C_fy,w-C_fz)
   C_near(z) = {z>0.30: z}
-  C_view(u,v,w) = C_f*(C_posx(u,v,w),C_posy(u,v,w))/C_near(C_posz(u,v,w))
+  C_view(u,v,w) = cam.projectCamera(C_posx(u,v,w),C_posy(u,v,w),C_posz(u,v,w),C_f,0.30)
   B_x = C_posx(W_x,W_y,W_z)
   B_y = C_posy(W_x,W_y,W_z)
   B_z = C_posz(W_x,W_y,W_z)
@@ -245,7 +228,7 @@ folder "Perspective rays and materials" collapsed hidden {
   F_screen(i,r,a) = C_f*(F_x(i,r,a),F_y(i,r,a))/F_visible(i,F_z(i,r,a))
 
   // Near ray/sphere intersection and the corresponding outward normal.
-  S_hit(i,r) = B_d[i]*F_k(i,r)-R_body[i]*sqrt(max(0,1-r^2))
+  S_hit(i,r) = cam.sphereRayDepth(r,B_d[i],R_body[i])
   S_x(i,r,a) = (S_hit(i,r)*F_x(i,r,a)-B_x[i])/R_body[i]
   S_y(i,r,a) = (S_hit(i,r)*F_y(i,r,a)-B_y[i])/R_body[i]
   S_z(i,r,a) = (S_hit(i,r)*F_z(i,r,a)-B_z[i])/R_body[i]
@@ -266,13 +249,12 @@ folder "Perspective rays and materials" collapsed hidden {
   T_baseR = [255,166,233,49,211,212,215,117,61,159]
   T_baseG = [206,154,182,100,108,156,184,199,115,158]
   T_baseB = [93,145,102,191,75,110,126,208,219,164]
-  T_shade(i,x,y,z) = {i=1: 0.74+0.27*S_limb(i,x,y,z)^0.6,0.15+0.85*S_light(i,x,y,z)^0.58}
+  T_shade(i,x,y,z) = {i=1: 0.74+0.27*S_limb(i,x,y,z)^0.6,paint.diffuseLight(S_light(i,x,y,z),0.15,0.58)}
   T_red(i,p,l,w) = T_baseR[i]+{i=4: 56*T_continent(p,l,w)+111*T_cloud(p,l,w)+63*abs(l)^10,0}
   T_green(i,p,l,w) = T_baseG[i]+{i=1: 16*T_grain(p,l,w)+12*sin(8*p+9*l+3*w),i=4: 24*T_continent(p,l,w)+100*T_cloud(p,l,w)+79*abs(l)^10,0}
   T_blue(i,p,l,w) = T_baseB[i]+{i=1: 24*T_grain(p,l,w)+17*sin(8*p+9*l+3*w),i=4: -102*T_continent(p,l,w)+52*T_cloud(p,l,w)+46*abs(l)^10,0}
   T_brightness(i,x,y,z,p,l,w) = T_shade(i,x,y,z)*(1+T_bands(i,p,l,w))
-  T_limit(v) = min(255,max(0,v))
-  T_palette(i,x,y,z,p,l,w) = rgb(T_limit(T_red(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)),T_limit(T_green(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)),T_limit(T_blue(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)))
+  T_palette(i,x,y,z,p,l,w) = paint.shadeRgb(T_red(i,p,l,w),T_green(i,p,l,w),T_blue(i,p,l,w),T_brightness(i,x,y,z,p,l,w))
   T_color(i,x,y,z) = T_palette(i,x,y,z,T_lng(x,y,z),T_pole(i,x,y,z),T_phi(x,y,z))
   T_sample(i,r,a) = T_color(i,S_x(i,r,a),S_y(i,r,a),S_z(i,r,a))
 

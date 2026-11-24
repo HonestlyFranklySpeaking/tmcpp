@@ -1,0 +1,42 @@
+// std/orbits | Focus-centered two-body ellipses, using radians.
+// a is the semimajor axis, 0 <= c < 1 the eccentricity, m the mean anomaly,
+// u the eccentric anomaly, i inclination, n ascending node, w argument of periapsis.
+// orbitX/Y/Z use the standard right-handed orbital frame with +Z pointing north.
+// For std/3d's Y-up convention, pass (orbitX,orbitZ,-orbitY) to the camera.
+
+period(a,mu) = 2*pi*sqrt(a^3/mu)
+// Approximate period in Julian years for a in AU and total mass in solar masses.
+periodAU(a,m) = sqrt(a^3/m)
+// m is the anomaly at the epoch. Elapsed time t and period p use the same units.
+meanAt(m,t,p) = m+2*pi*t/p
+wrapAngle(m) = m-2*pi*floor(m/(2*pi)+0.5)
+
+// Mikkola's cubic starter, followed by three Newton steps. The nonnegative
+// branch and odd symmetry handle both signs without cube roots of negatives.
+// S. Mikkola (1987), doi:10.1007/BF01235850.
+keplerAlpha(c) = (1-c)/(4*c+0.5)
+keplerBeta(m,c) = abs(m)/(8*c+1)
+keplerRoot(b,k) = (b+sqrt(b^2+k^3))^(1/3)
+keplerTerm(b,k) = keplerRoot(b,k)-k/keplerRoot(b,k)
+keplerShift(s,c) = s-0.078*s^5/(1+c)
+keplerGuess(m,c,s) = m+sign(m)*c*(3*s-4*s^3)
+keplerStart(m,c) = keplerGuess(m,c,keplerShift(keplerTerm(keplerBeta(m,c),keplerAlpha(c)),c))
+keplerStep(u,m,c) = u-(u-c*sin(u)-m)/((1-c)+2*c*sin(u/2)^2)
+keplerRefine(m,c) = keplerStep(keplerStep(keplerStep(keplerStart(m,c),m,c),m,c),m,c)
+// Solve u - c*sin(u) = m modulo 2*pi. Returns an angle in [-pi,pi).
+eccentricAnomaly(m,c) = {0<=c: {c<1: keplerRefine(wrapAngle(m),c)}}
+
+radius(a,c,u) = a*(1-c*cos(u))
+trueAnomaly(c,u) = arctan(sqrt(1-c^2)*sin(u),cos(u)-c)
+
+// Plane coordinates have the focus at the origin and periapsis on +X.
+planeX(a,c,u) = a*(cos(u)-c)
+planeY(a,c,u) = a*sqrt(1-c^2)*sin(u)
+nodeX(a,c,u,w) = planeX(a,c,u)*cos(w)-planeY(a,c,u)*sin(w)
+nodeY(a,c,u,w) = planeX(a,c,u)*sin(w)+planeY(a,c,u)*cos(w)
+// Separate coordinate functions also accept matching lists or a mix of lists and scalars.
+orbitX(a,c,u,i,n,w) = nodeX(a,c,u,w)*cos(n)-nodeY(a,c,u,w)*cos(i)*sin(n)
+orbitY(a,c,u,i,n,w) = nodeX(a,c,u,w)*sin(n)+nodeY(a,c,u,w)*cos(i)*cos(n)
+orbitZ(a,c,u,i,n,w) = nodeY(a,c,u,w)*sin(i)
+// Convenience vector for one position. For a list of positions, use the columns above.
+position(a,c,u,i,n,w) = [orbitX(a,c,u,i,n,w),orbitY(a,c,u,i,n,w),orbitZ(a,c,u,i,n,w)]

@@ -1,0 +1,27 @@
+// std/color | RGB palettes and lighting for computed Desmos styles.
+// Pass the result of an RGB function to a style tail like . #(shadeRgb(...)).
+// RGB channels use 0..255. Channel arithmetic works on scalars or flat lists.
+
+colorUnit(value) = min(1, max(0, value))
+colorChannel(value) = min(255, max(0, value))
+colorBlend(start, end, amount) = start + (end - start) * colorUnit(amount)
+
+rgbClamped(red, green, blue) = rgb(colorChannel(red), colorChannel(green), colorChannel(blue))
+
+// A and B are numeric [R,G,B] triples. Interpolate in RGB channel space.
+mixRgb(A, B, amount) = rgbClamped(colorBlend(A[1], B[1], amount), colorBlend(A[2], B[2], amount), colorBlend(A[3], B[3], amount))
+
+// Channel lists R, G and B are equally long and nonempty. Stops are evenly
+// spaced from 0 to 1. Sample multiple colors at once with a list of amounts.
+gradientIndex(count, amount) = 1 + (count - 1) * colorUnit(amount)
+gradientChannel(C, position) = colorBlend(C[floor(position)], C[ceil(position)], mod(position, 1))
+gradientAt(R, G, B, position) = rgbClamped(gradientChannel(R, position), gradientChannel(G, position), gradientChannel(B, position))
+gradientRgb(R, G, B, amount) = gradientAt(R, G, B, gradientIndex(length(R), amount))
+
+// Multiply RGB channels by a light level. Values above 1 can brighten.
+shadeRgb(red, green, blue, light) = rgbClamped(red * light, green * light, blue * light)
+
+// Given dot(unit normal, unit light direction), return a light multiplier.
+// Ambient is clamped to 0..1. Use response=1 for Lambert's cosine law;
+// a positive response below 1 softens the contrast near the terminator.
+diffuseLight(cosine, ambient, response) = colorBlend(colorUnit(ambient), 1, colorUnit(cosine)^response)

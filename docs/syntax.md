@@ -400,9 +400,9 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 | `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, VS Code, MCP server |
 | `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL outside the extension) | extension, CLI, VS Code, MCP server |
 | `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
-| `"std/styles"`, `"std/ui"`, `"std/shapes"`, `"std/easing"`, `"std/3d"`: the built-in libraries | everywhere, offline; nothing to fetch |
+| `"std/*"`: the built-in libraries | everywhere, offline; nothing to fetch |
 
-The built-in libraries are the files in [`library/std`](../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…), `std/easing` (easing curves) and `std/3d` (camera projection and wireframes). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
+The built-in libraries are the files in [`library/std`](../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…), `std/easing` (easing curves), `std/3d` (camera, projection and rays), `std/color` (RGB gradients and lighting), and `std/orbits` (elliptical two-body motion). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
 
 **3D geometry in the 2D calculator.** Use radians, with positive X pointing right, Y up and Z towards the viewer. `rotateX(p,a)`, `rotateY(p,a)` and `rotateZ(p,a)` each rotate one vertex stored as a three-number list. `ortho(p)` returns its drawable 2D point. For a mesh, store X, Y and Z in separate, equal-length lists.
 
@@ -415,6 +415,17 @@ tip = projectOrtho(0, 0, 2, turn, 0.36, 0)
 ```
 
 `projectOrtho(x,y,z,yaw,pitch,roll)` accepts scalars or coordinate columns. It rotates about the fixed Y axis, then X, then Z. `viewDepth(x,y,z,yaw,pitch)` gives the corresponding camera depth. `projectPerspective(x,y,z,yaw,pitch,roll,d)` places the eye at positive camera depth `d` and projects onto the plane at zero. Vertices at or beyond the eye have undefined projections. A segment that crosses the eye plane needs clipping by the caller. See [the wireframe cube](../examples/wire-cube.tmcpp).
+
+For a moving camera, subtract the target from each world coordinate first. Rotate with `viewX`, `viewY` and `viewDepth`, using the same angles as `projectOrtho`. Subtract the sideways and vertical offsets from the rotated X and Y, and pass `distance - viewDepth(...)` as the third argument to `projectCamera(right,up,forward,focal,near)`. It clips points whose forward distance is below the positive near plane. A focal length independent of distance lets you move the camera without changing the lens.
+
+- `raySphereNear(dx,dy,dz,cx,cy,cz,radius)` returns the first nonnegative hit along a ray, or is undefined on a miss. From inside the sphere it returns the exit. `raySphereFar` returns the last forward hit.
+- `rayPlane(dx,dy,dz,nx,ny,nz,offset)` intersects the plane `nx*x + ny*y + nz*z = offset`. Parallel rays and hits behind the ray origin are undefined.
+- For both, ray origin is zero. Subtract the origin from the sphere center or plane point when working in another frame. The hit parameter multiplies the ray direction, so it is a distance if that direction has unit length. The helpers accept scalars or coordinate columns.
+- `sphereRayDepth(rho,distance,radius)` gives the near distance of a unit ray aimed into a sphere's visible disk. Use `rho = sin(angleFromCenter) / (radius/distance)`, from 0 at the center to 1 at the rim. The eye must be outside the sphere.
+
+**Computed color.** `std/color` returns Desmos colors for `#(...)` style tails. `rgbClamped(r,g,b)` clamps channels to 0–255; `mixRgb(A,B,t)` blends two `[R,G,B]` triples, and `gradientRgb(R,G,B,t)` samples a palette from equally long, nonempty channel lists. Values of `t` outside 0–1 use the nearest end. Color blends are linear in RGB channel values. `shadeRgb(r,g,b,light)` scales and clamps channels. `diffuseLight(cosine,ambient,response)` takes the dot product of the unit surface normal and unit light direction. Use `response = 1` for Lambert lighting, or a positive value below 1 for a softer terminator.
+
+**Kepler orbits.** In `std/orbits`, `period(a,mu)` uses consistent units of length and time and `periodAU(a,mass)` uses AU, total solar masses and Julian years. Use `meanAt(epochAngle,elapsed,period)` and `eccentricAnomaly(mean,eccentricity)` to advance an ellipse in time. Angles are in radians and eccentricity must be in `[0,1)`. The solver wraps the result around zero. `radius(a,eccentricity,anomaly)` and `trueAnomaly(eccentricity,anomaly)` take eccentric anomaly as input. `orbitX/Y/Z(a,eccentricity,anomaly,inclination,node,periapsis)` return coordinate columns in a frame with +Z north. `position(...)` returns one three-number position. Pass `(orbitX, orbitZ, -orbitY)` to a Y-up camera. See all three libraries together in [the solar-system example](../examples/solar-system.tmcpp).
 
 Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
 

@@ -44,6 +44,21 @@ test("mcp: initialize, tools and resources", async () => {
   assert.equal(r[6].error.code, -32601);
 });
 
+test("mcp: discovers and reads the 3D, color and orbit libraries", async () => {
+  const libraries = [
+    ["std/3d", /raySphereNear/],
+    ["std/color", /gradientRgb/],
+    ["std/orbits", /eccentricAnomaly/],
+  ];
+  const resources = libraries.map(([id]) => ["resources/read", { uri: "tmcpp://" + id }]);
+  const replies = await session([init, ["resources/list", {}], ...resources]);
+  const listed = new Set(replies[2].result.resources.map((resource) => resource.uri));
+  libraries.forEach(([id, signature], i) => {
+    assert.ok(listed.has("tmcpp://" + id));
+    assert.match(replies[i + 3].result.contents[0].text, signature);
+  });
+});
+
 test("mcp: compile and check", async () => {
   const r = await session([init,
     call("compile", { source: "a = 1 #red" }),

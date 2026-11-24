@@ -321,7 +321,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
 | M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
 | M11 ship v2: version 0.2.0, changelog, packaged extension and VS Code extension | done |
-| M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d` | done |
+| M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d`, `std/color`, `std/orbits` | done |
 | M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
 | M15 Chrome Web Store, and publishing from CI | planned |

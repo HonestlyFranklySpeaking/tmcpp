@@ -10,7 +10,7 @@ The name is a nod to C++, which started life as "C with Classes".
 
 [![The solar system in 3D, drawn with equations in TMC++: the Sun with a corona, eight planets on their real orbits, Saturn's rings and the main asteroid belt](docs/solar-system.png)](docs/solar-system.png)
 
-*`examples/solar-system.tmcpp`, written by ChatGPT through the [MCP server](#mcp-server) from a one-line prompt: the planets at their real positions for the chosen date (JPL's Keplerian elements, Kepler's equation solved with Newton steps), shaded spheres ray-cast against the Sun, Saturn's rings with the planet's shadow, and a free-flying camera on sliders. 349 lines, 304 Desmos items, rendered here with `tmcpp preview`.*
+*`examples/solar-system.tmcpp`, written by ChatGPT through the [MCP server](#mcp-server) from a one-line prompt: the planets at their real positions for the chosen date (JPL's Keplerian elements, Kepler's equation solved with Newton steps), shaded spheres ray-cast against the Sun, Saturn's rings with the planet's shadow, and a free-flying camera on sliders. 349 lines, 304 Desmos items, rendered here with `tmcpp preview`.* [See Desmos graph.](https://www.desmos.com/calculator/izcqxxc7au)
 
 ```js
 class curve { #c74440 dashed width 3 }

@@ -1,0 +1,348 @@
+"Made by ChatGPT-6.2 Sol Ultra.
+Prompt: Use tmcpp mcp to draw a cool looking physics realistic interpritation of the solar system in 3d. Dont put akward captions around the piece, instead the whole space should be used to present this piece of artwork, allow for movement in all directions via raycasting and other techniques using sliders."
+
+// SOLAR SYSTEM — a full-frame perspective study in TMC++.
+// Camera controls live in the sidebar. The drawing itself has no text.
+// Orbital positions are computed in AU. The display compresses orbital spacing
+// and enlarges bodies so the inner planets remain visible alongside Neptune.
+settings x [-18 : 18] y [-10.85 : 10.85] radians no-grid lock @{ showXAxis: false, showYAxis: false }
+
+folder "Camera · orbit, fly, roll" collapsed {
+  a_yaw = 160 [-180 : 180 : 1]
+  a_elevation = 29 [-90 : 90 : 1]
+  a_roll = -12 [-180 : 180 : 1]
+  d_distance = 43 [3 : 115 : 0.1]
+  f_target = 0 [0 : 9 : 1]
+  x_truck = 0 [-50 : 50 : 0.2]
+  y_pedestal = 0 [-50 : 50 : 0.2]
+  z_dolly = 0 [-50 : 50 : 0.2]
+}
+folder "Time · press play on the year" collapsed {
+  y_year = 2028.630 [1800 : 2050 : 0.002] . loop 300s
+}
+folder "Display scale" collapsed {
+  s_spacing = 0.51 [0.51 : 1 : 0.01]
+  s_radius = 1 [0.25 : 2 : 0.01]
+}
+// JPL Solar System Dynamics, approximate positions, Table 1.
+// https://ssd.jpl.nasa.gov/planets/approx_pos.html
+// Mercury through Neptune. Earth uses the Earth–Moon barycentre.
+// Coordinates are heliocentric AU in the J2000 ecliptic, with +Z north.
+// q is Julian years (365.25 days each) since J2000.0. Valid range: -200 to 50.
+
+folder "Keplerian orbits" collapsed hidden {
+  A_epoch = [0.38709927,0.72333566,1.00000261,1.52371034,5.20288700,9.53667594,19.18916464,30.06992276]
+  A_rate = [0.00000037,0.00000390,0.00000562,0.00001847,-0.00011607,-0.00125060,-0.00196176,0.00026291]
+  E_epoch = [0.20563593,0.00677672,0.01671123,0.09339410,0.04838624,0.05386179,0.04725744,0.00859048]
+  E_rate = [0.00001906,-0.00004107,-0.00004392,0.00007882,-0.00013253,-0.00050991,-0.00004397,0.00005105]
+  I_epoch = [7.00497902,3.39467605,-0.00001531,1.84969142,1.30439695,2.48599187,0.77263783,1.77004347]
+  I_rate = [-0.00594749,-0.00078890,-0.01294668,-0.00813131,-0.00183714,0.00193609,-0.00242939,0.00035372]
+  L_epoch = [252.25032350,181.97909950,100.46457166,-4.55343205,34.39644051,49.95424423,313.23810451,-55.12002969]
+  L_rate = [149472.67411175,58517.81538729,35999.37244981,19140.30268499,3034.74612775,1222.49362201,428.48202785,218.45945325]
+  W_epoch = [77.45779628,131.60246718,102.93768193,-23.94362959,14.72847983,92.59887831,170.95427630,44.96476227]
+  W_rate = [0.16047689,0.00268329,0.32327364,0.44441088,0.21252668,-0.41897216,0.40805281,-0.32241464]
+  N_epoch = [48.33076593,76.67984255,0,49.55953891,100.47390909,113.66242448,74.01692503,131.78422574]
+  N_rate = [-0.12534081,-0.27769418,0,-0.29257343,0.20469106,-0.28867794,0.04240589,-0.00508664]
+
+  // Use radians internally. The rates above are per century.
+  A_orbit(q,j) = A_epoch[j] + A_rate[j]*q/100
+  E_orbit(q,j) = E_epoch[j] + E_rate[j]*q/100
+  I_orbit(q,j) = (I_epoch[j] + I_rate[j]*q/100)*pi/180
+  N_orbit(q,j) = (N_epoch[j] + N_rate[j]*q/100)*pi/180
+  W_orbit(q,j) = (W_epoch[j] - N_epoch[j] + (W_rate[j]-N_rate[j])*q/100)*pi/180
+  M_orbit(q,j) = (mod(L_epoch[j] - W_epoch[j] + (L_rate[j]-W_rate[j])*q/100 + 180,360)-180)*pi/180
+
+  // Invert M = u - e*sin(u) using three Newton steps.
+  E_start(q,j) = M_orbit(q,j) + E_orbit(q,j)*sin(M_orbit(q,j))
+  E_step(u,m,c) = u + (m-u+c*sin(u))/(1-c*cos(u))
+  E_one(q,j) = E_step(E_start(q,j),M_orbit(q,j),E_orbit(q,j))
+  E_two(q,j) = E_step(E_one(q,j),M_orbit(q,j),E_orbit(q,j))
+  E_solve(q,j) = E_step(E_two(q,j),M_orbit(q,j),E_orbit(q,j))
+
+  // Rotate from perihelion, tip the plane, then rotate about the ecliptic pole.
+  V_x(u,q,j) = A_orbit(q,j)*(cos(u)-E_orbit(q,j))
+  V_y(u,q,j) = A_orbit(q,j)*sqrt(1-E_orbit(q,j)^2)*sin(u)
+  V_node(u,q,j) = V_x(u,q,j)*cos(W_orbit(q,j)) - V_y(u,q,j)*sin(W_orbit(q,j))
+  V_perp(u,q,j) = V_x(u,q,j)*sin(W_orbit(q,j)) + V_y(u,q,j)*cos(W_orbit(q,j))
+  H_x(u,q,j) = V_node(u,q,j)*cos(N_orbit(q,j)) - V_perp(u,q,j)*cos(I_orbit(q,j))*sin(N_orbit(q,j))
+  H_y(u,q,j) = V_node(u,q,j)*sin(N_orbit(q,j)) + V_perp(u,q,j)*cos(I_orbit(q,j))*cos(N_orbit(q,j))
+  H_z(u,q,j) = V_perp(u,q,j)*sin(I_orbit(q,j))
+
+  // Scalar functions H_*(u,q,j) are also available for individual orbit traces.
+  Q_x(u,q) = [H_x(u,q,j) for j=[1...8]]
+  Q_y(u,q) = [H_y(u,q,j) for j=[1...8]]
+  Q_z(u,q) = [H_z(u,q,j) for j=[1...8]]
+  P_x(q) = [H_x(E_solve(q,j),q,j) for j=[1...8]]
+  P_y(q) = [H_y(E_solve(q,j),q,j) for j=[1...8]]
+  P_z(q) = [H_z(E_solve(q,j),q,j) for j=[1...8]]
+  O_x(u) = Q_x(u,0)
+  O_y(u) = Q_y(u,0)
+  O_z(u) = Q_z(u,0)
+}
+// Static celestial background. Prepend before orbital curves and planets.
+class backgroundPaint { fill 1 opacity 0 }
+class backgroundHaze { opacity 0 }
+
+folder "Deep field" collapsed {
+  // Widescreen coordinates for the sky wash and a diagonal galactic dust lane.
+  b_u(x,y) = 0.914*x - 0.406*y
+  b_v(x,y) = 0.406*x + 0.914*y - 1.4
+  b_n(x,y) = b_v(x,y) - 0.7*sin(b_u(x,y)/6)
+  b_f(x,y) = ((b_u(x,y)+4)/32)^2 + (b_n(x,y)/5.5)^2
+  b_g(x,y) = ((b_u(x,y)+11)/19)^2 + ((b_n(x,y)-0.85)/2.7)^2
+  b_h(x,y) = ((b_u(x,y)-11)/18)^2 + ((b_n(x,y)+1.2)/3.5)^2
+  y > -100000 .backgroundPaint #050713
+  b_f(x,y) < [1.9,1.7...0.1] .backgroundHaze #34477c fill 0.025
+  b_g(x,y) < [1.6,1.45...0.1] .backgroundHaze #594878 fill 0.022
+  b_h(x,y) < [1.6,1.45...0.1] .backgroundHaze #2c486b fill 0.025
+  ((b_u(x,y)+2)/23)^2 + ((b_n(x,y)-0.2)/0.9)^2 < [1.4,1.1...0.2] .backgroundHaze #050612 fill 0.036
+
+  // Deterministic pseudorandom angular locations. Three draws taper the dust.
+  b_p(i,s) = mod(sin(i*(12.9898 + 0.481*s) + 78.233*s)*43758.5453,1)
+  b_i = [1...1150]
+  b_j = [1...425]
+  b_k = [1...42]
+  b_x = 68*b_p(b_i,1) - 34
+  b_y = 40*b_p(b_i,2) - 20
+  b_d = 51*b_p(b_j,3) - 25.5
+  b_e = 5.2*(b_p(b_j,4)+b_p(b_j,5)+b_p(b_j,6)-1.5) + 0.7*sin(b_d/6) + 1.4
+  b_m = (0.914*b_d + 0.406*b_e, -0.406*b_d + 0.914*b_e) . hidden
+  (b_x,b_y) #a0b6e8 point 1.65 point-opacity 0.37
+  b_m #9991cf point 1.4 point-opacity 0.25
+  (68*b_p(b_k,7)-34,40*b_p(b_k,8)-20) #cfddff point 2.65 point-opacity 0.75
+  (68*b_p(b_k,9)-34,40*b_p(b_k,10)-20) #f4c396 point 1.95 point-opacity 0.61
+
+  // A few faint diffraction spikes outside the main subject.
+  b_c = [-14.2,13.9,-11.6,11.7]
+  b_l = [6.65,5.75,-6.45,-7.0]
+  b_s = [0.21,0.26,0.17,0.15]
+  (b_c,b_l) #84a6f0 point 11 point-opacity 0.08
+  (b_c+1.25*b_s*(2*t-1),b_l) #bad8ff width 1 opacity 0.28
+  (b_c,b_l+b_s*(2*t-1)) #bad8ff width 1 opacity 0.31
+  (b_c,b_l) #e4efff point 4.2 point-opacity 0.88
+}
+
+folder "Scene geometry" collapsed hidden {
+  // Right-handed display coordinates: JPL (x,y,z) becomes (x,z,-y).
+  // Hold an orbit's scale constant through its year, preserving the ellipse.
+  q_date = y_year-2000
+  W_scale(a) = 14.55/30.0699*(a/30.0699)^(s_spacing-1)
+  W_s = W_scale([A_orbit(q_date,j) for j=[1...8]])
+  M_phase = mod(q_date*365.25/27.321661+0.34,1)*2pi
+  M_size = 0.57
+  W_px = W_s*P_x(q_date)
+  W_py = W_s*P_z(q_date)
+  W_pz = -W_s*P_y(q_date)
+  W_x = join([0],W_px,[W_px[3]+M_size*cos(M_phase)])
+  W_y = join([0],W_py,[W_py[3]+M_size*sin(M_phase)*sin(5.145*pi/180)])
+  W_z = join([0],W_pz,[W_pz[3]-M_size*sin(M_phase)*cos(5.145*pi/180)])
+
+  // Enlarged display radii are a monotone mapping of physical body radii.
+  // The Moon is placed on a small illustrative circular orbit around Earth.
+  R_km = [695700,2439.4,6051.8,6371.0084,3389.5,69911,58232,25362,24622,1737.4]
+  R_body = s_radius*0.238*(R_km/6371.0084)^0.36
+
+  // Saturn's IAU pole in the J2000 ecliptic display frame.
+  // https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html
+  S_ra = (40.589-0.036*q_date/100)*pi/180
+  S_dec = (83.537-0.004*q_date/100)*pi/180
+  S_eps = 23.43928*pi/180
+  S_px = cos(S_dec)*cos(S_ra)
+  S_py = sin(S_dec)*cos(S_eps)-cos(S_dec)*sin(S_ra)*sin(S_eps)
+  S_pz = -cos(S_dec)*sin(S_ra)*cos(S_eps)-sin(S_dec)*sin(S_eps)
+  S_tilt = sqrt(S_px^2+S_pz^2)
+
+  // Camera rotation applied to vectors, then translation applied to points.
+  // Truck/pedestal/dolly move in camera-local axes. Angles are in radians here.
+  C_a = a_yaw*pi/180
+  C_e = a_elevation*pi/180
+  C_r = a_roll*pi/180
+  C_d = d_distance+z_dolly
+  C_f = 43
+  C_fx = W_x[f_target+1]
+  C_fy = W_y[f_target+1]
+  C_fz = W_z[f_target+1]
+  C_h(u,w) = u*cos(C_a)+w*sin(C_a)
+  C_k(u,w) = w*cos(C_a)-u*sin(C_a)
+  C_v(u,v,w) = v*cos(C_e)-C_k(u,w)*sin(C_e)
+  C_right(u,v,w) = C_h(u,w)*cos(C_r)-C_v(u,v,w)*sin(C_r)
+  C_up(u,v,w) = C_h(u,w)*sin(C_r)+C_v(u,v,w)*cos(C_r)
+  C_forward(u,v,w) = -v*sin(C_e)-C_k(u,w)*cos(C_e)
+  C_posx(u,v,w) = C_right(u-C_fx,v-C_fy,w-C_fz)-x_truck
+  C_posy(u,v,w) = C_up(u-C_fx,v-C_fy,w-C_fz)-y_pedestal
+  C_posz(u,v,w) = C_d+C_forward(u-C_fx,v-C_fy,w-C_fz)
+  C_near(z) = {z>0.30: z}
+  C_view(u,v,w) = C_f*(C_posx(u,v,w),C_posy(u,v,w))/C_near(C_posz(u,v,w))
+  B_x = C_posx(W_x,W_y,W_z)
+  B_y = C_posy(W_x,W_y,W_z)
+  B_z = C_posz(W_x,W_y,W_z)
+  B_d = sqrt(B_x^2+B_y^2+B_z^2)
+  B_order = sort([1...10],-B_z)
+
+  O_u(t,j) = W_s[j]*H_x(t,q_date,j)
+  O_v(t,j) = W_s[j]*H_z(t,q_date,j)
+  O_w(t,j) = -W_s[j]*H_y(t,q_date,j)
+  O_plot(t,j) = C_view(O_u(t,j),O_v(t,j),O_w(t,j))
+}
+
+folder "Ecliptic traces" collapsed {
+  O_plot(t,8) #5379a7 width 1.05 opacity 0.43 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,7) #74a8ac width 1 opacity 0.42 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,6) #af956c width 1.15 opacity 0.49 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,5) #a57b67 width 1.15 opacity 0.5 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,4) #94594f width 1.05 opacity 0.58 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,3) #51769b width 1.12 opacity 0.64 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,2) #9c815a width 1.05 opacity 0.57 @{ domain: @{ min: 0, max: 2*pi } }
+  O_plot(t,1) #887670 width 1.05 opacity 0.59 @{ domain: @{ min: 0, max: 2*pi } }
+}
+
+folder "Main belt" collapsed {
+  // A stylized population distributed around the main belt, not tracked asteroids.
+  A_i = [1...950]
+  A_hash(i,s) = mod(sin(i*(13.679+0.67*s)+73.127*s)*43627.517,1)
+  A_axis = 2.13+1.13*(A_hash(A_i,1)+A_hash(A_i,2))/2
+  A_ang = 2pi*mod(A_hash(A_i,3)+q_date/A_axis^1.5,1)
+  A_incl = 0.31*(A_hash(A_i,4)+A_hash(A_i,5)-1)
+  A_node = 2pi*A_hash(A_i,6)
+  A_rad = A_axis*W_scale(A_axis)*(1-0.08*A_hash(A_i,7)*cos(A_ang+5.6*A_hash(A_i,8)))
+  A_vert = A_rad*sin(A_incl)*sin(A_ang)
+  A_plane = A_rad*cos(A_ang)*cos(A_node)-A_rad*cos(A_incl)*sin(A_ang)*sin(A_node)
+  A_cross = -A_rad*cos(A_ang)*sin(A_node)-A_rad*cos(A_incl)*sin(A_ang)*cos(A_node)
+  C_view(A_plane,A_vert,A_cross) #8792b5 point 1.55 point-opacity 0.38
+  C_view(A_plane[1...135],A_vert[1...135],A_cross[1...135]) #d0b8a2 point 2.05 point-opacity 0.38
+}
+
+folder "Solar corona" collapsed {
+  G_x = C_f*B_x[1]/C_near(B_z[1])
+  G_y = C_f*B_y[1]/C_near(B_z[1])
+  G_r = C_f*R_body[1]/C_near(B_z[1])
+  G_a(x,y) = arctan(y-G_y,x-G_x)
+  G_w(x,y) = 1+0.035*sin(9*G_a(x,y)+0.7)+0.065*cos(3*G_a(x,y)-0.9)+0.028*sin(18*G_a(x,y))
+  sqrt((x-G_x)^2+(y-G_y)^2) < G_r*[3.4,3.21...1.12]*G_w(x,y) #d95726 fill 0.028 opacity 0
+  sqrt((x-G_x)^2+(y-G_y)^2) < G_r*[2.22,2.12...1.02]*G_w(x,y) #f18532 fill 0.058 opacity 0
+  sqrt((x-G_x)^2+(y-G_y)^2) < G_r*[1.35,1.31...0.99]*G_w(x,y) #ffa850 fill 0.09 opacity 0
+}
+
+folder "Perspective rays and materials" collapsed hidden {
+  // An orthonormal basis around the center ray to each body.
+  D_x(i) = B_x[i]/B_d[i]
+  D_y(i) = B_y[i]/B_d[i]
+  D_z(i) = B_z[i]/B_d[i]
+  D_g(i) = max(0.000001,sqrt(D_x(i)^2+D_z(i)^2))
+  U_x(i) = D_z(i)/D_g(i)
+  U_z(i) = -D_x(i)/D_g(i)
+  V_rx(i) = -D_y(i)*D_x(i)/D_g(i)
+  V_ry(i) = D_g(i)
+  V_rz(i) = -D_y(i)*D_z(i)/D_g(i)
+
+  // Shoot a unit ray in the tangent cone. At rho=1 it touches the silhouette.
+  F_h(i,r) = r*R_body[i]/B_d[i]
+  F_k(i,r) = sqrt(max(0,1-F_h(i,r)^2))
+  F_x(i,r,a) = F_k(i,r)*D_x(i)+F_h(i,r)*(U_x(i)*cos(a)+V_rx(i)*sin(a))
+  F_y(i,r,a) = F_k(i,r)*D_y(i)+F_h(i,r)*V_ry(i)*sin(a)
+  F_z(i,r,a) = F_k(i,r)*D_z(i)+F_h(i,r)*(U_z(i)*cos(a)+V_rz(i)*sin(a))
+  F_visible(i,z) = {B_z[i]>R_body[i]+0.30: {z>0.014: z}}
+  F_screen(i,r,a) = C_f*(F_x(i,r,a),F_y(i,r,a))/F_visible(i,F_z(i,r,a))
+
+  // Near ray/sphere intersection and the corresponding outward normal.
+  S_hit(i,r) = B_d[i]*F_k(i,r)-R_body[i]*sqrt(max(0,1-r^2))
+  S_x(i,r,a) = (S_hit(i,r)*F_x(i,r,a)-B_x[i])/R_body[i]
+  S_y(i,r,a) = (S_hit(i,r)*F_y(i,r,a)-B_y[i])/R_body[i]
+  S_z(i,r,a) = (S_hit(i,r)*F_z(i,r,a)-B_z[i])/R_body[i]
+  S_dist(i) = max(0.000001,sqrt((B_x[i]-B_x[1])^2+(B_y[i]-B_y[1])^2+(B_z[i]-B_z[1])^2))
+  S_light(i,x,y,z) = max(0,((B_x[1]-B_x[i])*x+(B_y[1]-B_y[i])*y+(B_z[1]-B_z[i])*z)/S_dist(i))
+  S_limb(i,x,y,z) = max(0,-D_x(i)*x-D_y(i)*y-D_z(i)*z)
+
+  T_lng(x,y,z) = x*C_right(1,0,0)+y*C_up(1,0,0)+z*C_forward(1,0,0)
+  T_lat(x,y,z) = x*C_right(0,1,0)+y*C_up(0,1,0)+z*C_forward(0,1,0)
+  T_phi(x,y,z) = x*C_right(0,0,1)+y*C_up(0,0,1)+z*C_forward(0,0,1)
+  T_satlat(x,y,z) = x*C_right(S_px,S_py,S_pz)+y*C_up(S_px,S_py,S_pz)+z*C_forward(S_px,S_py,S_pz)
+  T_pole(i,x,y,z) = {i=7: T_satlat(x,y,z),T_lat(x,y,z)}
+  T_grain(p,l,w) = sin(27*p+13*l+8*w)*sin(19*l-15*w)*cos(31*w+14*p)
+  T_land(p,l,w) = sin(4.6*p+2.4*l-0.4)+0.55*sin(10.2*w-2.8*l+2*p)+0.37*cos(11.8*l+5*w)+0.13*T_grain(p,l,w)
+  T_continent(p,l,w) = max(0,min(1,3.5*(T_land(p,l,w)-0.48)))
+  T_cloud(p,l,w) = 0.5*max(0,sin(19*l+8*w+2.1*sin(8*p-5*w))-0.46)
+  T_bands(i,p,l,w) = {i=6: 0.19*sin(23*l+1.3*sin(6*p+5*w))+0.1*cos(67*l-0.5*sin(9*w)),i=7: 0.079*sin(32*l+0.35*p)+0.019*cos(49*l),i=3: 0.08*sin(20*l+6*p+4*w),i=8: 0.04*cos(22*l),i=9: 0.1*sin(15*l+1.4*w),i=1: 0.035*T_grain(p,l,w),0.10*T_grain(p,l,w)}
+  T_baseR = [255,166,233,49,211,212,215,117,61,159]
+  T_baseG = [206,154,182,100,108,156,184,199,115,158]
+  T_baseB = [93,145,102,191,75,110,126,208,219,164]
+  T_shade(i,x,y,z) = {i=1: 0.74+0.27*S_limb(i,x,y,z)^0.6,0.15+0.85*S_light(i,x,y,z)^0.58}
+  T_red(i,p,l,w) = T_baseR[i]+{i=4: 56*T_continent(p,l,w)+111*T_cloud(p,l,w)+63*abs(l)^10,0}
+  T_green(i,p,l,w) = T_baseG[i]+{i=1: 16*T_grain(p,l,w)+12*sin(8*p+9*l+3*w),i=4: 24*T_continent(p,l,w)+100*T_cloud(p,l,w)+79*abs(l)^10,0}
+  T_blue(i,p,l,w) = T_baseB[i]+{i=1: 24*T_grain(p,l,w)+17*sin(8*p+9*l+3*w),i=4: -102*T_continent(p,l,w)+52*T_cloud(p,l,w)+46*abs(l)^10,0}
+  T_brightness(i,x,y,z,p,l,w) = T_shade(i,x,y,z)*(1+T_bands(i,p,l,w))
+  T_limit(v) = min(255,max(0,v))
+  T_palette(i,x,y,z,p,l,w) = rgb(T_limit(T_red(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)),T_limit(T_green(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)),T_limit(T_blue(i,p,l,w)*T_brightness(i,x,y,z,p,l,w)))
+  T_color(i,x,y,z) = T_palette(i,x,y,z,T_lng(x,y,z),T_pole(i,x,y,z),T_phi(x,y,z))
+  T_sample(i,r,a) = T_color(i,S_x(i,r,a),S_y(i,r,a),S_z(i,r,a))
+
+  // Concentric wedges use small overlaps to avoid antialiasing seams.
+  // Increase detail only when a body occupies a large part of the image.
+  J_detail(i) = C_f*R_body[i]/max(0.1,B_z[i])
+  J_cols(i) = {J_detail(i)>0.72: 88,48}
+  J_rows(i) = {J_detail(i)>0.72: 24,13}
+  J_id(i) = [0...J_cols(i)*J_rows(i)-1]
+  J_ring(i) = floor(J_id(i)/J_cols(i))
+  J_wedge(i) = mod(J_id(i),J_cols(i))
+  J_lo(i) = max(0,(J_ring(i)-0.075)/J_rows(i))
+  J_hi(i) = min(1,(J_ring(i)+1.075)/J_rows(i))
+  J_mid(i) = (J_ring(i)+0.5)/J_rows(i)
+  J_start(i) = 2pi*(J_wedge(i)-0.055)/J_cols(i)
+  J_end(i) = 2pi*(J_wedge(i)+1.055)/J_cols(i)
+  J_angle(i) = 2pi*(J_wedge(i)+0.5)/J_cols(i)
+  J_outline = 2pi*[0...119]/120
+}
+
+component Globe(rank) {
+  body = B_order[rank]
+  base = T_sample(body,0.8,0)
+  tiles = T_sample(body,J_mid(body),J_angle(body))
+  polygon(F_screen(body,1,J_outline)) . #(base) fill 1 opacity 0
+  polygon(F_screen(body,J_lo(body),J_start(body)),F_screen(body,J_hi(body),J_start(body)),F_screen(body,J_hi(body),J_end(body)),F_screen(body,J_lo(body),J_end(body))) . #(tiles) fill 1 opacity 0
+}
+
+// Draw far bodies first. Recomputed as the view or planets move.
+folder "Sun, planets and Moon" collapsed {
+  new Globe(1)
+  new Globe(2)
+  new Globe(3)
+  new Globe(4)
+  new Globe(5)
+  new Globe(6)
+  new Globe(7)
+  new Globe(8)
+  new Globe(9)
+  new Globe(10)
+}
+
+folder "Saturn's rings" collapsed {
+  // Tilted ring plane, with a conspicuous gap between the bright main bands.
+  K_u = -S_pz/S_tilt
+  K_v = S_px/S_tilt
+  K_x(t,r) = W_x[7]+R_body[7]*r*(K_u*cos(t)-K_v*S_py*sin(t))
+  K_y(t,r) = W_y[7]+R_body[7]*r*S_tilt*sin(t)
+  K_z(t,r) = W_z[7]+R_body[7]*r*(K_v*cos(t)+K_u*S_py*sin(t))
+  K_a(t,r) = C_posx(K_x(t,r),K_y(t,r),K_z(t,r))
+  K_b(t,r) = C_posy(K_x(t,r),K_y(t,r),K_z(t,r))
+  K_c(t,r) = C_posz(K_x(t,r),K_y(t,r),K_z(t,r))
+  // Reject hidden arcs when the view ray hits Saturn before it reaches the rings.
+  K_l(t,r) = sqrt(K_a(t,r)^2+K_b(t,r)^2+K_c(t,r)^2)
+  K_dot(t,r,i) = (K_a(t,r)*B_x[i]+K_b(t,r)*B_y[i]+K_c(t,r)*B_z[i])/max(0.001,K_l(t,r))
+  K_disc(t,r,i) = K_dot(t,r,i)^2-B_d[i]^2+R_body[i]^2
+  K_front(t,r,i) = K_dot(t,r,i)-sqrt(max(0,K_disc(t,r,i)))
+  K_clear(t,r,i) = {K_disc(t,r,i)<0: 1,K_front(t,r,i)<=0: 1,K_front(t,r,i)>=K_l(t,r): 1,0}
+  K_own(t,r) = {K_clear(t,r,7)>0: C_near(K_c(t,r))}
+  K_plot(t,r) = C_f*(K_a(t,r),K_b(t,r))/K_own(t,r)
+  // Trace a second ray toward the Sun to leave a shadow where Saturn blocks it.
+  K_sundist(t,r) = sqrt(K_x(t,r)^2+K_y(t,r)^2+K_z(t,r)^2)
+  K_tosun(t,r) = (K_x(t,r)*(K_x(t,r)-W_x[7])+K_y(t,r)*(K_y(t,r)-W_y[7])+K_z(t,r)*(K_z(t,r)-W_z[7]))/K_sundist(t,r)
+  K_sunlit(t,r) = {K_tosun(t,r)<R_body[7]*sqrt(r^2-1): 1}
+  K_bright(t,r) = K_plot(t,r)*K_sunlit(t,r)
+  K_plot(t,[1.27,1.295...1.52]) #514747 width 1.05 opacity 0.53 @{ domain: @{ min: 0, max: 2*pi } }
+  K_plot(t,[1.54,1.559...1.935]) #786b61 width 1.15 opacity 0.61 @{ domain: @{ min: 0, max: 2*pi } }
+  K_plot(t,[2.03,2.047...2.28]) #675d57 width 0.96 opacity 0.58 @{ domain: @{ min: 0, max: 2*pi } }
+  K_bright(t,[1.27,1.295...1.52]) #a08b77 width 1.05 opacity 0.54 @{ domain: @{ min: 0, max: 2*pi } }
+  K_bright(t,[1.54,1.559...1.935]) #e5c394 width 1.15 opacity 0.63 @{ domain: @{ min: 0, max: 2*pi } }
+  K_bright(t,[2.03,2.047...2.28]) #cbbb9d width 0.96 opacity 0.58 @{ domain: @{ min: 0, max: 2*pi } }
+  K_bright(t,[2.30,2.33,2.35]) #968777 width 0.85 opacity 0.45 @{ domain: @{ min: 0, max: 2*pi } }
+}

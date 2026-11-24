@@ -37,10 +37,14 @@ npx @ikeasourpatches/tmcpp graph.tmcpp        # compile once, nothing to install
 npm install -g @ikeasourpatches/tmcpp         # or install the tmcpp command
 tmcpp graph.tmcpp > graph.tmc
 tmcpp check graph.tmcpp                       # compile, then validate with DesModder's parser
+tmcpp check graph.tmcpp --runtime             # ...and load it in real Desmos: what Desmos itself rejects
+tmcpp describe graph.tmcpp                    # sliders, functions, components and what imports bring in
 tmcpp preview graph.tmcpp --out graph.png     # render in real Desmos (see below)
 ```
 
-Preview needs `playwright-core`, an optional extra that drives the Chrome or Edge you already have. Add it next to tmcpp with `npm install -g playwright-core`, or in one go: `npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview graph.tmcpp`.
+`check --runtime` catches what the parser can't: `Cannot add a point and a number`, and helper point lists that get drawn by accident. Each problem names its TMC++ line, and the slider values it was checked at; `--at a=1 b=pi` sets sliders first, and `--json` gives the result as JSON for tools and editors. It uses the same browser as preview.
+
+Preview and `check --runtime` need `playwright-core`, an optional extra that drives the Chrome or Edge you already have. Add it next to tmcpp with `npm install -g playwright-core`, or in one go: `npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview graph.tmcpp`.
 
 Needs Node 20 or newer. In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
 
@@ -88,7 +92,8 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 | | |
 | --- | --- |
 | `compile` | TMC++ to TMC, or compile errors with line numbers |
-| `check` | compile, then validate with DesModder's parser; fast, no browser |
+| `check` | compile, then validate with DesModder's parser; fast, no browser. With `runtime: true` (and `at` slider values), also load it in real Desmos and report what Desmos rejects, by TMC++ line |
+| `describe` | sliders with ranges, functions and components with their parameters, classes, colours, and what each import brings in |
 | `preview` | a PNG from real Desmos, with `at` slider values or a `sweep` contact sheet (needs `playwright-core`) |
 | `tmcpp://docs/syntax` | this repo's syntax reference |
 | `tmcpp://std/...` | the source of each built-in library |
@@ -164,7 +169,9 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ### Statements
 
-- One statement per line. A `;` at the end is optional.
+- One statement per line. A `;` at the end is optional. A string (a note or a label) may run over several lines.
+- `let P = ...` defines a helper that other lines use but that is never drawn (it compiles hidden, and From graph gives `let` back). Use it for intermediate points and lists.
+- Calling a function with the wrong number of arguments, or naming a parameter `e`, `pi` or `tau`, is a compile error, because Desmos would reject it.
 - A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
 - `//` comments are allowed anywhere. They never reach TMC, but the extension keeps them in the graph's metadata note, so **From graph** gives them back. For text that viewers of the graph should see, use a note (`"text"`).
 - Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls and keywords stay intact. The compiler keeps the body of `sum`/`product`/`integral` and the expression after `(d/d x)` attached to their operators, while still inserting multiplication within those expressions. `.5` becomes `0.5`.
@@ -326,7 +333,8 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
 | M15 Chrome Web Store, and publishing from CI | planned |
 | M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | planned |
-| M17 language additions: enums, private library names | planned |
+| M17 language additions: `let` (done), enums, private library names | in progress |
+| Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |
 

@@ -84,25 +84,31 @@ export async function renderPreview(source, { path = "", isTmc = /\.tmc$/i.test(
       })
     : [at];
 
+  return withDesmos(async (page) => {
+    const { png, missing } = await page.evaluate(renderFrames, { state, frames, width, cols });
+    return { png: Buffer.from(png.split(",")[1], "base64"), frames: frames.length, missing, warnings };
+  }, { show });
+}
+
+/** Open desmos.com in your Chrome or Edge (headless unless show), run fn(page), close. */
+export async function withDesmos(fn, { show = false } = {}) {
   let chromium;
   try { ({ chromium } = await loadPlaywright()); }
   catch {
-    throw new Error("previews need playwright-core, which drives your installed Chrome or Edge.\n  Installed tmcpp globally?  npm install -g playwright-core\n  Using npx?                 npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview FILE");
+    throw new Error("this needs playwright-core, which drives your installed Chrome or Edge.\n  Installed tmcpp globally?  npm install -g playwright-core\n  Using npx?                 npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp ...");
   }
   let browser;
   for (const channel of ["chrome", "msedge"]) {
     try { browser = await chromium.launch({ channel, headless: !show }); break; } catch {}
   }
   if (!browser) throw new Error("couldn't start Chrome or Edge; install one of them");
-
   try {
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
     try {
       await page.goto("https://www.desmos.com/calculator", { waitUntil: "domcontentloaded", timeout: 60000 });
     } catch { throw new Error("couldn't open desmos.com (are you online?)"); }
     await page.waitForFunction(() => window.Calc && window.Calc.asyncScreenshot, null, { timeout: 60000 });
-    const { png, missing } = await page.evaluate(renderFrames, { state, frames, width, cols });
-    return { png: Buffer.from(png.split(",")[1], "base64"), frames: frames.length, missing, warnings };
+    return await fn(page);
   } finally {
     await browser.close();
   }

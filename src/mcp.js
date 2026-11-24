@@ -24,8 +24,11 @@ function version() {
 
 const INSTRUCTIONS = `TMC++ is a preprocessor for DesModder Text Mode (TMC): it adds style tails, classes, named colours,
 components, if statements, actions and libraries, and compiles to TMC that pastes into Desmos.
-Read tmcpp://docs/syntax before writing TMC++. Write a file, then call check (fast, no browser) until it
-reports no problems, then preview to see the graph. compile returns the TMC to paste into Desmos.
+Read tmcpp://docs/syntax before writing TMC++, and call describe on a graph or library before using its
+functions, so you call them with the right arguments. Write a file, then call check (fast, no browser) until
+it reports no problems; call check with runtime: true when a graph draws less than expected, since Desmos
+rejects some things the parser accepts. Then preview to see the graph. Define helper points and lists with
+let (let P = ...) so they aren't drawn. compile returns the TMC to paste into Desmos.
 If the user's browser extension is linked (link_status), push loads a graph straight into their open Desmos
 tab, pull reads it back as TMC++ (with any edits they made in Desmos), and screenshot shows the tab.`;
 
@@ -45,8 +48,12 @@ const TOOLS = [
   {
     name: "check",
     title: "Check TMC++",
-    description: "Compile, then validate the output with DesModder's own Text Mode parser, without a browser. Reports compile errors and warnings (TMC++ lines), parser diagnostics (TMC lines, with the line text) and the number of graph items. Use this after every edit.",
-    inputSchema: { type: "object", properties: { ...SOURCE, tmc: { type: "boolean", description: "Also return the compiled TMC." } }, additionalProperties: false },
+    description: "Compile, then validate the output with DesModder's own Text Mode parser. Reports compile errors and warnings (TMC++ lines), parser diagnostics (TMC lines, with the line text) and the number of graph items. Use this after every edit. With runtime: true it also loads the graph in real Desmos (headless, a few seconds, needs playwright-core) and reports what Desmos itself rejects, such as 'Cannot add a point and a number', by TMC++ line, plus helper point lists that are accidentally drawn. Run it before preview or push when a graph draws less than expected.",
+    inputSchema: { type: "object", properties: { ...SOURCE,
+      tmc: { type: "boolean", description: "Also return the compiled TMC." },
+      runtime: { type: "boolean", description: "Also check in real Desmos." },
+      at: { type: "object", description: "Slider values for the runtime check, e.g. {\"t\": \"pi/2\"}.", additionalProperties: { type: ["number", "string"] } },
+    }, additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
   {
@@ -66,6 +73,13 @@ const TOOLS = [
       additionalProperties: false,
     },
     annotations: { readOnlyHint: false, openWorldHint: true },
+  },
+  {
+    name: "describe",
+    title: "Describe a graph",
+    description: "What a TMC++ graph offers: its sliders with values and ranges, the functions and components it defines (with parameters and lines), its classes and colours, and everything each import brings in, under the names to use (sp.Spring, std/ui's Button...). Use it before editing a graph you didn't write, and to look up a library's functions instead of guessing their arguments.",
+    inputSchema: { type: "object", properties: { ...SOURCE }, additionalProperties: false },
+    annotations: { readOnlyHint: true, openWorldHint: true },
   },
   {
     name: "link_status",
@@ -135,7 +149,8 @@ async function callTool(name, args = {}) {
       let tab = "";
       try { const i = await link.request("info", {}, 8000); tab = `\nDesmos tab: ${i.title} (${i.url})${i.madeWithTmcpp ? ", made with TMC++" : ""}`; }
       catch (e) { tab = `\nNo Desmos tab answered: ${e.message}`; }
-      return { content: [text(`Linked to the TMC++ extension ${link.clientInfo?.version ?? ""}.${tab}`)] };
+      const old = extensionBehind();
+      return { content: [text(`Linked to the TMC++ extension ${link.clientInfo?.version ?? ""} (tmcpp ${version()}).${tab}${old ? `\n${old}` : ""}`)] };
     }
     if (link.busy) return { content: [text(link.notLinkedMessage())], isError: true };
     const { code } = pairing({ port: link.port });
@@ -155,6 +170,11 @@ async function callTool(name, args = {}) {
     return { content: [{ type: "image", data: png, mimeType: "image/png" }, ...(args.out ? [text(`saved to ${resolve(args.out)}`)] : [])] };
   }
   const { source, path } = input(args);
+  if (name === "describe") {
+    const { describe, describeText } = await import("./describe.js");
+    const d = await describe(source, { path });
+    return { content: [text(describeText(d))] };
+  }
   if (name === "push") {
     if (!link) throw new Error("the browser link is off in this server (TMCPP_LINK=0)");
     // Relative files can't be read from the page, so send every import's text along.
@@ -162,7 +182,9 @@ async function callTool(name, args = {}) {
     const libraries = Object.fromEntries(await resolveImports(source, loadNode, from));
     for (const id of Object.keys(libraries)) if (id.startsWith("std/")) delete libraries[id];
     const r = await link.request("push", { source, libraries, from });
+    const old = extensionBehind();
     const lines = [r.ok ? (r.message || "Loaded into the graph.") : "The page couldn't compile it:",
+      ...(old ? [old] : []),
       ...r.errors.map((e) => `line ${e.line}: error: ${e.message}`), ...r.warnings.map((w) => `line ${w.line}: warning: ${w.message}`)];
     return { content: [text(lines.join("\n"))], isError: !r.ok };
   }
@@ -181,9 +203,22 @@ async function callTool(name, args = {}) {
     ];
     out.push(r.errors.length ? `${r.errors.length} compile error(s); the parser did not run.`
       : `${r.ok ? "OK" : "FAILED"}: ${r.diagnostics.length} parser diagnostic(s), ${r.warnings.length} warning(s), ${r.items} item(s) in the graph state.`);
+    let rtOk = true;
+    if ((args.runtime || args.at) && r.ok && !r.errors.length) {
+      const { runtimeCheck } = await import("./runtime.js");
+      const { parseNumber } = await import("./preview.js");
+      const at = {};
+      for (const [k, v] of Object.entries(args.at ?? {})) at[k] = parseNumber(v);
+      const rt = await runtimeCheck(source, { path, at });
+      rtOk = rt.ok;
+      const loc = (x) => `${where(path)}:${x.line}${x.where ? ` (${x.where})` : ""}`;
+      out.push(...rt.errors.map((e) => `${loc(e)}: Desmos error: ${e.message}\n    ${e.math}`), ...rt.warnings.map((w) => `${loc(w)}: warning: ${w.message}`));
+      const sl = Object.entries(rt.sliders ?? {}).map(([k, v]) => `${k}=${v}`).join(" ");
+      out.push(`Runtime: ${rt.errors.length} Desmos error(s)${sl ? ` at ${sl}` : ""}.`);
+    }
     const content = [text(out.join("\n"))];
     if (args.tmc && r.tmc) content.push(text(r.tmc));
-    return { content, isError: !r.ok || r.errors.length > 0 };
+    return { content, isError: !r.ok || r.errors.length > 0 || !rtOk };
   }
   if (name === "preview") {
     const { renderPreview, parseNumber, parseSweep } = await import("./preview.js");
@@ -223,6 +258,20 @@ async function handle(msg) {
     case "prompts/list": return { prompts: [] };
     default: throw rpcError(-32601, `method not found: ${method}`);
   }
+}
+
+/** The extension compiles pushed graphs itself, so one older than this server may not know newer
+ * syntax or libraries. Returns a warning, or null. */
+function extensionBehind() {
+  const ext = link?.clientInfo?.version;
+  if (!ext) return null;
+  const n = (v) => String(v).split(".").map((x) => parseInt(x, 10) || 0);
+  const [a, b] = [n(ext), n(version())];
+  for (let i = 0; i < 3; i++) {
+    if (a[i] > b[i]) return null;
+    if (a[i] < b[i]) return `Warning: the browser extension is ${ext} but tmcpp is ${version()}. Newer syntax or libraries may fail in the tab; update the extension (rebuild and reload it).`;
+  }
+  return null;
 }
 
 /** For tests: run a tool against a given link. */

@@ -334,3 +334,10 @@ test("an invisible fill, and no fill, both come back as fill 0", () => {
   poly.fill = false; delete poly.fillOpacity;
   assert.match(decompile(state, { latexToText }).source, /fill 0/);
 });
+
+test("let comes back as let", () => {
+  const { state, latexToText } = graph("let P = (1, 2)\nlet L = ([1, 2], [3, 4]) #red\nP + L");
+  const { source } = decompile(state, { latexToText });
+  assert.match(source, /^let P = \(1, 2\)$/m);
+  assert.match(source, /^let L = \(\[1, 2\], \[3, 4\]\)  #red$/m);
+});

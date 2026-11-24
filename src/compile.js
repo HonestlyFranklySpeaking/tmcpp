@@ -3,7 +3,7 @@
 
 import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
-import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions } from "./rewrite.js";
+import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions, checkCalls } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
 import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
 import { expandComponents } from "./components.js";
@@ -518,7 +518,19 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const errors = [], warnings = [];
   const parse = (text) => {
     const sts = toStatements(text);
-    for (const st of sts) st.text = st.src = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
+    for (const st of sts) {
+      st.text = st.src = unicodeToTmc(st.text); // θ -> theta, ≤ -> <= (not inside strings)
+      // `let P = ...`: a helper that other lines use, never drawn. It compiles as `P = ... . hidden`;
+      // st.src keeps the `let`, so From graph gives it back.
+      const lm = /^let\s+(?=[A-Za-z])/.exec(st.text);
+      if (lm) {
+        const body = st.text.slice(lm[0].length);
+        if (!/=/.test(body)) { errors.push({ line: st.line, message: "'let' needs a definition, like let P = (1, 2)" }); continue; }
+        const at = findTailStart(body);
+        st.text = at === -1 ? `${body} . hidden` : `${body.slice(0, at).trimEnd()} . hidden ${body.slice(at)}`;
+        st.let = true;
+      }
+    }
     return sts;
   };
   const parsed = parse(source);
@@ -782,6 +794,9 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
       warnings.push({ line: 1, message: `${[...from].join(" and ")} are the same variable in Desmos (${name}); rename one` });
     }
   }
+  // Calls with the wrong number of arguments, and constants used as parameters: the parser
+  // accepts both, but Desmos shows an error. Only checked when nothing else is wrong.
+  if (!errors.length) for (const p of checkCalls(out)) errors.push({ line: lineMap[p.index] || 1, message: p.message });
   errors.sort((a, b) => a.line - b.line);
   return { tmc: out.join("\n"), errors, warnings, lineMap, classes, colors, items, settingsSource: settingsLines, tickerSource, imports: imported.imports,
     roundTrip: finishRoundTrip(roundTrip, expanded.instances),

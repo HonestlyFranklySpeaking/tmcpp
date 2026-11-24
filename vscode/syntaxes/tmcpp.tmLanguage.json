@@ -127,7 +127,7 @@
         },
         {
           "name": "keyword.control.tmcpp",
-          "match": "\\b(?:if|then|else|for|with|import|from|as|abstract|folder|table|settings|ticker|click)\\b"
+          "match": "\\b(?:if|then|else|for|with|import|from|as|abstract|folder|table|settings|ticker|click|let)\\b"
         },
         {
           "name": "keyword.operator.action.tmcpp",

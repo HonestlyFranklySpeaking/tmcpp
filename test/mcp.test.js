@@ -36,7 +36,7 @@ test("mcp: initialize, tools and resources", async () => {
   const r = await session([init, ["notifications/initialized", {}], ["tools/list", {}], ["resources/list", {}], ["resources/read", { uri: "tmcpp://docs/syntax" }], ["resources/read", { uri: "tmcpp://std/shapes" }], ["nope", {}]]);
   assert.equal(r[1].result.protocolVersion, "2025-06-18");
   assert.equal(r[1].result.serverInfo.name, "tmcpp");
-  assert.deepEqual(r[2].result.tools.map((t) => t.name), ["compile", "check", "preview", "link_status", "push", "pull", "screenshot"]);
+  assert.deepEqual(r[2].result.tools.map((t) => t.name), ["compile", "check", "preview", "describe", "link_status", "push", "pull", "screenshot"]);
   const uris = r[3].result.resources.map((x) => x.uri);
   assert.ok(uris.includes("tmcpp://docs/syntax") && uris.includes("tmcpp://std/ui"));
   assert.match(r[4].result.contents[0].text, /^# TMC\+\+ syntax reference/);
@@ -112,4 +112,14 @@ test("mcp: push, pull and screenshot go through the link", async () => {
     assert.equal(shot.content[0].data, "iVBORw0KGgo=");
     ws.close();
   } finally { _test.useLink(null); await link.stop(); }
+});
+
+test("mcp: describe lists sliders, functions and imports", async () => {
+  const r = await _test.callTool("describe", { source: 'import { lerp } from "std/easing"\na = 2 [0 : 5]\nf(x, y) = x + y\ncomponent Dot(P) {\n  g(u) = u\n  P\n}' });
+  const t = r.content[0].text;
+  assert.match(t, /a = 2  \[0 : 5\]/);
+  assert.match(t, /f\(x, y\)/);
+  assert.match(t, /Dot\(P\)/);
+  assert.doesNotMatch(t, /\bg\(u\)/); // a component's local function isn't the file's
+  assert.match(t, /Imported from "std\/easing"/);
 });

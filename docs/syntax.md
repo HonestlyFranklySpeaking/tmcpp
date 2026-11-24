@@ -60,6 +60,16 @@ h(x) = sin(x) \
   + cos(x)
 ```
 
+**Helpers with `let`.** `let P = ...` defines something other lines use without drawing it: it compiles to `P = ... . hidden`, and From graph gives back `let`. It works for points, lists, numbers and functions, in a file or inside a component, and a tail still applies (`let L = ... #red`, so it shows in that colour if you unhide it). Use it for intermediate points and point lists, which Desmos would otherwise draw as stray dots.
+
+```js
+let A = (0, 0)
+let B = (4, 1)
+let mid = (A + B) / 2
+segment(A, B)  #blue width 3
+mid . point 10
+```
+
 `//` starts a comment anywhere outside a string. Comments never reach TMC; the extension stores them in the graph's metadata note.
 
 Not carried over from TMC: one-line blocks such as `folder "A" { y = x; }`. Put each statement on its own line.
@@ -623,6 +633,12 @@ Every message names the TMC++ line. Common ones:
 | `'lerp' is defined in this file and also imported from 'x'` | rename yours, or import with `as` |
 | `Import cycle: a imports b imports a` | libraries can't import each other in a loop |
 | `TMC: ...` (extension) | DesModder's parser rejected the compiled line |
+| `f takes 2 arguments, but this call gives 1` | Desmos would reject the call; checked across the whole file, imports included |
+| `'e' can't be a parameter of g: Desmos already defines it` | also `pi`, `tau`, `infinity`, `index` and `dt` |
+| `'let' needs a definition, like let P = (1, 2)` | `let` goes before a definition |
+| `... is drawn as points and also used by other lines` (`check --runtime`, warning) | an unstyled helper point list that Desmos draws: add `. hidden` or use `let` |
+
+`tmcpp check --runtime` (or the MCP `check` tool with `runtime: true`) also reports, by TMC++ line, any error Desmos shows itself once the graph loads, such as `Cannot add a point and a number`, with the slider values it checked at.
 
 In the extension, **Copy all** at the top of the message list copies every message with its source line.
 

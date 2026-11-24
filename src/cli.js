@@ -16,7 +16,10 @@ const HELP = `tmcpp ${version()}: compile TMC++ to DesModder Text Mode (TMC)
   tmcpp compile graph.tmcpp         the same, spelled out
   tmcpp < graph.tmcpp               read the source from standard input
   tmcpp check graph.tmcpp           compile, then validate with DesModder's own parser
+  tmcpp check graph.tmcpp --runtime also load it in real Desmos and report what Desmos rejects
+                                    (--at a=1 b=2 sets sliders first; --json for tools)
   tmcpp preview graph.tmcpp [opts]  render a PNG in real Desmos (needs playwright-core)
+  tmcpp describe graph.tmcpp        list sliders, functions, components, classes and imports (--json)
   tmcpp mcp                         run an MCP server on stdio (compile, check, preview tools)
   tmcpp pair                        show the code that links the browser extension to tmcpp mcp
   tmcpp --version
@@ -58,10 +61,16 @@ if (cmd === "--version" || cmd === "-v") { console.log(version()); process.exit(
 
 if (cmd === "check") {
   const { runCheck } = await import("./check.js");
-  process.exit(await runCheck(argv[1]));
+  process.exit(await runCheck(argv.slice(1)));
 } else if (cmd === "preview") {
   const { runPreview } = await import("./preview.js");
   await runPreview(argv.slice(1));
+} else if (cmd === "describe") {
+  const { describe, describeText } = await import("./describe.js");
+  const path = argv.slice(1).find((a) => !a.startsWith("--"));
+  const d = await describe(decodeSource(readFileSync(path ?? 0)), { path: path ?? "" });
+  console.log(argv.includes("--json") ? JSON.stringify(d, null, 2) : describeText(d));
+  process.exit(d.errors.length ? 1 : 0);
 } else if (cmd === "mcp") {
   const { runMcp } = await import("./mcp.js");
   await runMcp();

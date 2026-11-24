@@ -16,7 +16,7 @@ import { STD } from "../../src/std/index.js";
 // ---------- highlighting ----------
 
 const KEYWORDS = new Set(["component", "new", "as", "class", "color", "folder", "table", "settings", "ticker", "import",
-  "from", "if", "then", "else", "abstract", "for", "with", "click"]);
+  "from", "if", "then", "else", "abstract", "for", "with", "click", "let"]);
 const STYLE = new Set(STYLE_WORDS);
 const NUMBER = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
 
@@ -106,7 +106,7 @@ function defines(text) {
     comps: all(/^\s*component\s+([A-Za-z]\w*)/gm),
     classes: all(/^\s*class\s+([A-Za-z_][\w-]*)/gm),
     colors: all(/^\s*color\s+([A-Za-z_][\w-]*)/gm),
-    vars: all(/^\s*([A-Za-z][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*=(?!=)/gm),
+    vars: all(/^\s*(?:let\s+)?([A-Za-z][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*=(?!=)/gm),
     instances: all(/^\s*new\s+.*?\bas\s+([A-Za-z]\w*)/gm),
   };
 }

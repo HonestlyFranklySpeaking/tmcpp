@@ -519,3 +519,19 @@ test("a string can run over several lines, and old domain: @{ min, max } still w
   assert.match(ok("(cos(t), sin(t)) @{ domain: @{ min: 0, max: 2*pi } }"), /domain: @\{ t: @\{ min: 0, max: 2\*pi \} \}/);
   assert.match(ok("r = 2 @{ domain: @{ max: pi } }"), /domain: @\{ theta: @\{ max: pi \} \}/);
 });
+
+test("let defines a hidden helper, in a file and in a component", () => {
+  assert.equal(ok("let P = (1, 2)"), "P = (1, 2) @{ hidden: true };");
+  assert.equal(ok("let L = ([1, 2], [3, 4]) #red"), 'L = ([1, 2], [3, 4]) @{ hidden: true, color: RED };');
+  assert.match(ok("component S(A) {\n  let d = A + 1\n  d x\n}\nnew S(2) as s"), /d_s = 2 \+ 1 @\{ hidden: true \}/);
+  const r = compile("let q", { defaultSettings: {}, watermark: false });
+  assert.match(r.errors[0].message, /'let' needs a definition/);
+});
+
+test("calls with the wrong number of arguments, and constants as parameters, are errors", () => {
+  const errs = (src) => compile(src, { defaultSettings: {}, watermark: false }).errors.map((e) => `${e.line}: ${e.message}`);
+  assert.deepEqual(errs("f(x, y) = x + y\ny = f(x)"), ["2: f takes 2 arguments, but this call gives 1"]);
+  assert.deepEqual(errs("h(t) = t\nk = h(1, 2)"), ["2: h takes 1 argument, but this call gives 2"]);
+  assert.deepEqual(errs("g(e) = e + 1"), ["1: 'e' can't be a parameter of g: Desmos already defines it. Use another name"]);
+  assert.deepEqual(errs('f(x, y) = x\nL = [f(1, 2), max(1, 2)]\n(1, 1) . label "f(1)"'), []);
+});

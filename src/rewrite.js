@@ -231,3 +231,69 @@ export function bracketComprehensions(math) {
   }
   return s;
 }
+
+// ---------- static checks on the finished TMC (names are Desmos names by now) ----------
+
+const RESERVED_PARAMS = new Set(["e", "pi", "tau", "infinity", "infty", "index", "dt"]);
+const NAME = "[A-Za-z](?:_\\{?[A-Za-z0-9]+\\}?|[A-Za-z0-9]*)";
+
+/** Matching ")" for the "(" at `open`, skipping strings. */
+function closeParen(s, open) {
+  let depth = 0, inStr = false;
+  for (let i = open; i < s.length; i++) {
+    const c = s[i];
+    if (c === "\\" && inStr) { i++; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (OPEN.includes(c)) depth++;
+    else if (CLOSE.includes(c) && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * Problems Desmos would show as errors that the Text Mode parser accepts: calling a function
+ * with the wrong number of arguments, and naming a parameter after a constant (e, pi, tau).
+ * lines: the TMC statements. Returns [{ index, message }] with index into lines.
+ */
+export function checkCalls(lines) {
+  const problems = [];
+  const head = new RegExp(`^(${NAME})\\(([^()]*)\\)\\s*=(?!=)`);
+  const arity = new Map();
+  lines.forEach((l, index) => {
+    const m = l.match(head);
+    if (!m) return;
+    const params = splitArgs(m[2]);
+    if (!arity.has(m[1])) arity.set(m[1], params.length);
+    for (const p of params) {
+      if (RESERVED_PARAMS.has(p)) problems.push({ index, message: `'${p}' can't be a parameter of ${m[1]}: Desmos already defines it. Use another name` });
+    }
+  });
+  if (!arity.size) return problems;
+  const call = new RegExp(`(^|[^A-Za-z0-9_.\\\\{])(${NAME})\\(`, "g");
+  lines.forEach((l, index) => {
+    // Skip the definition's own head, and strings (labels, notes).
+    const m = l.match(head);
+    const body = m ? l.slice(m[0].length) : l;
+    for (const c of body.matchAll(call)) {
+      const name = c[2];
+      if (!arity.has(name)) continue;
+      const open = c.index + c[0].length - 1;
+      if (quoteOpen(body.slice(0, open))) continue;
+      const close = closeParen(body, open);
+      if (close < 0) continue;
+      const got = splitArgs(body.slice(open + 1, close)).length, want = arity.get(name);
+      if (got !== want) problems.push({ index, message: `${name} takes ${want} argument${want === 1 ? "" : "s"}, but this call gives ${got}` });
+    }
+  });
+  return problems;
+}
+
+function quoteOpen(text) {
+  let open = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") { i++; continue; }
+    if (text[i] === '"') open = !open;
+  }
+  return open;
+}

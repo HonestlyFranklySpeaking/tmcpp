@@ -109,7 +109,7 @@ export function buildMeta(compiled, list, ticker = null) {
     if (tags?.length) entry.tags = tags;
     if (it.writtenTags && it.tags?.length) entry.tagsc = it.tags;
     const tail = it.writtenTail ?? it.tail;
-    if (tail) entry.tail = tail;
+    if (tail || (it.writtenTail === "" && it.tail)) entry.tail = tail; // "": written bare (let P = ...)
     if (it.writtenTail !== undefined && it.tail) entry.tc = it.tail;
     if (it.comments?.length) entry.comments = it.comments;
     if (it.math !== undefined && typeof e.latex === "string") {

@@ -9,6 +9,11 @@
 
 ### Added
 
+- **`let`.** `let P = ...` defines a hidden helper that other lines use; From graph gives `let` back.
+- **Call checks.** Calling a function with the wrong number of arguments, or naming a parameter `e`, `pi` or `tau`, is now a compile error instead of a silent error in Desmos.
+- **`tmcpp check --runtime`.** Loads the graph in real Desmos and reports Desmos's own errors by TMC++ line, with the slider values used (`--at` sets them), plus unstyled helper point lists that get drawn by accident. `--json` for tools. The MCP `check` tool takes `runtime: true`.
+- **`tmcpp describe`** and an MCP `describe` tool: sliders with ranges, functions and components with parameters, classes, colours and what each import brings in.
+- **Version check.** `push` and `link_status` warn when the browser extension is older than `tmcpp`.
 - **3D and orbital building blocks.** `std/3d` adds camera transforms and ray intersections. New `std/color` and `std/orbits` libraries provide palettes, lighting and Kepler motion. The solar-system example uses all three.
 - **Current Text Mode.** TMC++ now bundles a build of DesModder's Text Mode library from its November 2026 source instead of the npm release from 2023, so `|x|`, regression parameters and `@{ id }` work, and `tmcpp check` agrees with the extension. No runtime dependencies are left.
 - **Strings can span lines.** A note or label whose closing `"` is on a later line keeps its line breaks.

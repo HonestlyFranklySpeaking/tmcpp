@@ -3,4 +3,4 @@
 // The same as `tmcpp check`; the code lives in src/check.js.
 import { runCheck } from "../src/check.js";
 
-process.exit(await runCheck(process.argv[2]));
+process.exit(await runCheck(process.argv.slice(2)));

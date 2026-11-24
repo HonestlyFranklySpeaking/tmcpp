@@ -61,3 +61,47 @@ export async function renderFrames({ state, frames, width = 1600, cols = 3 }) {
   });
   return { png: canvas.toDataURL("image/png"), missing: [...missing] };
 }
+
+// Runs INSIDE desmos.com too. Loads a state, sets sliders, waits for Desmos to evaluate, and
+// reports every expression's error (Calc.expressionAnalysis, the public API) plus, where the
+// calculator exposes it, what the expression draws and which names it uses.
+export async function analyzeGraph({ state, at = {} }) {
+  const Calc = window.Calc;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  Calc.setState(state);
+  const exprs = state.expressions.list.filter((e) => e.type === "expression" && typeof e.latex === "string" && e.latex.trim());
+  const hiddenFolders = new Set(state.expressions.list.filter((e) => e.type === "folder" && e.hidden).map((e) => e.id));
+  const latexNames = (n) => {
+    const out = [n];
+    if (n.includes("_")) { const [h, ...rest] = n.split("_"); out.push(`${h}_{${rest.join("_")}}`); }
+    else if (n.length > 1) out.push(`${n[0]}_{${n.slice(1)}}`);
+    return out;
+  };
+  const missing = [];
+  for (const [name, value] of Object.entries(at)) {
+    let hit = null;
+    for (const ln of latexNames(name)) { hit = exprs.find((x) => x.latex.startsWith(ln + "=")); if (hit) { Calc.setExpression({ id: hit.id, latex: `${ln}=${value}` }); break; } }
+    if (!hit) missing.push(name);
+  }
+  // Wait until Desmos has analysed every expression, then a little longer for it to settle.
+  const t0 = Date.now();
+  while (Date.now() - t0 < 20000 && exprs.some((e) => !Calc.expressionAnalysis[e.id])) await sleep(200);
+  await sleep(600);
+  const items = exprs.map((e) => {
+    const a = Calc.expressionAnalysis[e.id] ?? {};
+    let type = null, name = null, uses = [];
+    try {
+      const f = Calc.controller.getItemModel(e.id)?.formula;
+      type = f?.expression_type ?? null;
+      name = f?.assignment ?? f?.defined_name ?? null;
+      uses = Array.isArray(f?.variables) ? f.variables : [];
+    } catch {}
+    return { id: e.id, latex: e.latex, hidden: !!e.hidden || hiddenFolders.has(e.folderId), error: a.isError ? a.errorMessage : null, graphable: !!a.isGraphable, type, name, uses };
+  });
+  const sliders = {};
+  for (const e of Calc.getState().expressions.list) {
+    const m = e.type === "expression" && e.slider && /^([^=]+)=(.+)$/.exec(e.latex ?? "");
+    if (m) sliders[m[1].replace(/[{}]/g, "")] = m[2];
+  }
+  return { items, sliders, missing, settled: Date.now() - t0 < 20000 };
+}

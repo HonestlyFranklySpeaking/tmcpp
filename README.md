@@ -32,7 +32,11 @@ The same graph in plain TMC needs a nested `@{ }` style block on almost every li
 npx @ikeasourpatches/tmcpp graph.tmcpp        # compile once, nothing to install
 npm install -g @ikeasourpatches/tmcpp         # or install the tmcpp command
 tmcpp graph.tmcpp > graph.tmc
+tmcpp check graph.tmcpp                       # compile, then validate with DesModder's parser
+tmcpp preview graph.tmcpp --out graph.png     # render in real Desmos (see below)
 ```
+
+Preview needs `playwright-core`, an optional extra that drives the Chrome or Edge you already have. Add it next to tmcpp with `npm install -g playwright-core`, or in one go: `npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview graph.tmcpp`.
 
 In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
 
@@ -50,21 +54,21 @@ Requires Node 22+.
 ```sh
 npm install
 npm test                                  # compiler and DesModder parser tests
-node src/cli.js examples/sunset.tmcpp     # print TMC, or errors with line numbers
-node tools/check.js examples/sunset.tmcpp # compile, then validate with DesModder's parser
+node src/cli.js examples/sunset.tmcpp        # print TMC, or errors with line numbers
+node src/cli.js check examples/sunset.tmcpp  # compile, then validate with DesModder's parser
 ```
 
-The CLI also reads TMC++ from standard input when no file is given. `tools/check.js` accepts either a `.tmcpp` source file or an already compiled `.tmc` file. Compile diagnostics identify source lines; parser diagnostics from `tools/check.js` identify lines in the generated TMC.
+In a checkout, `node src/cli.js` is the `tmcpp` command. It also reads TMC++ from standard input when no file is given. `check` accepts either a `.tmcpp` source file or an already compiled `.tmc` file. Compile diagnostics identify source lines; parser diagnostics from `check` identify lines in the generated TMC.
 
-To check a file with imports, pass the entry file to the CLI or `tools/check.js`; both resolve relative files and `gh:` or HTTPS imports. For example, `node tools/check.js examples/springs-import.tmcpp` checks the spring library together with the graph that imports it.
+To check a file with imports, pass the entry file; every command resolves relative files and `gh:` or HTTPS imports. For example, `tmcpp check examples/springs-import.tmcpp` checks the spring library together with the graph that imports it. (`tools/check.js` and `npm run preview` still work and run the same code.)
 
 ### Preview in real Desmos
 
 ```sh
-npm run preview -- examples/glass-choir.tmcpp                          # one frame -> glass-choir.preview.png
-npm run preview -- examples/glass-choir.tmcpp --at a=1.2 d=-0.5        # set sliders first
-npm run preview -- examples/glass-choir.tmcpp --sweep a=0..2pi/9       # 9 frames of a loop as a contact sheet
-npm run preview -- examples/hello.tmcpp --sweep s=0..=1/5 --out hello.png   # ..= includes the end value
+tmcpp preview examples/glass-choir.tmcpp                          # one frame -> glass-choir.preview.png
+tmcpp preview examples/glass-choir.tmcpp --at a=1.2 d=-0.5        # set sliders first
+tmcpp preview examples/glass-choir.tmcpp --sweep a=0..2pi/9       # 9 frames of a loop as a contact sheet
+tmcpp preview examples/hello.tmcpp --sweep s=0..=1/5 --out hello.png   # ..= includes the end value
 ```
 
 The parser only proves the equations are valid; the preview shows the composition, such as a moving shape crossing a title at some slider values. It renders with Desmos itself (`Calc.asyncScreenshot`) in your installed Chrome or Edge, headless, so it needs internet access to desmos.com but no extra browser download. Add `--show` to watch it, `--width` and `--cols` to size the output.
@@ -212,7 +216,7 @@ The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some m
 
 ## Known limits
 
-The npm release of text-mode-core (0.1.1) is older than the DesModder extension. `npm test` and `tools/check.js` therefore reject a few things the extension accepts, and the bundled extension inherits the same limits:
+The npm release of text-mode-core (0.1.1) is older than the DesModder extension. `npm test` and `tmcpp check` therefore reject a few things the extension accepts, and the bundled extension inherits the same limits:
 
 - `|x|` absolute value: use `abs(x)`
 - regression parameter blocks `# { ... }`

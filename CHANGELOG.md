@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`tmcpp check` and `tmcpp preview`.** The npm command now compiles, checks and previews: `tmcpp check graph.tmcpp` validates the output with DesModder's own parser, and `tmcpp preview graph.tmcpp --out graph.png` renders it in real Desmos (`--at`, `--sweep`, `--width`, `--cols`, `--show`). `tmcpp compile graph.tmcpp` spells out the default command.
+- **Preview is an optional extra.** It uses `playwright-core`, declared as an optional peer dependency, so a plain install stays small. Without it, `tmcpp preview` says how to add it.
+
 ## 0.2.0 (2026-11-23): v2
 
 v2 adds structure on top of v1's styles: components, conditionals, actions and libraries, plus a real editor.

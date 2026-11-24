@@ -13,7 +13,7 @@ Requires Node 22 or newer.
 ```sh
 npm install
 npm test                       # compiler, parser, round-trip and std library tests
-node tools/check.js file.tmcpp # compile and validate with DesModder's own parser
+node src/cli.js check file.tmcpp # compile and validate with DesModder's own parser
 npm run build:ext              # the browser extension (extension/dist)
 npm run build:vscode           # the VS Code extension (vscode/dist)
 ```

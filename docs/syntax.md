@@ -384,7 +384,7 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 
 | Import | Where it works |
 | --- | --- |
-| `"./parts/ui.tmcpp"`, relative to the importing file | CLI, `tools/check.js` and `npm run preview` |
+| `"./parts/ui.tmcpp"`, relative to the importing file | CLI: `tmcpp`, `tmcpp check` and `tmcpp preview` |
 | `"springs"`, a name saved in the extension's Library panel | extension |
 | `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
 | `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL in the CLI) | extension, CLI, check and preview |

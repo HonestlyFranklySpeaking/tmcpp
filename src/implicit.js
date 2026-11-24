@@ -110,21 +110,31 @@ export function implicitMultiply(math, seen = null) {
   let depth = 0;
   let boundDepth = null;     // depth of the "(...)" bounds after a big operator
   let noMulAfterClose = false;
+  const bars = [];           // depths of the |...| absolute values that are open
 
   for (let tok of toks) {
     let k = kind(tok);
     if (k === "ws") { gap = true; out += tok; continue; }
+    // An absolute-value bar closes one opened at this depth when it follows something a value can
+    // end with; otherwise it opens one. Opening bars act like "(", closing ones like ")".
+    if (tok === "|") {
+      const pk = sig.at(-1)?.k;
+      const ends = pk === "num" || pk === "id" || pk === ")" || pk === "|c";
+      k = bars.at(-1) === depth && ends ? "|c" : "|o";
+    }
     if (k === "num" && tok.startsWith(".")) tok = "0" + tok;
 
     const p1 = sig.at(-1), p2 = sig.at(-2), p3 = sig.at(-3);
     const prev = p1?.k;
-    const operand = k === "num" || k === "id" || k === "(";
+    const operand = k === "num" || k === "id" || k === "(" || k === "|o";
     let mul = false;
     if (prev && operand) {
       const afterBounds = prev === ")" && noMulAfterClose;
       const derivative = p1?.t === "d" && p2?.t === "/" && p3?.t === "d";
-      if (prev === "num" && (k === "id" || k === "(")) mul = true;                  // 4p, 2(x)
+      if (prev === "num" && (k === "id" || k === "(" || k === "|o")) mul = true;   // 4p, 2(x), 2|x|
       else if (prev === ")" && !afterBounds) mul = true;                            // (a)(b), (a)x
+      else if (prev === "|c") mul = true;                                           // |x|y, |x||y|
+      else if (prev === "id" && k === "|o") mul = true;                             // k|x|
       else if (prev === "id" && gap && (k === "id" || k === "num") && !derivative) mul = true; // k sin(x)
     }
     if (mul) out = out.trimEnd() + " * ";
@@ -138,6 +148,8 @@ export function implicitMultiply(math, seen = null) {
         for (const s of sig) s.boundPending = false;
       }
     }
+    if (k === "|o") bars.push(depth);
+    if (k === "|c") bars.pop();
     noMulAfterClose = false;
     if (k === ")") {
       if (depth === boundDepth) { noMulAfterClose = true; boundDepth = null; }

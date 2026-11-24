@@ -119,6 +119,16 @@ const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
  * @returns {{text: string, line: number, comments: string[]}[]}
  * `line` is the 1-based source line where the statement starts.
  */
+/** Whether text ends inside a "string" (an odd number of unescaped quotes). */
+function quoteOpen(text) {
+  let open = false;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") { i++; continue; }
+    if (text[i] === '"') open = !open;
+  }
+  return open;
+}
+
 function toStatements(source) {
   const raw = source.split(/\r?\n/);
   const out = [];
@@ -131,6 +141,17 @@ function toStatements(source) {
 
   for (let i = 0; i < raw.length; i++) {
     const physical = raw[i];
+    // Inside a string that a previous line left open (a multi-line note or label): the line is
+    // text, newline included, escaped the way TMC strings need it.
+    if (cur?.inString) {
+      cur.text += "\\n" + physical;
+      cur.end = i + 1;
+      cur.inString = quoteOpen(cur.text);
+      if (cur.inString) continue;
+      cur.open = endsWithOperator(cur.text.trimEnd()) || bracketDepth(cur.text) > 0;
+      cur.text = cur.text.trimEnd().replace(/;+$/, "");
+      continue;
+    }
     const [codeRaw, comment] = splitComment(physical);
     const indent = physical.match(/^\s*/)[0].length;
     let code = codeRaw.trim();
@@ -175,6 +196,7 @@ function toStatements(source) {
     const exprUnclosed = !isHeader(t) && bracketDepth(t) > 0;
     cur.open = explicit || classUnclosed ||
       (!folderOpen && (exprUnclosed || endsWithOperator(t)));
+    cur.inString = quoteOpen(t);
   }
   flush();
   if (pendingComments.length) {
@@ -377,8 +399,19 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
 }
 
 /** Serialise a style object to TMC `@{ ... }` syntax. */
-function styleToTmc(style, rawInner) {
-  const merged = rawInner ? mergeTmc(style, parseTmcObject(rawInner)) : style;
+/** The old Text Mode spelling `domain: @{ min, max }` (TMC++ 0.2 and earlier) becomes today's
+ * `domain: @{ t: @{ min, max } }`, or `theta` for a polar curve (`r = ...`). */
+function upgradeDomain(obj, math) {
+  const d = obj?.domain;
+  if (d && typeof d === "object" && ("min" in d || "max" in d)) {
+    const { min, max, ...rest } = d;
+    obj.domain = { ...rest, [/^\s*r\s*=/.test(math ?? "") ? "theta" : "t"]: { ...(min !== undefined && { min }), ...(max !== undefined && { max }) } };
+  }
+  return obj;
+}
+
+function styleToTmc(style, rawInner, math) {
+  const merged = rawInner ? mergeTmc(style, upgradeDomain(parseTmcObject(rawInner), math)) : style;
   const w = writeTmcObject(merged);
   return w ? " " + w : "";
 }
@@ -712,7 +745,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
 
     applyTokens(tokenizeTail(tail), style, { classes, colors, errors, warnings, line, localKeys: new Set() });
     let styled = "";
-    try { styled = styleToTmc(style, rawInner); }
+    try { styled = styleToTmc(style, rawInner, math); }
     catch (e) { errors.push({ line, message: e.message }); }
     // The math as the author wrote it (amber.turns, not t_urnsamber), when a pass rewrote it. Lines
     // from instances, libraries and if blocks come back through their block instead.

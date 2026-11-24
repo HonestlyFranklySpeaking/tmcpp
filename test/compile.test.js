@@ -495,3 +495,27 @@ test("fill 0 compiles to a fill too faint to see, so the shape stays clickable",
   assert.match(r.tmc, /fill: 0\.0000001/);
   assert.match(compile("polygon((0,0),(1,0),(0,1)) . fill 0.5", { watermark: false }).tmc, /fill: 0\.5/);
 });
+
+test("absolute value bars get implicit multiplication like brackets", async () => {
+  const { buildConfig, textToRaw } = await import("../src/tmc-core.js");
+  const cases = {
+    "y = 2|x - 1|": "y = 2 * |x - 1|;",
+    "y = |x||x|": "y = |x| * |x|;",
+    "y = a|x| + |x|b": "y = a * |x| + |x| * b;",
+    "y = ||x| - 1|": "y = ||x| - 1|;",
+    "f(x) = |x|^2 - 3|x + 1|": "f(x) = |x|^2 - 3 * |x + 1|;",
+    "L = [|a|, |b - 1|]": "L = [|a|, |b - 1|];",
+  };
+  for (const [src, want] of Object.entries(cases)) {
+    const got = ok(src);
+    assert.equal(got, want);
+    assert.deepEqual(textToRaw(buildConfig({}), `a = 1; b = 2; ${got}`)[0].diagnostics.map((d) => d.message), [], src);
+  }
+});
+
+test("a string can run over several lines, and old domain: @{ min, max } still works", () => {
+  const out = ok('"First line\nsecond line"\ny = x');
+  assert.equal(out.split("\n")[0], '"First line\\nsecond line";');
+  assert.match(ok("(cos(t), sin(t)) @{ domain: @{ min: 0, max: 2*pi } }"), /domain: @\{ t: @\{ min: 0, max: 2\*pi \} \}/);
+  assert.match(ok("r = 2 @{ domain: @{ max: pi } }"), /domain: @\{ theta: @\{ max: pi \} \}/);
+});

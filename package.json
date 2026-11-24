@@ -1,7 +1,7 @@
 {
   "name": "@ikeasourpatches/tmcpp",
   "version": "0.2.0",
-  "description": "TMC with Classes: a preprocessor for DesModder's Text Mode for Desmos, adding CSS-style classes, one-word styles, labels and slider shorthand, compiled live by a browser extension.",
+  "description": "TMC with Classes: a preprocessor for DesModder's Text Mode for Desmos, with classes, one-word styles, components, conditionals, actions and libraries. Includes a CLI that compiles, checks and previews, and an MCP server for AI apps.",
   "keywords": [
     "desmos",
     "desmodder",
@@ -10,7 +10,9 @@
     "transpiler",
     "dsl",
     "graphing",
-    "browser-extension"
+    "browser-extension",
+    "mcp",
+    "model-context-protocol"
   ],
   "author": "Gordon Ji (https://github.com/IkeaSourPatches)",
   "repository": {

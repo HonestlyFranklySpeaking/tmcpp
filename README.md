@@ -1,12 +1,16 @@
 # TMC with Classes (TMC++)
 
-**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand, reusable components, conditionals and libraries, then compiles to plain TMC. A browser extension compiles it live inside desmos.com.
+**Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand, reusable components, conditionals, action shortcuts and libraries, then compiles to plain TMC. A browser extension compiles it live inside desmos.com, a VS Code extension checks it as you type, and an [MCP server](#mcp-server) lets AI apps write graphs straight into your Desmos tab.
 
 The name is a nod to C++, which started life as "C with Classes".
 
 [![EVENT HORIZON: a black hole poster drawn entirely with equations in TMC++, embers orbiting the disk](docs/event-horizon.gif)](docs/event-horizon.png)
 
 *`examples/event-horizon.tmcpp`, written by ChatGPT in TMC++: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines, 71 Desmos items. Click for the full-resolution still.* [See Desmos graph.](https://www.desmos.com/calculator/91wpdzmsmn)
+
+[![The solar system in 3D, drawn with equations in TMC++: the Sun with a corona, eight planets on their real orbits, Saturn's rings and the main asteroid belt](docs/solar-system.png)](docs/solar-system.png)
+
+*`examples/solar-system.tmcpp`, written by ChatGPT through the [MCP server](#mcp-server) from a one-line prompt: the planets at their real positions for the chosen date (JPL's Keplerian elements, Kepler's equation solved with Newton steps), shaded spheres ray-cast against the Sun, Saturn's rings with the planet's shadow, and a free-flying camera on sliders. 349 lines, 304 Desmos items, rendered here with `tmcpp preview`.*
 
 ```js
 class curve { #c74440 dashed width 3 }
@@ -38,7 +42,9 @@ tmcpp preview graph.tmcpp --out graph.png     # render in real Desmos (see below
 
 Preview needs `playwright-core`, an optional extra that drives the Chrome or Edge you already have. Add it next to tmcpp with `npm install -g playwright-core`, or in one go: `npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview graph.tmcpp`.
 
-In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
+Needs Node 20 or newer. In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
+
+`check`, `preview`, `mcp` and `pair` arrive in 0.3.0. Until that version is on npm, run them from a checkout (below).
 
 | Where | Get it |
 | --- | --- |
@@ -49,7 +55,7 @@ In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
 
 ## Quick start
 
-Requires Node 22+.
+Working on TMC++ itself needs Node 22 or newer (the tests use its built-in WebSocket).
 
 ```sh
 npm install
@@ -77,7 +83,7 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 
 ## MCP server
 
-`tmcpp mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdio, so an AI app can write TMC++ and see what it made. It offers three tools and some reading material:
+`tmcpp mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdio, so an AI app such as Claude Code, Claude Desktop or Cursor can write TMC++, check it and see what it made. It offers three tools and some reading material:
 
 | | |
 | --- | --- |
@@ -100,7 +106,9 @@ With the browser extension linked, the AI can also work in the Desmos tab you ha
 | `pull` | TMC++ rebuilt from the graph as it is now, edits you made in Desmos included, or the panel's text |
 | `screenshot` | a PNG of the tab as it is right now |
 
-To pair, run `tmcpp pair` (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked. Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
+To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked. Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
+
+The link is up only while the AI app is running `tmcpp mcp`. Until then the panel says "Waiting for tmcpp mcp", and Chrome's extension console shows `ERR_CONNECTION_REFUSED` now and then as the extension retries (every 3 to 30 seconds). That's expected and harmless.
 
 How it's kept safe: `tmcpp mcp` listens only on `127.0.0.1` (port 51324, or `TMCPP_LINK_PORT`), accepts only browser extensions (web pages can't connect), and drops any connection that doesn't send the pairing code within 5 seconds. **Unlink** in the panel turns it off; `TMCPP_LINK=0` starts the server without it.
 
@@ -120,30 +128,31 @@ Claude Desktop, Cursor and other apps with a JSON config:
 }
 ```
 
-On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't start `npx` directly. From a checkout, point it at the source instead: `"command": "node", "args": ["C:/path/to/tmcpp/src/cli.js", "mcp"]`. Drop the `playwright-core` part if you don't want previews.
+On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't start `npx` directly. From a checkout, point it at the source instead: `claude mcp add tmcpp -- node /path/to/tmcpp/src/cli.js mcp`, or `"command": "node", "args": ["/path/to/tmcpp/src/cli.js", "mcp"]` in a JSON config. Drop the `playwright-core` part if you don't want previews. `claude mcp remove tmcpp` undoes the add.
 
 ## Browser extension
 
 1. `npm install`, then `npm run build:ext` (writes `extension/dist/tmcpp.js`).
 2. In Chrome open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the `extension` folder.
 3. Open desmos.com/calculator and click **TMC++** (bottom right) or press Alt+T.
-4. Write TMC++ and press Ctrl+Enter. The whole graph is replaced; Ctrl+Z in Desmos undoes it (two presses).
+4. Write TMC++ and press Ctrl+Enter. The whole graph is replaced; Ctrl+Z in Desmos undoes it (two presses). Inside the editor, Ctrl+Z undoes your typing as usual.
 
 The panel:
 
 - the editor highlights TMC++ (classes, colours, style words, `${}` in labels, keywords), underlines compile errors and warnings while you type, and completes class names after `.`, colours after `#`, components after `new` (imported ones too, `sp.Spring`), style words in a tail, your variables, and library names inside `import "`. Ctrl+Enter compiles, Ctrl+/ comments lines, Ctrl+F searches, and Tab indents
-- the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Example) and **Compile**
+- the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Link to AI, Example) and **Compile**
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
 - **Library** saves definition-only source for reuse, inserts imports, and fetches GitHub libraries for offline use
+- **Link to AI** pairs the tab with `tmcpp mcp` (see [Linking your Desmos tab](#linking-your-desmos-tab)); a green **AI** badge in the header, and **TMC++ · AI** on the toggle button, show it's linked
 - saves your source per graph in the browser and follows you when you switch graphs
 - **From graph** rebuilds TMC++ from the graph as it is now. Untouched lines come back exactly as you wrote them; lines you restyled in Desmos come back as their classes plus only the changed tokens (`.curve width 5`); math edited in Desmos is converted back; component instances, `if` blocks and imports come back as written while untouched; items added in Desmos appear without their automatic colour. Opening a TMC++ graph this browser has no source for rebuilds it automatically.
 - watermarks the graph: its hidden `randomSeed` starts with `544d432b2b`, which is "TMC++" in ASCII hex, and is kept across recompiles so `random()` doesn't reshuffle (a seed you set in `settings` always wins)
   - Desmos hashes randomSeed with MD5 per expression; thanks to MD5's avalanche effect, the fixed prefix has zero impact on randomness quality as long as the remaining 80 bits vary with your source.
 - writes a hidden metadata note into the graph (classes, tags, tails, comments, hashes) so the graph remembers it was made with TMC++, and pops the panel open when you open such a graph
 
-After changing the compiler, run `npm run build:ext` again and click reload on the extension card.
+After changing the compiler, run `npm run build:ext` again and click reload on the extension card, then reload the Desmos tab. Reloading only the tab keeps Chrome's old background worker, and the panel then says to reload TMC++ in `chrome://extensions`.
 
 ## VS Code
 
@@ -157,14 +166,38 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 - One statement per line. A `;` at the end is optional.
 - A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
-- `//` comments are allowed anywhere and are never sent to TMC. If you want your comments to be saved, use the notes that Desmos provides, these comments are recommended for programming purposes.
+- `//` comments are allowed anywhere. They never reach TMC, but the extension keeps them in the graph's metadata note, so **From graph** gives them back. For text that viewers of the graph should see, use a note (`"text"`).
 - Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls and keywords stay intact. The compiler keeps the body of `sum`/`product`/`integral` and the expression after `(d/d x)` attached to their operators, while still inserting multiplication within those expressions. `.5` becomes `0.5`.
 - Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
+- Absolute value works both ways: `|x - 1|` or `abs(x - 1)`, and multiplies like a bracket: `2|x|`, `a|x|`, `|x||y|`. From graph writes it as `abs(...)`.
 - Name variables freely: `score`, `hello_world` and even `total` become names Desmos accepts (`s_core`, `h_elloworld`, `t_otal`), including inside `${...}` in labels.
 - Double inequalities work on anything: Desmos only draws `a < f < b` when `f` is `x` or `y`, so TMC++ rewrites the rest to `max(a - f, f - b) < 0`. `2.49 < r(x,y) < 2.98` draws a ring, and the bounds can be piecewise.
 - Drawing level curves of a function you defined just works: `q(x,y) = [0.5, 0.6]` after `q(x,y) = ...` would redefine `q` in Desmos, so it becomes `q(x,y) - ([0.5, 0.6]) = 0` (with a warning saying so).
 - `segment(A, B)` and `path(P)` draw straight lines between points or lists of points (Desmos's graphing calculator has no `segment()`).
 - Files can be UTF-8 or UTF-16 (what Windows PowerShell's `>` writes).
+
+### Components
+
+A component is a group of lines written once and stamped out with `new`; each instance gets its own folder and its own variables. See [components](docs/syntax.md#components) for nesting, abstract parameters and list instances.
+
+```js
+component Dot(P, abstract n = 0) {
+  P . point 12 click(n++) label "${n}"
+}
+new Dot((2, 1)) as d1
+new Dot((4, 1), n = 5) as d2  . #red
+clicks = d1.n + d2.n
+```
+
+### Actions
+
+Short forms for Desmos's `n -> n + 1`, anywhere an action goes: `n++`, `n += 2`, `mode++ % 3`, `toggle(on)`, `L[i] = v`, `L.push(x)` and `reset()`. See [actions](docs/syntax.md#actions).
+
+```js
+score = 0
+on = 0
+(0, 0) . point 12 click(score++, toggle(on))
+```
 
 ### Conditionals and libraries
 
@@ -210,7 +243,7 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `#c74440`, `#red` `#blue` `#green` `#purple` `#orange` `#black` | colour |
 | `solid` `dashed` `dotted` | line style |
 | `width N`, `opacity N` | line width and opacity |
-| `fill N` | fill opacity |
+| `fill N` | fill opacity; `fill 0` stays clickable (an invisible button) |
 | `point N`, `point-opacity N` | point size and opacity |
 | `open` `cross` | point style |
 | `drag x\|y\|xy\|none\|auto` | point drag mode |
@@ -243,10 +276,13 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 | `examples/night-net.tmcpp` | NIGHT NET, a playable game: drag the net to catch falling gold stars and let the red meteors drop. A ticker runs the game loop, a clickable PLAY button (`@{ onClick: start }`) resets it, and it tracks lives, score and best score |
 | `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette, one list inequality for 24 water bands, and `segment()` for the coral (232 items) |
 | `examples/event-horizon.tmcpp` | EVENT HORIZON (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
+| `examples/solar-system.tmcpp` | the solar system in 3D (by ChatGPT, through the MCP server): real orbits from JPL's elements for any year from 1800 to 2050, ray-cast shaded planets, Saturn's rings and shadow, the asteroid belt, and a camera you can orbit, fly and roll with sliders |
 | `examples/hello.tmcpp` | HELLO WORLD written stroke by stroke from 46 segments and one parametric expression (the extension's starter) |
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |
 | `examples/sunset.tmcpp` | a sunset scene driven by one time-of-day slider |
 | `examples/demo.tmcpp` | a parabola with a draggable focus |
+| `examples/parallax.tmcpp` | PARALLAX, a tesseract projected into 2D, built with `std/ui` and action shortcuts: click any vertex to send a pulse along the edges |
+| `examples/wire-cube.tmcpp` | a wireframe cube from `std/3d`, with yaw, pitch and roll sliders to show the rotation order |
 | `examples/prism-post.tmcpp` | PRISM POST, a seven-route pulse-routing puzzle. Rotate the brass mirrors, then dispatch a pulse through both diamond stamps and into the cyan mail slot. The first six routes use eight mirrors; the final route adds seven more. `Mirror` and `Stamp` components track each mirror's turns and each stamp's state, while a ticker advances the pulse. The counter shows turns and par; returned pulses can be retried, and **Reset** clears the current route. |
 | `examples/springs.tmcpp` | two instances of a reusable spring component with local variables and an instance style override |
 | `examples/springs-import.tmcpp` and `examples/lib/springs.tmcpp` | the same spring component moved into a relative library and imported as `sp` |
@@ -257,11 +293,15 @@ A style word left in the math, as in `(1, 2) point 5`, is an error that tells yo
 TMC++ --compile--> TMC --text-mode-core textToRaw--> Desmos state --Calc.setState--> graph
 ```
 
+Imports are resolved first: from disk and GitHub in Node (`src/load-node.js`), from the Library panel in the extension. `text-mode-core` is DesModder's own Text Mode library, bundled in `vendor/`.
+
 Going back, `src/decompile.js` rebuilds TMC++ from a graph state using the metadata note, recompiling each tail to compare it with what Desmos holds, and `src/latex.js` turns Desmos LaTeX back into TMC math.
 
-The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some math syntax, including implicit multiplication and restrictions, before DesModder's text-mode-core parses the generated TMC. In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
+The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some math syntax, including implicit multiplication and restrictions, before text-mode-core parses the generated TMC. Components, `if` blocks, actions and imports are separate passes (`src/components.js`, `src/conditionals.js`, `src/actions.js`, `src/imports.js`). In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
 
-## Known limits
+The MCP server (`src/mcp.js`) and its link to the extension (`src/link.js`, a small WebSocket server on 127.0.0.1) use no outside libraries.
+
+## TMC information
 
 TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-core`, from DesModder's source, November 2026), because the npm release stopped at 0.1.1 in 2023. So `|x|`, regression parameters (`#{ m = 1, b = 2 }`) and the `id` option all work. Two things plain TMC still doesn't read, which TMC++ handles itself (see the syntax reference): Greek letters other than `alpha beta theta phi pi tau`, and restrictions like `y = x {x > 0}`.
 
@@ -282,8 +322,14 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 | M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
 | M11 ship v2: version 0.2.0, changelog, packaged extension and VS Code extension | done |
 | M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d` | done |
-| v3 MCP server so AI assistants can write TMC++ graphs | planned |
+| M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
+| M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
+| M15 Chrome Web Store, and publishing from CI | planned |
+| M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | planned |
+| M17 language additions: enums, private library names | planned |
+| M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
+| M19 `fill 0` stays clickable | done |
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Bundles DesModder's [text-mode-core](https://www.npmjs.com/package/@desmodder/text-mode-core) (MIT). TMC syntax reference: [DesModder Text Mode docs](https://www.desmodder.com/text-mode/).
+MIT, see [LICENSE](LICENSE). Bundles a build of DesModder's [text-mode-core](https://github.com/DesModder/DesModder/tree/main/text-mode-core) (MIT, see [vendor/text-mode-core](vendor/text-mode-core)). TMC syntax reference: [DesModder Text Mode docs](https://www.desmodder.com/text-mode/).

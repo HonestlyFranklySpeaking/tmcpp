@@ -16,7 +16,11 @@ export async function checkSource(source, { path = "", isTmc = /\.tmc$/i.test(pa
     ({ tmc, errors, warnings } = await compileFile(source, path));
     if (errors.length) return { ok: false, tmc: "", errors, warnings, diagnostics: [], items: 0, state: null };
   }
-  const [{ diagnostics: raw }, state] = textToRaw(buildConfig({}), tmc);
+  let raw, state;
+  try { [{ diagnostics: raw }, state] = textToRaw(buildConfig({}), tmc); }
+  catch (e) { // text-mode-core throws on a few inputs instead of reporting them
+    return { ok: false, tmc, errors, warnings, diagnostics: [{ line: 1, severity: "error", message: `Text Mode crashed: ${e.message}`, text: "" }], items: 0, state: null };
+  }
   if (state) restoreGreek(state);
   const lines = tmc.split("\n");
   const lineOf = (pos) => tmc.slice(0, pos).split("\n").length;

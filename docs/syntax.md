@@ -15,8 +15,8 @@ A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without
 ## Contents
 
 - [Lines](#lines)
-- [Math](#math) · [Greek letters and Unicode](#greek-letters-and-unicode)
-- [Conditionals](#conditionals)
+- [Math](#math) · [Scientific notation](#scientific-notation) · [Greek letters and Unicode](#greek-letters-and-unicode)
+- [Conditionals](#conditionals) · [Actions](#actions)
 - [Style tails](#style-tails)
 - [Classes](#classes)
 - [Named colours](#named-colours)
@@ -43,6 +43,13 @@ A statement continues onto the next line when the line:
 - has an unclosed `(`, `[` or `{`,
 - ends in `\`, or
 - is followed by a line that is indented deeper and starts with an operator.
+
+A string can also run over several lines: a note or label whose closing `"` comes on a later line keeps its line breaks.
+
+```js
+"Line one of a note
+line two"
+```
 
 ```js
 f(x) = (x^2 +
@@ -128,6 +135,10 @@ x^2 + y^2 < 4 {y > 0}{x > 0}
 ```
 
 The parser TMC++ uses can't read restrictions, so each becomes a piecewise around the right-hand side (`y = {0 < x < 1: 2x}`), which draws the same thing. A `{...}` with a `:` in it is a piecewise value and is left alone.
+
+**Absolute value.** `|x - 1|` and `abs(x - 1)` both work, and bars multiply like brackets: `2|x|` becomes `2 * |x|`, `|x||y|` becomes `|x| * |y|`. A bar closes the one opened at the same bracket depth when it follows a value; otherwise it opens a new one, so `||x| - 1|` nests as you'd expect. From graph writes absolute values as `abs(...)`.
+
+**Regressions** are plain TMC: `Y1 ~ m * X1 + b`, with starting values as `#{ m = 1, b = 2 }` after it.
 
 **List comprehensions without brackets.** Desmos accepts `L = f(i) for i = [1...5]` and `join(g(a) for a = [1, 2])`; TMC++ adds the brackets TMC needs.
 
@@ -384,10 +395,10 @@ See [the spring library](../examples/lib/springs.tmcpp) and [a graph that import
 
 | Import | Where it works |
 | --- | --- |
-| `"./parts/ui.tmcpp"`, relative to the importing file | CLI: `tmcpp`, `tmcpp check` and `tmcpp preview` |
+| `"./parts/ui.tmcpp"`, relative to the importing file | CLI (`tmcpp`, `check`, `preview`), VS Code, and the MCP server, whose `push` sends the files along to the extension |
 | `"springs"`, a name saved in the extension's Library panel | extension |
-| `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, check and preview |
-| `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL in the CLI) | extension, CLI, check and preview |
+| `"gh:user/repo/path.tmcpp@ref"`, a file on GitHub (`@ref` is a branch, tag or commit; HEAD if left out) | extension, CLI, VS Code, MCP server |
+| `"https://raw.githubusercontent.com/..."` or `"https://gist.githubusercontent.com/..."`, a raw file or gist (any `https://` URL outside the extension) | extension, CLI, VS Code, MCP server |
 | `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
 | `"std/styles"`, `"std/ui"`, `"std/shapes"`, `"std/easing"`, `"std/3d"`: the built-in libraries | everywhere, offline; nothing to fetch |
 
@@ -548,11 +559,11 @@ Every `settings` line merges over the previous ones, key by key, starting from a
 
 - A `settings` block at the top with the default viewport and any `settings` lines you wrote.
 - A watermark: a `randomSeed` starting with `544d432b2b` ("TMC++" in ASCII hex), unless you set `randomSeed` yourself. The same source always gets the same seed.
-- In the extension only: stable item ids (`t1`, `t2`, ...) and a hidden metadata note that records classes, tags, tails, comments and hashes.
+- In the extension only (including graphs an AI loads with `push`): stable item ids (`t1`, `t2`, ...) and a hidden metadata note that records classes, tags, tails, comments and hashes.
 
 ### Rebuilding source from a graph
 
-The extension's **From graph** button turns a graph back into TMC++, using the metadata note:
+The extension's **From graph** button turns a graph back into TMC++, using the metadata note. The MCP server's `pull` tool does the same for a linked tab.
 
 | In the graph | Comes back as |
 | --- | --- |
@@ -626,9 +637,18 @@ segment((0, 0), (0, k))   . dotted
 y = 2x {0 < x < 1}        // a restriction
 r = 2 + cos(3θ)           // Greek, typed or by name
 
+// actions and conditionals
+score = 0
+mode = 0
+(3, -1) . point 12 click(score++, mode++ % 3)
+y = if mode = 0 then x else -x
+
+// libraries
+import { Button } from "std/ui"
+
 // components
 component Dot(P, abstract n = 0) {
-  P . point 12 click(n -> n + 1) label "${n}"
+  P . point 12 click(n++) label "${n}"
 }
 new Dot((2, 1)) as d1
 new Dot((4, 1), n = 5) as d2  . #red

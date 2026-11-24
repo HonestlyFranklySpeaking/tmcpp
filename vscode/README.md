@@ -10,7 +10,9 @@ This extension adds, for `.tmcpp` files:
 
 Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) for Cursor, VSCodium and Windsurf.
 
-The language reference is in the [syntax guide](https://github.com/IkeaSourPatches/tmcpp/blob/main/docs/syntax.md). To edit a graph live in Desmos, use the TMC++ browser extension from the same repository.
+The language reference is in the [syntax guide](https://github.com/IkeaSourPatches/tmcpp/blob/main/docs/syntax.md). To edit a graph live in Desmos, use the TMC++ browser extension from the same repository. To have an AI assistant in VS Code (or Cursor) write graphs, add the [TMC++ MCP server](https://github.com/IkeaSourPatches/tmcpp#mcp-server).
+
+The compiler inside is the same one the command line and the browser extension use, with DesModder's current Text Mode bundled, so `|x|` and regressions are understood.
 
 ## Building and publishing
 
@@ -23,4 +25,4 @@ npx @vscode/vsce publish              # VS Code Marketplace (needs vsce login)
 npx ovsx publish -p <token>           # Open VSX
 ```
 
-Raise `version` in `vscode/package.json` first; each store rejects a version it already has. To try changes without publishing, open the `vscode` folder in VS Code and press F5.
+Raise `version` in `vscode/package.json` first; each store rejects a version it already has. To try changes without publishing, open the `vscode` folder in VS Code and press F5, or install a local build with `npx @vscode/vsce package` and then `code --install-extension tmcpp-<version>.vsix`. On macOS, `code` is only on the PATH after **Shell Command: Install 'code' command in PATH** in VS Code's command palette.

@@ -4,11 +4,15 @@
 
 ### Changed
 
+- The old spelling `domain: @{ min, max }` is upgraded to `domain: @{ t: @{ min, max } }` (`theta` for `r = ...`), so graphs written for 0.2 keep their curve ranges.
 - `. fraction` compiles to `fractionDisplay`, and a parametric's or polar curve's range to `domain: @{ t: @{ ... } }` (`theta` for polar), as the current Text Mode spells them.
 
 ### Added
 
 - **Current Text Mode.** TMC++ now bundles a build of DesModder's Text Mode library from its November 2026 source instead of the npm release from 2023, so `|x|`, regression parameters and `@{ id }` work, and `tmcpp check` agrees with the extension. No runtime dependencies are left.
+- **Strings can span lines.** A note or label whose closing `"` is on a later line keeps its line breaks.
+- **Example:** `examples/solar-system.tmcpp`, a 3D solar system ChatGPT wrote through the MCP server.
+- **Absolute value multiplies like a bracket:** `2|x - 1|`, `a|x|` and `|x||y|` get their `*`.
 - **`fill 0` makes an invisible button.** It compiles to a fill too faint to see, because Text Mode turns a fill of 0 into no fill, which can't be clicked. From graph shows `fill 0` again.
 - **`tmcpp check` and `tmcpp preview`.** The npm command now compiles, checks and previews: `tmcpp check graph.tmcpp` validates the output with DesModder's own parser, and `tmcpp preview graph.tmcpp --out graph.png` renders it in real Desmos (`--at`, `--sweep`, `--width`, `--cols`, `--show`). `tmcpp compile graph.tmcpp` spells out the default command.
 - **MCP server.** `tmcpp mcp` serves `compile`, `check` and `preview` tools over stdio, plus the syntax reference and the built-in libraries as resources, so AI apps can write and look at TMC++ graphs. No extra dependencies.

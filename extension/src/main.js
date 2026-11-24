@@ -1,5 +1,5 @@
 // TMC++ panel for desmos.com/calculator. Runs in the page (MAIN world) so it can use Calc and Desmos.
-import { buildConfigFromGlobals, textToRaw, rawToText } from "@desmodder/text-mode-core";
+import { buildConfigFromGlobals, textToRaw, rawToText } from "../../src/tmc-core.js";
 import { decompile } from "../../src/decompile.js";
 import { latexToTmc } from "../../src/latex.js";
 import { compile, isWatermarkSeed } from "../../src/compile.js";

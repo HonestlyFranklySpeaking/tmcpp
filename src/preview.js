@@ -12,7 +12,7 @@
 //
 // Uses your installed Chrome, or Edge, through playwright-core. Needs internet access to desmos.com.
 import { readFileSync, writeFileSync } from "node:fs";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "./tmc-core.js";
 import { restoreGreek } from "./greek.js";
 import { compileFile } from "./load-node.js";
 import { decodeSource } from "./decode.js";

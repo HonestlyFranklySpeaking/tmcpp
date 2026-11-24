@@ -7,12 +7,12 @@
 // latexToText(latex) -> TMC math text is injected: it needs Desmos's own LaTeX parser,
 // which only exists on desmos.com (the extension passes one built from text-mode-core).
 
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "./tmc-core.js";
 import { compile, isWatermarkSeed } from "./compile.js";
 import { readMeta, fnv1a, itemHash, META_ID } from "./meta.js";
 import { substitute } from "./components.js";
 
-const AUTO_COLORS = new Set(["#c74440", "#2d70b3", "#388c46", "#6042a6", "#fa7e19", "#000000"]);
+const AUTO_COLORS = new Set(["#c74440", "#2d70b3", "#388c46", "#348543", "#6042a6", "#fa7e19", "#000000"]); // #348543: text-mode-core's own green, used when it isn't given Desmos's colours
 const BUILTIN = { "#c74440": "red", "#2d70b3": "blue", "#388c46": "green", "#6042a6": "purple", "#fa7e19": "orange", "#000000": "black" };
 const ORIENT = (o) => o.replace(/_/g, "-");
 
@@ -30,6 +30,8 @@ const DEFAULTS = {
   labelOrientation: "default", labelSize: "1", labelAngle: "0",
 };
 
+const isInvisibleFill = (x) => typeof x === "string" && /^\(?\s*(1\s*(\\cdot|\*)\s*10\^\{-7\}|0\.0000001|1e-7)\s*\)?$/.test(x.trim());
+
 /** The comparable style of a raw item, with Desmos's dropped defaults filled back in. */
 export function styleView(item) {
   const v = {};
@@ -38,7 +40,8 @@ export function styleView(item) {
     if (val !== undefined) v[k] = typeof val === "number" ? String(val) : val;
   }
   if (v.lines === false) { delete v.lineWidth; delete v.lineOpacity; delete v.lineStyle; }
-  if (v.fill === false) delete v.fillOpacity;
+  // No fill and TMC++'s invisible fill (fill 0 compiles to 1e-7) both read back as fill 0.
+  if (v.fill === false || isInvisibleFill(v.fillOpacity)) { v.fill = true; v.fillOpacity = "0"; }
   if (!v.showLabel) { delete v.labelSize; delete v.labelOrientation; delete v.labelAngle; delete v.suppressTextOutline; delete v.interactiveLabel; delete v.editableLabelMode; if (!v.label) delete v.label; delete v.showLabel; }
   if (v.points === false) { delete v.pointSize; delete v.pointOpacity; delete v.pointStyle; }
   if (item.clickableInfo?.enabled && item.clickableInfo.latex) {
@@ -279,14 +282,14 @@ export function decompile(state, { latexToText: fromLatex, itemToTmc = null }) {
   const exprLine = (item, indent) => {
     const e = exprs[item.id];
     // A parametric's t range (0 to 360 in a degree-mode graph, say) or a polar θ range has no
-    // token: write it raw, in the shape the bundled Text Mode reads: domain: @{ min, max }.
+    // token: write it raw, as Text Mode reads it: domain: @{ t: @{ min, max } } (theta for polar).
     // Desmos stores an untouched bound as "" (not missing): that means its default.
     const polar = !item.parametricDomain && item.polarDomain;
     const pd = item.parametricDomain ?? item.polarDomain;
     const [d0, d1] = polar ? ["0", "12 * pi"] : ["0", "1"];
     const bound = (x, d) => (x === undefined || x === null || String(x).trim() === "" ? d : valueText(x, latexToText));
     const lo = pd ? bound(pd.min, d0) : d0, hi = pd ? bound(pd.max, d1) : d1;
-    ctx.extraRaw = lo !== d0 || hi !== d1 ? [`domain: @{ min: ${lo}, max: ${hi} }`] : [];
+    ctx.extraRaw = lo !== d0 || hi !== d1 ? [`domain: @{ ${polar ? "theta" : "t"}: @{ min: ${lo}, max: ${hi} } }`] : [];
     const { math, checkMath } = mathOf(item);
     const actual = styleView(item);
     const join = (tail) => `${indent}${math}${tail ? "  " + tail : ""}`;

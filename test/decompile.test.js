@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "../src/tmc-core.js";
 import { compile } from "../src/compile.js";
 import { assignIds, buildMeta, metaItem } from "../src/meta.js";
 import { decompile } from "../src/decompile.js";
@@ -232,12 +232,12 @@ test("a slider with only a max, and a parametric's t range, survive From graph",
   ] } };
   const { source } = decompile(state, { latexToText: latexToTmc });
   assert.match(source, /^a_nim = 56\.595  \[ : 3532\.91\] \. forever/m);
-  assert.match(source, /domain: @\{ min: 0, max: 360 \}/);
+  assert.match(source, /domain: @\{ t: @\{ min: 0, max: 360 \} \}/);
   const r = compile(source, { defaultSettings: {}, watermark: false });
   assert.deepEqual(r.errors, []);
   assert.match(r.tmc, /slider: @\{ max: 3532\.91/);
   assert.match(r.tmc, /loopMode: "PLAY_INDEFINITELY"/);
-  assert.match(r.tmc, /domain: @\{ min: 0, max: 360 \}/);
+  assert.match(r.tmc, /domain: @\{ t: @\{ min: 0, max: 360 \} \}/);
   const [{ diagnostics }, st] = textToRaw(buildConfig({}), r.tmc);
   assert.deepEqual(diagnostics.map((d) => d.message), []);
   assert.deepEqual(st.expressions.list[1].parametricDomain, { min: "0", max: "360" });
@@ -323,4 +323,14 @@ test("M8: lines edited in Desmos give back the names as written", () => {
   const { source } = rebuild(state);
   assert.match(source, /^score_val = 100$/m);
   assert.match(source, /^label_y = score_val \* 2$/m);
+});
+
+test("an invisible fill, and no fill, both come back as fill 0", () => {
+  const src = "polygon((0,0),(1,0),(0,1)) . fill 0";
+  const { state, latexToText } = graph(src);
+  const poly = state.expressions.list.find((e) => e.latex?.includes("polygon"));
+  assert.equal(poly.fill, true); // Text Mode would have turned a plain 0 into fill: false
+  assert.match(decompile(state, { latexToText }).source, /fill 0/);
+  poly.fill = false; delete poly.fillOpacity;
+  assert.match(decompile(state, { latexToText }).source, /fill 0/);
 });

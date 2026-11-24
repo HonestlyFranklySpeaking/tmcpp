@@ -310,7 +310,7 @@ test("regression parameter block is not a colour", () => {
 test("point style, point opacity and item flags", () => {
   assert.equal(ok("(1, 2) . cross point-opacity 0.5 pinned secret"),
     '(1, 2) @{ points: @{ style: "CROSS", opacity: 0.5 }, pinned: true, secret: true };');
-  assert.equal(ok("1 + 7/2 . fraction"), "1 + 7/2 @{ displayEvaluationAsFraction: true };");
+  assert.equal(ok("1 + 7/2 . fraction"), "1 + 7/2 @{ fractionDisplay: true };");
 });
 
 test("settings no-grid and lock", () => {
@@ -486,4 +486,12 @@ test("list comprehensions without brackets get them", () => {
 test("a bracketed style value may contain spaces: opacity (a pi)", () => {
   assert.equal(ok("y = x . opacity (a pi) label \"A\" label-size (2 pi)"),
     'y = x @{ lines: @{ opacity: (a * pi) }, label: @{ text: "A", size: (2 * pi) } };');
+});
+
+test("fill 0 compiles to a fill too faint to see, so the shape stays clickable", async () => {
+  const { compile } = await import("../src/compile.js");
+  const r = compile("polygon((0,0),(1,0),(0,1)) . fill 0 click(n -> n + 1)\nn = 0", { watermark: false });
+  assert.deepEqual(r.errors, []);
+  assert.match(r.tmc, /fill: 0\.0000001/);
+  assert.match(compile("polygon((0,0),(1,0),(0,1)) . fill 0.5", { watermark: false }).tmc, /fill: 0\.5/);
 });

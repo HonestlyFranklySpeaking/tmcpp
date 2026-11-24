@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { latexToTmc } from "../src/latex.js";
 import { compile } from "../src/compile.js";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "../src/tmc-core.js";
 
 // LaTeX exactly as Desmos/TMC produced it earlier in this project.
 const CASES = [

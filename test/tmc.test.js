@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "../src/tmc-core.js";
 import { compile } from "../src/compile.js";
 
 const cfg = buildConfig({});

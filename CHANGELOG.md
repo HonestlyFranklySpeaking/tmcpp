@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- `. fraction` compiles to `fractionDisplay`, and a parametric's or polar curve's range to `domain: @{ t: @{ ... } }` (`theta` for polar), as the current Text Mode spells them.
+
 ### Added
 
+- **Current Text Mode.** TMC++ now bundles a build of DesModder's Text Mode library from its November 2026 source instead of the npm release from 2023, so `|x|`, regression parameters and `@{ id }` work, and `tmcpp check` agrees with the extension. No runtime dependencies are left.
+- **`fill 0` makes an invisible button.** It compiles to a fill too faint to see, because Text Mode turns a fill of 0 into no fill, which can't be clicked. From graph shows `fill 0` again.
 - **`tmcpp check` and `tmcpp preview`.** The npm command now compiles, checks and previews: `tmcpp check graph.tmcpp` validates the output with DesModder's own parser, and `tmcpp preview graph.tmcpp --out graph.png` renders it in real Desmos (`--at`, `--sweep`, `--width`, `--cols`, `--show`). `tmcpp compile graph.tmcpp` spells out the default command.
 - **MCP server.** `tmcpp mcp` serves `compile`, `check` and `preview` tools over stdio, plus the syntax reference and the built-in libraries as resources, so AI apps can write and look at TMC++ graphs. No extra dependencies.
 - **Desmos link.** Pair the browser extension with `tmcpp mcp` once (`tmcpp pair`, then ⋯ > Link to AI in the panel), and the AI can `push` graphs into your open Desmos tab, `pull` them back as TMC++ with your Desmos edits, and take a `screenshot`. Localhost only, extensions only, pairing code required.

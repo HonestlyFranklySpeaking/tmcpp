@@ -5,7 +5,7 @@
 // Left alone: function calls f(x), multi-letter names (quack42), keywords (for),
 // big operators `sum n=(1...5) n` / `integral x=(0...5) x^2`, and derivatives `(d/d x) f(x)`.
 
-import { buildConfig } from "@desmodder/text-mode-core";
+import { buildConfig } from "./tmc-core.js";
 import { greekPlaceholder } from "./greek.js";
 
 const BIG_OPS = new Set(["sum", "product", "integral"]);

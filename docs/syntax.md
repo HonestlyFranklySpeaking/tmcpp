@@ -433,7 +433,7 @@ The extension can only fetch from `raw.githubusercontent.com` and `gist.githubus
 | `solid` `dashed` `dotted` | `lines: @{ style: "DASHED" }` |
 | `width N` | `lines: @{ width: N }` |
 | `opacity N` | `lines: @{ opacity: N }` |
-| `fill N` | `fill: N` |
+| `fill N` | `fill: N`. `fill 0` writes `fill: 0.0000001`: Text Mode turns 0 into "no fill", and an unfilled shape can't be clicked, so this keeps invisible buttons working. From graph shows `fill 0`. |
 
 ### Points
 
@@ -502,7 +502,7 @@ polygon((0, 0), (2, 0), (0, 2))  #blue fill 0.8 click(s -> s + 1)
 | `hidden` | `hidden: true` |
 | `pinned` | `pinned: true` |
 | `secret` | `secret: true` (hidden from viewers of a shared graph) |
-| `fraction` | `displayEvaluationAsFraction: true` |
+| `fraction` | `fractionDisplay: true` |
 
 ## Blocks
 
@@ -563,7 +563,7 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 | an item you added in Desmos | its math and any styling, without Desmos's automatic colour |
 | a graph made without TMC++ | every item with its colours (including colour variables, as `#(c_1)`), fills and other styling |
 | a deleted item that had comments | the comments, at the end under `// orphaned comments` |
-| a parametric's or polar curve's range (`t` from 0 to 360) | a raw block: `@{ domain: @{ min: 0, max: 360 } }` |
+| a parametric's or polar curve's range (`t` from 0 to 360) | a raw block: `@{ domain: @{ t: @{ min: 0, max: 360 } } }` (`theta` for a polar curve) |
 | a component instance you haven't touched | its `new ... as ...` line, as written |
 | an instance with an edited or deleted line | **detached**: its folder as plain lines, with a warning; other instances still come back as `new` lines |
 | a line you added to an instance's folder | that line, right after the `new` line |

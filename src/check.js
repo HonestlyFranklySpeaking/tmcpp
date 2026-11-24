@@ -1,6 +1,6 @@
 // tmcpp check: compile, then validate the TMC with DesModder's own parser (text-mode-core).
 import { readFileSync } from "node:fs";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "./tmc-core.js";
 import { restoreGreek } from "./greek.js";
 import { compileFile } from "./load-node.js";
 import { decodeSource } from "./decode.js";

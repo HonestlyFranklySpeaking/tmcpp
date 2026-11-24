@@ -31,9 +31,10 @@
     "tmcpp": "src/cli.js"
   },
   "files": [
-    "src/",
+    "CHANGELOG.md",
     "docs/syntax.md",
-    "CHANGELOG.md"
+    "src/",
+    "vendor/"
   ],
   "engines": {
     "node": ">=20"
@@ -46,9 +47,6 @@
     "build:vscode": "node tools/build-vscode.js",
     "pack": "node tools/pack.js",
     "preview": "node tools/preview.js"
-  },
-  "dependencies": {
-    "@desmodder/text-mode-core": "0.1.1"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.4",

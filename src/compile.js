@@ -37,6 +37,7 @@ const VOCAB = [
 ];
 // For the editor's autocomplete and highlighting.
 export { VOCAB as STYLE_WORDS, NAMED_COLORS };
+export const INVISIBLE_FILL = "0.0000001"; // see `fill` below
 const OPEN = "([{", CLOSE = ")]}";
 
 // ---------- small helpers ----------
@@ -320,7 +321,13 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "width" || lower === "opacity") {
       const n = num(i, lower); if (n !== null) { set(["lines", lower], n, lower); i++; } continue;
     }
-    if (lower === "fill") { const n = num(i, "fill"); if (n !== null) { set(["fill"], n, "fill"); i++; } continue; }
+    if (lower === "fill") {
+      const n = num(i, "fill");
+      // Text Mode turns a fill of 0 into "no fill", and an unfilled shape can't be clicked: write a
+      // fill too faint to see instead, so `fill 0` gives an invisible button. From graph shows 0 again.
+      if (n !== null) { set(["fill"], n === 0 ? INVISIBLE_FILL : n, "fill"); i++; }
+      continue;
+    }
     if (lower === "point") { const n = num(i, "point"); if (n !== null) { set(["points", "size"], n, "point size"); i++; } continue; }
     if (lower === "drag") {
       const m = DRAG_MODES[(tokens[i + 1] ?? "").toLowerCase()];
@@ -356,7 +363,7 @@ function applyTokens(tokens, style, ctx, seen = new Set()) {
     if (lower === "point-opacity") { const n = num(i, "point-opacity"); if (n !== null) { set(["points", "opacity"], n, "point-opacity"); i++; } continue; }
     // Common item flags
     if (lower === "pinned" || lower === "secret") { set([lower], "true", lower); continue; }
-    if (lower === "fraction") { set(["displayEvaluationAsFraction"], "true", "fraction"); continue; }
+    if (lower === "fraction") { set(["fractionDisplay"], "true", "fraction"); continue; }
     // Slider playback
     if (lower === "play") { set(["slider", "playing"], "true", "play"); continue; }
     if (lower === "reverse") { set(["slider", "reversed"], "true", "reverse"); continue; }

@@ -263,12 +263,7 @@ The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some m
 
 ## Known limits
 
-The npm release of text-mode-core (0.1.1) is older than the DesModder extension. `npm test` and `tmcpp check` therefore reject a few things the extension accepts, and the bundled extension inherits the same limits:
-
-- `|x|` absolute value: use `abs(x)`
-- regression parameter blocks `# { ... }`
-- the `id` style option (TMC++ assigns ids itself)
-- Greek letters other than `alpha beta theta phi pi tau`, and restrictions like `y = x {x > 0}`: TMC++ handles both itself (see the syntax reference), so they only matter if you write plain TMC
+TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-core`, from DesModder's source, November 2026), because the npm release stopped at 0.1.1 in 2023. So `|x|`, regression parameters (`#{ m = 1, b = 2 }`) and the `id` option all work. Two things plain TMC still doesn't read, which TMC++ handles itself (see the syntax reference): Greek letters other than `alpha beta theta phi pi tau`, and restrictions like `y = x {x > 0}`.
 
 ## Roadmap
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildConfig, textToRaw } from "@desmodder/text-mode-core";
+import { buildConfig, textToRaw } from "../src/tmc-core.js";
 import { compile } from "../src/compile.js";
 import { assignIds, buildMeta, readMeta, metaItem, styleHash, graphHash, META_ID } from "../src/meta.js";
 

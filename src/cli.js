@@ -17,6 +17,8 @@ const HELP = `tmcpp ${version()}: compile TMC++ to DesModder Text Mode (TMC)
   tmcpp < graph.tmcpp               read the source from standard input
   tmcpp check graph.tmcpp           compile, then validate with DesModder's own parser
   tmcpp preview graph.tmcpp [opts]  render a PNG in real Desmos (needs playwright-core)
+  tmcpp mcp                         run an MCP server on stdio (compile, check, preview tools)
+  tmcpp pair                        show the code that links the browser extension to tmcpp mcp
   tmcpp --version
 
 preview options:
@@ -60,6 +62,13 @@ if (cmd === "check") {
 } else if (cmd === "preview") {
   const { runPreview } = await import("./preview.js");
   await runPreview(argv.slice(1));
+} else if (cmd === "mcp") {
+  const { runMcp } = await import("./mcp.js");
+  await runMcp();
+} else if (cmd === "pair") {
+  const { pairing } = await import("./link.js");
+  const { code, file } = pairing();
+  console.log(`${code}\n\nIn Desmos: open the TMC++ panel, choose ⋯ > Link to AI, paste the code, press Link.\nThe code is kept in ${file}; delete that file to make a new one.`);
 } else if (cmd === "compile") {
   process.exit(await compileCmd(argv[1]));
 } else if (cmd?.startsWith("-")) {

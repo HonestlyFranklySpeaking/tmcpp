@@ -29,97 +29,122 @@ async function loadPlaywright() {
   }
 }
 
-/** argv: the arguments after `preview`. Exits the process on errors, like a command. */
-export async function runPreview(argv) {
-  const die = (msg) => { console.error(`preview: ${msg}`); process.exit(1); };
-
-  // ---- arguments ----
-
-  let file = null;
-  const opt = { at: {}, sweep: null, out: null, width: 1600, cols: 3, show: false };
-
-  /** Numbers with optional pi: 2, -1.5, pi, 2pi, pi/2, 3pi/4. */
-  function num(s) {
-    const m = String(s).trim().match(/^(-?\d*\.?\d*)\s*\*?\s*(pi)?\s*(?:\/\s*(\d*\.?\d+))?$/);
-    if (!m || (m[1] === "" && !m[2]) || m[1] === "-" && !m[2]) {
-      const n = Number(s); if (Number.isFinite(n)) return n;
-      die(`can't read the number '${s}' (use forms like 1.5, 2pi, pi/2)`);
-    }
-    const k = m[1] === "" ? 1 : m[1] === "-" ? -1 : Number(m[1]);
-    return (m[2] ? k * Math.PI : k) / (m[3] ? Number(m[3]) : 1);
+/** Numbers with optional pi: 2, -1.5, pi, 2pi, pi/2, 3pi/4. Throws on anything else. */
+export function parseNumber(s) {
+  if (typeof s === "number") return s;
+  const m = String(s).trim().match(/^(-?\d*\.?\d*)\s*\*?\s*(pi)?\s*(?:\/\s*(\d*\.?\d+))?$/);
+  if (!m || (m[1] === "" && !m[2]) || m[1] === "-" && !m[2]) {
+    const n = Number(s); if (s !== "" && Number.isFinite(n)) return n;
+    throw new Error(`can't read the number '${s}' (use forms like 1.5, 2pi, pi/2)`);
   }
+  const k = m[1] === "" ? 1 : m[1] === "-" ? -1 : Number(m[1]);
+  return (m[2] ? k * Math.PI : k) / (m[3] ? Number(m[3]) : 1);
+}
 
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    const next = () => argv[++i] ?? die(`${a} needs a value`);
-    if (a === "--out") opt.out = next();
-    else if (a === "--width") opt.width = Number(next());
-    else if (a === "--cols") opt.cols = Number(next());
-    else if (a === "--show") opt.show = true;
-    else if (a === "--sweep") {
-      const m = next().match(/^([A-Za-z][\w]*)=(.+?)\.\.(=?)(.+)\/(\d+)$/);
-      if (!m) die("--sweep looks like a=0..2pi/9 (name=from..to/frames; ..= includes the end)");
-      opt.sweep = { name: m[1], lo: num(m[2]), inclusive: m[3] === "=", hi: num(m[4]), n: Number(m[5]) };
-      if (opt.sweep.n < 1) die("--sweep needs at least 1 frame");
-    } else if (!a.startsWith("--")) {
-      if (file) die(`unexpected '${a}' (one file at a time)`);
-      file = a;
-    } else if (a === "--at") {
-      while (argv[i + 1] && !argv[i + 1].startsWith("--")) {
-        const [k, v] = argv[++i].split("=");
-        if (!v) die(`--at expects name=value, got '${argv[i]}'`);
-        opt.at[k] = num(v);
-      }
+/** "a=0..2pi/9" -> { name, lo, hi, n, inclusive }. */
+export function parseSweep(text) {
+  const m = String(text).match(/^([A-Za-z][\w]*)=(.+?)\.\.(=?)(.+)\/(\d+)$/);
+  if (!m) throw new Error("--sweep looks like a=0..2pi/9 (name=from..to/frames; ..= includes the end)");
+  const sweep = { name: m[1], lo: parseNumber(m[2]), inclusive: m[3] === "=", hi: parseNumber(m[4]), n: Number(m[5]) };
+  if (sweep.n < 1) throw new Error("--sweep needs at least 1 frame");
+  return sweep;
+}
+
+/**
+ * Render a TMC++ (or TMC, with isTmc) source in real Desmos.
+ * Returns { png: Buffer, frames, missing, warnings }; throws an Error with a readable message.
+ * at: { slider: number }, sweep: { name, lo, hi, n, inclusive } or null.
+ */
+export async function renderPreview(source, { path = "", isTmc = /\.tmc$/i.test(path), at = {}, sweep = null, width = 1600, cols = 3, show = false } = {}) {
+  let tmc = source;
+  const warnings = [];
+  if (!isTmc) {
+    const r = await compileFile(source, path); // imports: ./files from disk, gh: and https from the network
+    if (r.errors.length) {
+      const e = new Error(r.errors.map((x) => `${path || "<source>"}:${x.line}: error: ${x.message}`).join("\n"));
+      e.compileErrors = r.errors;
+      throw e;
     }
-  }
-  if (!file) die("usage: tmcpp preview FILE [--at a=1 b=2] [--sweep a=0..2pi/9] [--out out.png]");
-  opt.out ??= file.replace(/\.(tmcpp|tmc|txt)$/i, "") + ".preview.png";
-
-  // ---- compile to a Desmos state ----
-  let tmc = decodeSource(readFileSync(file));
-  if (!/\.tmc$/i.test(file)) {
-    const r = await compileFile(tmc, file); // imports: ./files from disk, gh: and https from the network
-    for (const e of r.errors) console.error(`${file}:${e.line}: error: ${e.message}`);
-    if (r.errors.length) process.exit(1);
+    warnings.push(...r.warnings);
     tmc = r.tmc;
   }
   const [{ diagnostics }, state] = textToRaw(buildConfig({}), tmc);
-  restoreGreek(state);
   const errs = diagnostics.filter((d) => d.severity === "error");
-  if (errs.length || !state) die(`TMC rejected the file: ${errs[0]?.message ?? "no state"} (run tmcpp check for details)`);
+  if (errs.length || !state) throw new Error(`TMC rejected the file: ${errs[0]?.message ?? "no state"} (run tmcpp check for details)`);
+  restoreGreek(state);
 
   // Freeze animation so every frame is exactly the values asked for.
   for (const e of state.expressions.list) if (e.slider) e.slider.isPlaying = false;
   if (state.expressions.ticker) state.expressions.ticker.playing = false;
 
-  const frames = opt.sweep
-    ? Array.from({ length: opt.sweep.n }, (_, i) => {
-        const steps = opt.sweep.inclusive ? Math.max(1, opt.sweep.n - 1) : opt.sweep.n;
-        return { ...opt.at, [opt.sweep.name]: opt.sweep.lo + (opt.sweep.hi - opt.sweep.lo) * i / steps };
+  const frames = sweep
+    ? Array.from({ length: sweep.n }, (_, i) => {
+        const steps = sweep.inclusive ? Math.max(1, sweep.n - 1) : sweep.n;
+        return { ...at, [sweep.name]: sweep.lo + (sweep.hi - sweep.lo) * i / steps };
       })
-    : [opt.at];
+    : [at];
 
-  // ---- render in real Desmos ----
   let chromium;
   try { ({ chromium } = await loadPlaywright()); }
-  catch { die("previews need playwright-core, which drives your installed Chrome or Edge.\n  Installed tmcpp globally?  npm install -g playwright-core\n  Using npx?                 npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview FILE"); }
-
+  catch {
+    throw new Error("previews need playwright-core, which drives your installed Chrome or Edge.\n  Installed tmcpp globally?  npm install -g playwright-core\n  Using npx?                 npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview FILE");
+  }
   let browser;
   for (const channel of ["chrome", "msedge"]) {
-    try { browser = await chromium.launch({ channel, headless: !opt.show }); break; } catch {}
+    try { browser = await chromium.launch({ channel, headless: !show }); break; } catch {}
   }
-  if (!browser) die("couldn't start Chrome or Edge; install one of them");
+  if (!browser) throw new Error("couldn't start Chrome or Edge; install one of them");
 
   try {
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-    await page.goto("https://www.desmos.com/calculator", { waitUntil: "domcontentloaded", timeout: 60000 })
-      .catch(() => die("couldn't open desmos.com (are you online?)"));
+    try {
+      await page.goto("https://www.desmos.com/calculator", { waitUntil: "domcontentloaded", timeout: 60000 });
+    } catch { throw new Error("couldn't open desmos.com (are you online?)"); }
     await page.waitForFunction(() => window.Calc && window.Calc.asyncScreenshot, null, { timeout: 60000 });
-    const { png, missing } = await page.evaluate(renderFrames, { state, frames, width: opt.width, cols: opt.cols });
-    for (const m of missing) console.error(`preview: warning: no slider named '${m}'`);
-    writeFileSync(opt.out, Buffer.from(png.split(",")[1], "base64"));
-    console.log(`preview: wrote ${opt.out} (${frames.length} frame${frames.length > 1 ? "s" : ""})`);
+    const { png, missing } = await page.evaluate(renderFrames, { state, frames, width, cols });
+    return { png: Buffer.from(png.split(",")[1], "base64"), frames: frames.length, missing, warnings };
   } finally {
     await browser.close();
   }
+}
+
+/** argv: the arguments after `preview`. Exits the process on errors, like a command. */
+export async function runPreview(argv) {
+  const die = (msg) => { console.error(`preview: ${msg}`); process.exit(1); };
+  const opt = { at: {}, sweep: null, out: null, width: 1600, cols: 3, show: false };
+  let file = null;
+  try {
+    for (let i = 0; i < argv.length; i++) {
+      const a = argv[i];
+      const next = () => argv[++i] ?? die(`${a} needs a value`);
+      if (a === "--out") opt.out = next();
+      else if (a === "--width") opt.width = Number(next());
+      else if (a === "--cols") opt.cols = Number(next());
+      else if (a === "--show") opt.show = true;
+      else if (a === "--sweep") opt.sweep = parseSweep(next());
+      else if (a === "--at") {
+        while (argv[i + 1] && !argv[i + 1].startsWith("--")) {
+          const [k, v] = argv[++i].split("=");
+          if (!v) die(`--at expects name=value, got '${argv[i]}'`);
+          opt.at[k] = parseNumber(v);
+        }
+      } else if (!a.startsWith("--")) {
+        if (file) die(`unexpected '${a}' (one file at a time)`);
+        file = a;
+      } else die(`unknown option '${a}'`);
+    }
+  } catch (e) { die(e.message); }
+  if (!file) die("usage: tmcpp preview FILE [--at a=1 b=2] [--sweep a=0..2pi/9] [--out out.png]");
+  opt.out ??= file.replace(/\.(tmcpp|tmc|txt)$/i, "") + ".preview.png";
+
+  let r;
+  try {
+    r = await renderPreview(decodeSource(readFileSync(file)), { path: file, ...opt });
+  } catch (e) {
+    if (e.compileErrors) { console.error(e.message); process.exit(1); }
+    die(e.message);
+  }
+  for (const m of r.missing) console.error(`preview: warning: no slider named '${m}'`);
+  writeFileSync(opt.out, r.png);
+  console.log(`preview: wrote ${opt.out} (${r.frames} frame${r.frames > 1 ? "s" : ""})`);
 }

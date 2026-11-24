@@ -30,6 +30,13 @@ const read = async () => (await chrome.storage.local.get(KEY))[KEY] ?? {};
 const write = (libs) => chrome.storage.local.set({ [KEY]: libs });
 
 const ops = {
+  // The AI link: the panel reads and changes the pairing code; the background worker uses it.
+  async linkGet() { return chrome.runtime.sendMessage({ op: "link-get" }); },
+  async linkSet({ code, enabled }) {
+    const link = { code: String(code ?? "").trim(), enabled: !!enabled };
+    await chrome.storage.local.set({ link });
+    return { link };
+  },
   async list() { return read(); },
   async save({ name, source }) {
     const libs = await read();
@@ -74,3 +81,34 @@ window.addEventListener("message", async (e) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes[KEY]) window.postMessage({ tmcpp: "changed", data: changes[KEY].newValue ?? {} }, location.origin);
 });
+
+// ---------- the AI link: requests from `tmcpp mcp`, via the background worker, to the panel ----------
+let linkSeq = 0;
+const linkWaiting = new Map();
+window.addEventListener("message", (e) => {
+  const msg = e.data;
+  if (e.source !== window || msg?.tmcpp !== "link-res") return;
+  const done = linkWaiting.get(msg.seq);
+  if (done) { linkWaiting.delete(msg.seq); done(msg); }
+});
+chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+  if (msg?.op === "link-status") { window.postMessage({ tmcpp: "link-status", status: msg.status }, location.origin); return false; }
+  if (msg?.op !== "link-req") return false;
+  const seq = ++linkSeq;
+  const timer = setTimeout(() => { linkWaiting.delete(seq); reply({ ok: false, error: "the TMC++ panel didn't answer; reload the Desmos tab" }); }, 25000);
+  linkWaiting.set(seq, (res) => { clearTimeout(timer); reply({ ok: res.ok, data: res.data, error: res.error }); });
+  window.postMessage({ tmcpp: "link-req", seq, op: msg.req.op, args: msg.req.args ?? {} }, location.origin);
+  return true;
+});
+// Say hello now, when the tab comes to the front, and every 20s: the worker learns which Desmos
+// tab is in use, and the hello wakes it to reconnect the link if it was stopped.
+const hello = () => {
+  if (!chrome.runtime?.id) return; // the extension was reloaded; this copy is stale
+  chrome.runtime.sendMessage({ op: "tab-hello", inUse: !document.hidden && document.hasFocus() }).then((status) => {
+    if (status) window.postMessage({ tmcpp: "link-status", status }, location.origin);
+  }).catch(() => {});
+};
+hello();
+window.addEventListener("focus", hello);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) hello(); });
+setInterval(hello, 20000);

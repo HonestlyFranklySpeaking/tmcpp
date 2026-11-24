@@ -75,6 +75,53 @@ The parser only proves the equations are valid; the preview shows the compositio
 
 Paste the printed TMC into DesModder's Text Mode (the T button above the expression list), or use the extension below.
 
+## MCP server
+
+`tmcpp mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdio, so an AI app can write TMC++ and see what it made. It offers three tools and some reading material:
+
+| | |
+| --- | --- |
+| `compile` | TMC++ to TMC, or compile errors with line numbers |
+| `check` | compile, then validate with DesModder's parser; fast, no browser |
+| `preview` | a PNG from real Desmos, with `at` slider values or a `sweep` contact sheet (needs `playwright-core`) |
+| `tmcpp://docs/syntax` | this repo's syntax reference |
+| `tmcpp://std/...` | the source of each built-in library |
+
+Each tool takes `source` (the text) or `file` (a path; relative imports resolve next to it).
+
+### Linking your Desmos tab
+
+With the browser extension linked, the AI can also work in the Desmos tab you have open:
+
+| | |
+| --- | --- |
+| `link_status` | linked or not, and the pairing code if not |
+| `push` | put TMC++ in the panel and compile it into your graph (undo in Desmos brings the old graph back; the old panel text is kept) |
+| `pull` | TMC++ rebuilt from the graph as it is now, edits you made in Desmos included, or the panel's text |
+| `screenshot` | a PNG of the tab as it is right now |
+
+To pair, run `tmcpp pair` (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked. Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
+
+How it's kept safe: `tmcpp mcp` listens only on `127.0.0.1` (port 51324, or `TMCPP_LINK_PORT`), accepts only browser extensions (web pages can't connect), and drops any connection that doesn't send the pairing code within 5 seconds. **Unlink** in the panel turns it off; `TMCPP_LINK=0` starts the server without it.
+
+Claude Code:
+
+```sh
+claude mcp add tmcpp -- npx -y -p @ikeasourpatches/tmcpp -p playwright-core tmcpp mcp
+```
+
+Claude Desktop, Cursor and other apps with a JSON config:
+
+```json
+{
+  "mcpServers": {
+    "tmcpp": { "command": "npx", "args": ["-y", "-p", "@ikeasourpatches/tmcpp", "-p", "playwright-core", "tmcpp", "mcp"] }
+  }
+}
+```
+
+On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't start `npx` directly. From a checkout, point it at the source instead: `"command": "node", "args": ["C:/path/to/tmcpp/src/cli.js", "mcp"]`. Drop the `playwright-core` part if you don't want previews.
+
 ## Browser extension
 
 1. `npm install`, then `npm run build:ext` (writes `extension/dist/tmcpp.js`).

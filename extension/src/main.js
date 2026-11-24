@@ -6,7 +6,7 @@ import { compile, isWatermarkSeed } from "../../src/compile.js";
 import { decodeSource } from "../../src/decode.js";
 import { restoreGreek } from "../../src/greek.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
-import { createLibrary, libraryCss } from "./library.js";
+import { createLibrary, libraryCss, ask } from "./library.js";
 import { createEditor } from "./editor.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
@@ -54,6 +54,17 @@ const css = `
 #tmcpp-out .ok { color: #388c46; }
 #tmcpp-out .err { color: #c74440; cursor: pointer; }
 #tmcpp-out .warn { color: #b06d00; cursor: pointer; }
+#tmcpp-link { border-bottom: 1px solid #eee; padding: 8px 10px; font-size: 12px; }
+#tmcpp-link p { margin: 0 0 6px; color: #555; }
+#tmcpp-link code { font: 11px ui-monospace, Consolas, monospace; background: #f4f4f4; padding: 1px 4px; border-radius: 3px; }
+#tmcpp-link .row { display: flex; gap: 6px; }
+#tmcpp-link input { flex: 1; font: 12px ui-monospace, Consolas, monospace; padding: 4px 6px; border: 1px solid #ccc; border-radius: 5px; }
+#tmcpp-link button { font: 600 12px system-ui, sans-serif; padding: 4px 10px; border-radius: 6px; border: 1px solid #2d70b3; background: #2d70b3; color: #fff; cursor: pointer; }
+#tmcpp-link button.ghost { background: #fff; color: #2d70b3; }
+#tmcpp-link .state { font-weight: 600; }
+#tmcpp-link .state.linked { color: #388c46; } #tmcpp-link .state.denied { color: #c74440; } #tmcpp-link .state.waiting { color: #b06d00; }
+#tmcpp-ai { display: none; font: 700 10px system-ui, sans-serif; color: #fff; background: #388c46; border-radius: 4px; padding: 2px 5px; cursor: pointer; }
+#tmcpp-ai.on { display: inline-block; }
 `;
 
 function mount(Calc, Desmos) {
@@ -65,7 +76,7 @@ function mount(Calc, Desmos) {
   const panel = document.createElement("div");
   panel.id = "tmcpp-panel";
   panel.innerHTML = `
-    <div id="tmcpp-head"><b>TMC++</b>
+    <div id="tmcpp-head"><b>TMC++ <span id="tmcpp-ai" title="An AI app is linked through tmcpp mcp and can load graphs here">AI</span></b>
       <button class="ghost" id="tmcpp-fromgraph" title="Rebuild TMC++ from the graph as it is now, including edits made in Desmos">From graph</button>
       <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library<span class="badge" hidden></span></button>
       <button class="ghost" id="tmcpp-more" title="Open, save, copy and the example" aria-haspopup="true">⋯</button>
@@ -75,22 +86,33 @@ function mount(Calc, Desmos) {
         <button id="tmcpp-save" role="menuitem">Save as .tmcpp</button>
         <button id="tmcpp-tmc" role="menuitem">Copy compiled TMC</button>
         <hr>
+        <button id="tmcpp-linkbtn" role="menuitem">Link to AI… <span>tmcpp mcp</span></button>
+        <hr>
         <button id="tmcpp-example" role="menuitem">Load example <span>replaces text</span></button>
       </div>
       <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden></div>
     <div id="tmcpp-info"></div>
     <div id="tmcpp-lib" hidden></div>
+    <div id="tmcpp-link" hidden>
+      <p>Status: <span class="state">Not linked</span></p>
+      <p>Lets an AI app running <code>tmcpp mcp</code> on this computer load graphs into this tab, read them back and take screenshots. Run <code>tmcpp pair</code> for the code.</p>
+      <div class="row"><input id="tmcpp-code" placeholder="pairing code, like 51324-3f9a…" spellcheck="false" autocomplete="off">
+        <button id="tmcpp-linkon">Link</button><button class="ghost" id="tmcpp-linkoff">Unlink</button></div>
+    </div>
     <div id="tmcpp-editor"></div>
     <div id="tmcpp-out"></div>`;
   document.body.append(toggle, panel);
 
+  // Libraries that came with a graph from the AI link (its ./relative files), kept for this page.
+  let pushed = { libraries: {}, from: "" };
+  function allLibraries() { return { ...library.sources(), ...pushed.libraries }; }
   // The editor (CodeMirror): compile errors show as squiggles while you type.
   const src = createEditor(panel.querySelector("#tmcpp-editor"), {
     run: () => run(),
-    libraries: () => library.sources(),
+    libraries: () => allLibraries(),
     check: (text) => {
       try {
-        const r = compile(text, { libraries: library.sources(), watermark: false });
+        const r = compile(text, { libraries: allLibraries(), from: pushed.from, watermark: false });
         return [...r.errors.map((e) => ({ ...e, kind: "err" })), ...r.warnings.map((w) => ({ ...w, kind: "warn" }))];
       } catch { return []; }
     },
@@ -138,7 +160,9 @@ function mount(Calc, Desmos) {
     src.setSelectionRange(start, start + (lines[n - 1] ?? "").length);
   };
 
+  let lastReport = { items: [], okText: "" };
   const report = (items, okText) => {
+    lastReport = { items, okText };
     out.replaceChildren();
     if (!items.length) {
       out.append(Object.assign(document.createElement("div"), { className: "ok", textContent: okText }));
@@ -190,7 +214,7 @@ function mount(Calc, Desmos) {
     hasLocalSource = true;
     // Keep this graph's TMC++ seed so random() results don't reshuffle on every compile.
     const seed = Calc.getState().randomSeed;
-    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined, libraries: library.sources() });
+    const r = compile(src.value, { randomSeed: isWatermarkSeed(seed) ? seed : undefined, libraries: allLibraries(), from: pushed.from });
     library.notePending(src.value);
     const notes = r.warnings.map((w) => ({ ...w, kind: "warn" }));
     if (r.errors.length) {
@@ -276,8 +300,9 @@ function mount(Calc, Desmos) {
     }
     return t.trim();
   };
+  const rebuild = () => decompile(Calc.getState(), { latexToText, itemToTmc: itemTmc });
   const fromGraph = (why) => {
-    const { source, warnings } = decompile(Calc.getState(), { latexToText, itemToTmc: itemTmc });
+    const { source, warnings } = rebuild();
     src.value = source;
     localStorage.setItem(STORE(), src.value);
     hasLocalSource = true;
@@ -342,6 +367,78 @@ function mount(Calc, Desmos) {
   // Ctrl+Enter, Tab and Ctrl+/ are the editor's own keys; keep Desmos's shortcuts out of it.
   src.addEventListener("keydown", (e) => e.stopPropagation());
   src.addEventListener("input", () => { localStorage.setItem(STORE(), src.value); hasLocalSource = true; });
+
+  // ---- the AI link (M14): requests from `tmcpp mcp`, through the background worker ----
+  const linkBox = panel.querySelector("#tmcpp-link"), codeIn = panel.querySelector("#tmcpp-code");
+  const aiBadge = panel.querySelector("#tmcpp-ai"), stateEl = linkBox.querySelector(".state");
+  const showLink = (st) => {
+    if (!st) return;
+    stateEl.textContent = st.message;
+    stateEl.className = `state ${st.state}`;
+    aiBadge.classList.toggle("on", st.state === "linked");
+    toggle.textContent = st.state === "linked" ? "TMC++ · AI" : "TMC++";
+  };
+  const refreshLink = async () => {
+    try {
+      const r = await ask("linkGet");
+      if (!r) throw new Error("The extension's background worker is out of date: reload TMC++ in chrome://extensions");
+      if (r.link?.code) codeIn.value = r.link.code;
+      showLink(r.status);
+    }
+    catch (e) { showLink({ state: "denied", message: e.message }); }
+  };
+  panel.querySelector("#tmcpp-linkbtn").onclick = () => { linkBox.hidden = !linkBox.hidden; if (!linkBox.hidden) { refreshLink(); codeIn.focus(); } };
+  aiBadge.onclick = () => { linkBox.hidden = false; refreshLink(); };
+  codeIn.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter") panel.querySelector("#tmcpp-linkon").click(); });
+  panel.querySelector("#tmcpp-linkon").onclick = async () => {
+    const code = codeIn.value.trim();
+    if (!/^\d{2,5}-[0-9a-f]{16,}$/.test(code)) { showLink({ state: "denied", message: "A pairing code looks like 51324-3f9a… (run tmcpp pair)" }); return; }
+    await ask("linkSet", { code, enabled: true });
+    showLink({ state: "waiting", message: "Connecting…" });
+    setTimeout(refreshLink, 1500);
+  };
+  panel.querySelector("#tmcpp-linkoff").onclick = async () => {
+    await ask("linkSet", { code: codeIn.value, enabled: false });
+    showLink({ state: "off", message: "Not linked" });
+  };
+
+  const screenshot = (width = 1000) => new Promise((resolve) => {
+    const b = Calc.graphpaperBounds?.pixelCoordinates ?? { width: 1000, height: 700 };
+    const w = Math.max(100, Math.min(4000, Math.round(width)));
+    Calc.asyncScreenshot({ width: w, height: Math.round(w * b.height / b.width), targetPixelRatio: 1, showLabels: true }, resolve);
+  });
+  const linkOps = {
+    info: () => ({ title: document.title, url: location.href, panelOpen: isOpen(), madeWithTmcpp: !!readMeta(Calc.getState().expressions.list)?.meta, editorLines: src.value.split("\n").length }),
+    // Load TMC++ into the editor and compile it into the graph, like pressing Compile.
+    push: ({ source, libraries = {}, from = "" }) => {
+      if (typeof source !== "string") throw new Error("push needs source text");
+      if (src.value.trim() && src.value !== source) localStorage.setItem(`tmcpp:before-ai:${location.pathname}`, src.value);
+      pushed = { libraries, from };
+      src.value = source;
+      localStorage.setItem(STORE(), source);
+      hasLocalSource = true;
+      open(true, false);
+      run();
+      const errors = lastReport.items.filter((i) => i.kind === "err"), warnings = lastReport.items.filter((i) => i.kind === "warn");
+      return { ok: errors.length === 0, message: lastReport.okText, errors, warnings };
+    },
+    // Read TMC++ back: rebuilt from the graph (including edits made in Desmos), or the editor's text.
+    pull: ({ from = "graph" }) => {
+      if (from === "editor") return { source: src.value, warnings: [] };
+      return rebuild();
+    },
+    screenshot: async ({ width }) => ({ png: await screenshot(width) }),
+  };
+  window.addEventListener("message", async (e) => {
+    const m = e.data;
+    if (e.source !== window) return;
+    if (m?.tmcpp === "link-status") { showLink(m.status); return; }
+    if (m?.tmcpp !== "link-req") return;
+    const reply = (r) => window.postMessage({ tmcpp: "link-res", seq: m.seq, ...r }, location.origin);
+    if (!linkOps[m.op]) return reply({ ok: false, error: `unknown request '${m.op}'` });
+    try { reply({ ok: true, data: await linkOps[m.op](m.args ?? {}) }); }
+    catch (err) { reply({ ok: false, error: String(err?.message ?? err) }); }
+  });
 
   // Follow the graph. Desmos switches graphs without reloading the page (the URL path changes)
   // and loads saved graphs after Calc exists, so watch both the path and graph changes.

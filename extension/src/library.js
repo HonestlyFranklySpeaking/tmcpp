@@ -19,7 +19,7 @@ window.addEventListener("message", (e) => {
     for (const fn of listeners) fn(m.data);
   }
 });
-function ask(op, args = {}, ms = op === "fetch" ? 30000 : 8000) {
+export function ask(op, args = {}, ms = op === "fetch" ? 30000 : 8000) {
   return new Promise((resolve, reject) => {
     const n = ++seq;
     const timer = setTimeout(() => {

@@ -30,7 +30,8 @@
   ],
   "host_permissions": [
     "https://raw.githubusercontent.com/*",
-    "https://gist.githubusercontent.com/*"
+    "https://gist.githubusercontent.com/*",
+    "http://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "dist/background.js"

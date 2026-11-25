@@ -237,10 +237,22 @@ export function expandComponents(statements, errors, warnings) {
     }
     const m = st.text.match(/^[A-Za-z]+\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*\{$/);
     const body = [];
-    let j = i + 1;
-    for (; j < statements.length && statements[j].text !== "}"; j++) {
-      if (!statements[j].orphan) body.push(statements[j]);
+    let j = i + 1, depth = 0, skipTo = -1;
+    for (; j < statements.length && !(statements[j].text.startsWith("}") && depth === 0); j++) {
+      const t = statements[j].text;
       defLines.add(j);
+      if (t.startsWith("}")) depth--;
+      // A block that can't go in a body (another component, a folder...): one error at its header,
+      // and its lines and closing } are left out, so the outer component still closes properly.
+      if (depth === 0 && t.endsWith("{") && FORBIDDEN_IN_BODY.test(t)) {
+        const what = t.split(/\s/)[0];
+        if (!statements[j].lib) errors.push({ line: statements[j].line, message: what === "component"
+          ? "A component can't be defined inside another component; define it at the top level and use 'new' inside instead"
+          : `'${what}' can't go inside a component` });
+        skipTo = depth;
+      } else if (skipTo === -1 && !statements[j].orphan) body.push(statements[j]);
+      if (t.endsWith("{")) depth++;
+      if (skipTo !== -1 && depth === skipTo && t.startsWith("}")) skipTo = -1;
     }
     if (j < statements.length) defLines.add(j);
     else errors.push({ line: st.line, message: "Component is never closed; end it with '}'" });

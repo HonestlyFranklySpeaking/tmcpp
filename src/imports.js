@@ -225,7 +225,11 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     walk(parse(priv.text), (st, depth) => {
       if (st.orphan) return;
       const t = st.text;
-      if (depth > 0) { if (mode === "comp") lib.statements.push(st); return; }
+      if (depth > 0) {
+        if (mode === "comp" && depth === 1 && COMPONENT.test(t)) bad(st, "A component can't be defined inside another component; define it at the top level and use 'new' inside instead");
+        if (mode === "comp") lib.statements.push(st);
+        return;
+      }
       if (t === "}") { if (mode === "comp") lib.statements.push(st); mode = null; return; }
       if (isImport(t)) {
         const p = parseImport(t);
@@ -451,10 +455,11 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
   const out = [];
   for (const lib of libs.values()) {
     const helpers = [];
-    let skipping = false;
+    let skipping = 0;
     for (const st of lib.out) {
-      if (skipping) { if (st.text === "}") skipping = false; continue; }
-      if (COMPONENT.test(st.text) && !keep(st)) { skipping = true; continue; }
+      // An unused component is left out whole, nested blocks and all.
+      if (skipping) { if (st.text.startsWith("}")) skipping--; else if (st.text.endsWith("{")) skipping++; continue; }
+      if (COMPONENT.test(st.text) && !keep(st)) { skipping = 1; continue; }
       if (st.value) { if (used.ident.has(assigned(st.text).name)) helpers.push(st); }
       else if (keep(st)) out.push(st);
     }

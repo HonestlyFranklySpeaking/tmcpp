@@ -4,6 +4,7 @@
 
 ### Changed
 
+- A component defined inside another component is one clear error at the inner definition, in a file or a library, instead of a confusing "Unmatched '}'" (or no error at all when the library's component went unused).
 - Everything inside `click(...)` is an action, so `on = 1` there sets `on` even when nothing else on the line is an action shortcut.
 - The old spelling `domain: @{ min, max }` is upgraded to `domain: @{ t: @{ min, max } }` (`theta` for `r = ...`), so graphs written for 0.2 keep their curve ranges.
 - `. fraction` compiles to `fractionDisplay`, and a parametric's or polar curve's range to `domain: @{ t: @{ ... } }` (`theta` for polar), as the current Text Mode spells them.

@@ -323,3 +323,14 @@ test("a member of one instance passed as an argument to another resolves", () =>
   assert.deepEqual(r.errors, []);
   assert.match(r.tmc, /q_bar = \(v_alsl \/ 100\) \+ 1/);
 });
+
+test("a component defined inside another is one clear error, in a file or a library", async () => {
+  const { compile } = await import("../src/compile.js");
+  const nested = "component Outer(A) {\n  component Inner(B) {\n    B . point 5\n  }\n  A . point 8\n}";
+  const run = (src, libraries) => compile(src, { defaultSettings: {}, watermark: false, libraries }).errors.map((e) => `${e.line}: ${e.message}`);
+  assert.deepEqual(run(nested + "\nnew Outer((1, 1)) as o"), ["2: A component can't be defined inside another component; define it at the top level and use 'new' inside instead"]);
+  assert.deepEqual(run(nested), ["2: A component can't be defined inside another component; define it at the top level and use 'new' inside instead"]);
+  for (const use of ["new Outer((1, 1)) as o", "y = x"]) {
+    assert.deepEqual(run(`import "lib"\n${use}`, { lib: nested }), ["1: In 'lib' line 2: A component can't be defined inside another component; define it at the top level and use 'new' inside instead"]);
+  }
+});

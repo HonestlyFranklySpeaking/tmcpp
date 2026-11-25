@@ -6,6 +6,6 @@
 
 - [ ] `npm test` passes
 - [ ] Added or updated a test for this change
-- [ ] Updated `docs/syntax.md` if syntax changed
+- [ ] Updated the syntax reference in docs/syntax/
 - [ ] Existing TMC and TMC++ source still compiles the same, or the change is noted in `CHANGELOG.md`
 - [ ] Ran `npm run build:std` if `library/std` changed, and checked anything that draws in real Desmos

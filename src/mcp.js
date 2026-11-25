@@ -111,8 +111,15 @@ const TOOLS = [
   },
 ];
 
+// The syntax reference: docs/syntax/, one page per topic. tmcpp://docs/syntax is all of it at once.
+const SYNTAX_PAGES = ["README", "basics", "logic", "styles", "components", "libraries", "blocks", "round-trip", "errors"];
+const syntaxPage = (name) => readFileSync(new URL(`../docs/syntax/${name}.md`, import.meta.url), "utf8")
+  .replace(/^\[Syntax reference\]\(README\.md\).*\n\n/m, ""); // the page-to-page links mean nothing to an AI
+const pageTitle = (name) => syntaxPage(name).match(/^# (.+)$/m)?.[1] ?? name;
+
 function resources() {
-  const list = [{ uri: "tmcpp://docs/syntax", name: "syntax", title: "TMC++ syntax reference", description: "Everything TMC++ adds to DesModder Text Mode, with a cheat sheet.", mimeType: "text/markdown" }];
+  const list = [{ uri: "tmcpp://docs/syntax", name: "syntax", title: "TMC++ syntax reference (all pages)", description: "Everything TMC++ adds to DesModder Text Mode, with a cheat sheet. Read this first.", mimeType: "text/markdown" }];
+  for (const p of SYNTAX_PAGES.slice(1)) list.push({ uri: `tmcpp://docs/syntax/${p}`, name: `syntax/${p}`, title: pageTitle(p), description: `One page of the syntax reference: ${pageTitle(p)}.`, mimeType: "text/markdown" });
   for (const [id, src] of Object.entries(STD)) {
     const blurb = src.split("\n").map((l) => l.replace(/^\/\/\s?/, "").trim()).filter((l) => l && !l.startsWith(id) && !l.endsWith(".tmcpp"))[0] ?? "";
     list.push({ uri: `tmcpp://${id}`, name: id, title: `import "${id}"`, description: blurb, mimeType: "text/plain" });
@@ -121,7 +128,9 @@ function resources() {
 }
 
 function readResource(uri) {
-  if (uri === "tmcpp://docs/syntax") return { uri, mimeType: "text/markdown", text: readFileSync(new URL("../docs/syntax.md", import.meta.url), "utf8") };
+  if (uri === "tmcpp://docs/syntax") return { uri, mimeType: "text/markdown", text: SYNTAX_PAGES.map(syntaxPage).join("\n\n---\n\n") };
+  const page = uri.match(/^tmcpp:\/\/docs\/syntax\/([a-z-]+)$/)?.[1];
+  if (page && SYNTAX_PAGES.includes(page)) return { uri, mimeType: "text/markdown", text: syntaxPage(page) };
   const id = uri.replace(/^tmcpp:\/\//, "");
   if (STD[id] !== undefined) return { uri, mimeType: "text/plain", text: STD[id] };
   throw rpcError(-32002, `no resource ${uri}`);

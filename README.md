@@ -96,7 +96,7 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 | `check` | compile, then validate with DesModder's parser; fast, no browser. With `runtime: true` (and `at` slider values), also load it in real Desmos and report what Desmos rejects, by TMC++ line |
 | `describe` | sliders with ranges, functions and components with their parameters, classes, colours, and what each import brings in |
 | `preview` | a PNG from real Desmos, with `at` slider values or a `sweep` contact sheet (needs `playwright-core`) |
-| `tmcpp://docs/syntax` | this repo's syntax reference |
+| `tmcpp://docs/syntax` | the whole syntax reference at once; `tmcpp://docs/syntax/components` and so on for single pages |
 | `tmcpp://std/...` | the source of each built-in library |
 
 Each tool takes `source` (the text) or `file` (a path; relative imports resolve next to it).
@@ -169,118 +169,39 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ## Language
 
-**Full reference: [docs/syntax.md](docs/syntax.md)**, covering every TMC++ addition, with links to DesModder's docs for plain TMC. The summary below covers the essentials.
+The essentials are below. **Everything else is in the [syntax reference](docs/syntax/README.md)**, one short page per topic: [lines and math](docs/syntax/basics.md), [conditionals, actions and enums](docs/syntax/logic.md), [styles](docs/syntax/styles.md), [components](docs/syntax/components.md), [libraries](docs/syntax/libraries.md), [blocks and settings](docs/syntax/blocks.md), [From graph](docs/syntax/round-trip.md) and [errors](docs/syntax/errors.md).
 
-### Statements
-
-- One statement per line. A `;` at the end is optional. A string (a note or a label) may run over several lines.
-- `let P = ...` defines a helper that other lines use but that is never drawn (it compiles hidden, and From graph gives `let` back). Use it for intermediate points and lists.
-- `mode = enum(idle, flying, landed)` names a variable's states: write `mode = flying` in conditions and actions, and `mode++` cycles through them. See [enums](docs/syntax.md#enums).
-- In a library, a name starting with `_` is private: the library uses it, files that import it can't.
-- Calling a function with the wrong number of arguments, or naming a parameter `e`, `pi` or `tau`, is a compile error, because Desmos would reject it.
-- A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
-- `//` comments are allowed anywhere. They never reach TMC, but the extension keeps them in the graph's metadata note, so **From graph** gives them back. For text that viewers of the graph should see, use a note (`"text"`).
-- Write math naturally: TMC needs explicit `*`, so `4p`, `k sin(x)` and `(a)(b)` become `4 * p`, `k * sin(x)` and `(a) * (b)`. Function calls and keywords stay intact. The compiler keeps the body of `sum`/`product`/`integral` and the expression after `(d/d x)` attached to their operators, while still inserting multiplication within those expressions. `.5` becomes `0.5`.
-- Piecewise and list comprehensions are plain TMC: `y = {x > 0: 2x, -x}`, `L = [n^2 for n = [1...5]]`.
-- Absolute value works both ways: `|x - 1|` or `abs(x - 1)`, and multiplies like a bracket: `2|x|`, `a|x|`, `|x||y|`. From graph writes it as `abs(...)`.
-- Name variables freely: `score`, `hello_world` and even `total` become names Desmos accepts (`s_core`, `h_elloworld`, `t_otal`), including inside `${...}` in labels.
-- Double inequalities work on anything: Desmos only draws `a < f < b` when `f` is `x` or `y`, so TMC++ rewrites the rest to `max(a - f, f - b) < 0`. `2.49 < r(x,y) < 2.98` draws a ring, and the bounds can be piecewise.
-- Drawing level curves of a function you defined just works: `q(x,y) = [0.5, 0.6]` after `q(x,y) = ...` would redefine `q` in Desmos, so it becomes `q(x,y) - ([0.5, 0.6]) = 0` (with a warning saying so).
-- `segment(A, B)` and `path(P)` draw straight lines between points or lists of points (Desmos's graphing calculator has no `segment()`).
-- Files can be UTF-8 or UTF-16 (what Windows PowerShell's `>` writes).
-
-### Components
-
-A component is a group of lines written once and stamped out with `new`; each instance gets its own folder and its own variables. See [components](docs/syntax.md#components) for nesting, abstract parameters and list instances.
+- **One statement per line**; a `;` is optional, and a line ending in an operator, a comma or an open bracket continues on the next. `//` comments are allowed anywhere.
+- **Write math naturally**: `4p`, `k sin(x)` and `2|x|` get their `*`, and names like `score` become names Desmos accepts.
+- **A tail styles a line**: it starts at the first `.class`, `#colour`, lone `.`, `label "`, `click(` or `@{` after a space. Later tokens win.
 
 ```js
-component Dot(P, abstract n = 0) {
+class curve { #c74440 dashed width 3 }      // a reusable style
+color sea #2d70b3                            // a named colour, used as #sea
+a = 1 [0 : 2pi] . play loop 10s              // a slider: bounds, then playback
+y = sin(x + a)  .curve opacity 0.5           // a class, then an override
+(0, 1)  #sea point 10 drag y label "P" above
+let M = (a, 0)                               // a helper: used, never drawn
+score = 0
+mode = enum(idle, flying)                    // named states
+M . click(score++, mode++)                   // actions
+y = if mode = flying then 2 else -2          // an inline if
+```
+
+The most used tokens: `solid` `dashed` `dotted`, `width N`, `opacity N`, `fill N`, `point N`, `drag x|y|xy`, `hidden`, `label "text"` with a position (`above`, `below-left`...), slider bounds `[min : max : step]`, and `play` `loop` `bounce` `once`. The full list is on the [styles page](docs/syntax/styles.md#token-reference).
+
+Bigger structure, each with its own page:
+
+```js
+component Dot(P, abstract n = 0) {           // components: written once, stamped out with new
   P . point 12 click(n++) label "${n}"
 }
 new Dot((2, 1)) as d1
-new Dot((4, 1), n = 5) as d2  . #red
-clicks = d1.n + d2.n
-```
-
-### Actions
-
-Short forms for Desmos's `n -> n + 1`, anywhere an action goes: `n++`, `n += 2`, `mode++ % 3`, `toggle(on)`, `L[i] = v`, `L.push(x)` and `reset()`. See [actions](docs/syntax.md#actions).
-
-```js
-score = 0
-on = 0
-(0, 0) . point 12 click(score++, toggle(on))
-```
-
-### Conditionals and libraries
-
-An inline `if` has both arms and can be used in expressions or actions. A block guards several math statements; matching assignments become one piecewise expression. See [conditionals](docs/syntax.md#conditionals) for `else if`, nested blocks and block limits.
-
-```js
-k = 1
-a = if k = 1 then 2 else 3
-if k = 1 {
-  y = x^2 . #red
-} else {
-  y = -x . #red
+import "std/ui" as ui                        // libraries: files, GitHub, or the built-in std/
+folder "Controls" collapsed {                // folders, tables, tickers, settings
+  k = 2 [1 : 5 : 1]
 }
 ```
-
-Move reusable classes, colours, functions, constants and components into a library, then import them by name or with a namespace. The CLI accepts relative `.tmcpp` files; the extension uses libraries saved in its **Library** panel. Both accept `gh:user/repo/path.tmcpp@ref` imports. See [libraries](docs/syntax.md#libraries) for selective imports, name conflicts and remote fetching.
-
-```js
-import "./lib/springs.tmcpp" as sp
-new sp.Spring((0, 0), (4, 1)) as s1
-```
-
-### Style tails
-
-A tail starts at the first whitespace-preceded `.name`, `#`, `label "`, `click(`, lone `.` or `@{`. Tokens apply left to right: classes, then inline tokens, then a raw `@{ }`; later wins.
-
-```js
-class curve { #c74440 dashed width 3 }   // define once (hoisted; ; separators allowed)
-class thick { width 5 }
-color sea #2d70b3                         // a named colour, used as #sea
-y = sin(x)  .curve .thick opacity 0.5     // stack classes, then override inline
-y = cos(x)  . dotted                      // a lone . starts a tail with no class
-```
-
-A style word left in the math, as in `(1, 2) point 5`, is an error that tells you to add the `.`.
-
-| Token | Meaning |
-| --- | --- |
-| `.name` | apply a class |
-| `#name` | a colour you defined with `color name #rrggbb` |
-| `#(c_1)`, `#(rgb(100, 136, 234))` | a colour expression |
-| `click(s -> s + 1)`, `click-label "text"` | run an action when the shape is clicked |
-| `#c74440`, `#red` `#blue` `#green` `#purple` `#orange` `#black` | colour |
-| `solid` `dashed` `dotted` | line style |
-| `width N`, `opacity N` | line width and opacity |
-| `fill N` | fill opacity; `fill 0` stays clickable (an invisible button) |
-| `point N`, `point-opacity N` | point size and opacity |
-| `open` `cross` | point style |
-| `drag x\|y\|xy\|none\|auto` | point drag mode |
-| `hidden` | hide the graph |
-| `pinned` `secret` `fraction` | pin, hide from viewers, show the result as a fraction |
-| `label "text"` | label; `${p}` interpolation passes through |
-| `above` `below-left` `right` ... | label position (all 16 Desmos orientations, hyphenated) |
-| `label-size N`, `label-angle N`, `no-outline`, `hover`, `editable`, `editable-math` | label options |
-| `[min : max]`, `[min : max : step]` | slider bounds (go right after the math); bounds are math, so `[0 : 2pi]` works |
-| `play`, `loop` `bounce` `once` `forever`, `reverse`, `40s` `500ms` | slider playback |
-| `@{ ... }` | raw TMC style, merged in last |
-
-`fill`, `opacity`, `width` and `point-opacity` also take an expression written without spaces, such as `fill 0.8*(1-t)^2`.
-
-### Blocks and items
-
-| Syntax | Notes |
-| --- | --- |
-| `"text"` | note |
-| `folder "Name" [collapsed] [hidden] { ... }` | no folders inside folders |
-| `table [pinned] [secret] { ... }` | columns take tails (`Y = [4, 5, 6] . drag xy`); tables can sit inside folders |
-| `ticker a -> a + 1 . play 2s` | `play` and a step time (`minStep`) |
-| `image "name" @{ ... }` | plain TMC |
-| `settings x [-10 : 10] y [-6 : 6] degrees no-grid lock` | merged over a default viewport of -10 to 10; add a raw `@{ }` for anything else |
 
 ## Examples
 
@@ -332,11 +253,11 @@ v3 is the finished product: M20, the M14 eval and M21 come next, and then the br
 | M6 components inside components, `p.a.n` paths, stacked tails | done |
 | M7 list instances: `new Cell(i, j) for i = [1...9], j = [1...9] as cells` | done |
 | M8 round trip: "From graph" gives back `new` lines, `if` blocks, imports and component definitions | done |
-| M9 inline and block [if statements](docs/syntax.md#conditionals) | done |
+| M9 inline and block [if statements](docs/syntax/logic.md#conditionals) | done |
 | M10 merged ticker actions (`tick` in components) | dropped, not doing it |
-| M10 [scientific notation](docs/syntax.md#scientific-notation): `3e-3`, `1.5E8` | done |
+| M10 [scientific notation](docs/syntax/basics.md#scientific-notation): `3e-3`, `1.5E8` | done |
 | M11 ship v2: version 0.2.0, changelog, packaged extension and VS Code extension | done |
-| M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d`, `std/color`, `std/orbits` | done |
+| M12 [libraries](docs/syntax/libraries.md): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d`, `std/color`, `std/orbits` | done |
 | M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
 | M15 Chrome Web Store, and publishing from CI: the v3 release | last, after the rest of v3 |

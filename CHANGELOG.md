@@ -4,6 +4,7 @@
 
 ### Changed
 
+- **Docs reorganised.** The syntax reference is now a folder, `docs/syntax/`, with one short page per topic and an index with the cheat sheet; `docs/syntax.md` points there. The README keeps only the essentials. The MCP server serves the whole reference as `tmcpp://docs/syntax` and each page on its own. A test now compiles every example in the README and the reference.
 - A component defined inside another component is one clear error at the inner definition, in a file or a library, instead of a confusing "Unmatched '}'" (or no error at all when the library's component went unused).
 - Everything inside `click(...)` is an action, so `on = 1` there sets `on` even when nothing else on the line is an action shortcut.
 - The old spelling `domain: @{ min, max }` is upgraded to `domain: @{ t: @{ min, max } }` (`theta` for `r = ...`), so graphs written for 0.2 keep their curve ranges.

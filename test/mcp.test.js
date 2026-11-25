@@ -123,3 +123,13 @@ test("mcp: describe lists sliders, functions and imports", async () => {
   assert.doesNotMatch(t, /\bg\(u\)/); // a component's local function isn't the file's
   assert.match(t, /Imported from "std\/easing"/);
 });
+
+test("mcp: the syntax reference is served whole and page by page", async () => {
+  const r = await session([init, ["resources/list", {}], ["resources/read", { uri: "tmcpp://docs/syntax/components" }], ["resources/read", { uri: "tmcpp://docs/syntax" }]]);
+  const uris = r[2].result.resources.map((x) => x.uri);
+  assert.ok(uris.includes("tmcpp://docs/syntax/styles") && uris.includes("tmcpp://docs/syntax/libraries"));
+  assert.match(r[3].result.contents[0].text, /^# Components/);
+  assert.doesNotMatch(r[3].result.contents[0].text, /\[Syntax reference\]\(README\.md\)/);
+  const all = r[4].result.contents[0].text;
+  for (const h of ["# Lines and math", "# Components", "# Libraries", "## Cheat sheet", "# Errors and warnings"]) assert.ok(all.includes(h), h);
+});

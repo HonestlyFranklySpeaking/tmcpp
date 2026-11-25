@@ -37,7 +37,7 @@ Preview drives your installed Chrome or Edge through playwright-core, an optiona
   npx -p @ikeasourpatches/tmcpp -p playwright-core tmcpp preview graph.tmcpp
 
 Paste the output into DesModder's Text Mode, or use the browser extension.
-Syntax: https://github.com/IkeaSourPatches/tmcpp/blob/main/docs/syntax.md`;
+Syntax: https://github.com/IkeaSourPatches/tmcpp/tree/main/docs/syntax`;
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];

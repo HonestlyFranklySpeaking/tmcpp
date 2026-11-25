@@ -316,6 +316,8 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
+v3 is the finished product: M16, M20, the M14 eval and M21 come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+
 | Milestone | State |
 | --- | --- |
 | M1 line compiler | done |
@@ -333,12 +335,14 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 | M12 [libraries](docs/syntax.md#libraries): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d`, `std/color`, `std/orbits` | done |
 | M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
-| M15 Chrome Web Store, and publishing from CI | planned |
-| M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | planned |
+| M15 Chrome Web Store, and publishing from CI: the v3 release | last, after the rest of v3 |
+| M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | next |
 | M17 language additions: `let`, enums, private library names | done |
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |
+| M20 syntax revamp: lambdas, macros, compile-time `for` loops, `while` loops (as recursion or a ticker), maybe pointers | planned for v3 |
+| M21 live editing (the graph updates as you type, Desmos edits flow back) and multiuser editing | planned for v3 |
 
 ## License
 

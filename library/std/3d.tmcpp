@@ -38,21 +38,21 @@ lengthSquared3(u,v,w) = dot3(u,v,w,u,v,w)
 // Ray origin is (0,0,0). Center coordinates are relative to the ray origin.
 // The direction need not be normalized. Hits are t on ray(t) = t * direction,
 // so t is a physical distance only for a unit direction. A miss is undefined.
-raySphereD(a,b,p,q,s,r) = b^2-a*(lengthSquared3(p,q,s)-r^2)
-rayLo(a,b,k) = (b-sqrt(max(0,k)))/a
-rayHi(a,b,k) = (b+sqrt(max(0,k)))/a
-rayFirst(lo,hi) = {lo>=0: lo,hi>=0: hi}
-rayNearRoot(a,b,k,r) = {a>0: {r>0: {k>=0: rayFirst(rayLo(a,b,k),rayHi(a,b,k))}}}
-rayFarRoot(a,b,k,r) = {a>0: {r>0: {k>=0: {rayHi(a,b,k)>=0: rayHi(a,b,k)}}}}
-rayNearSolve(a,b,p,q,s,r) = rayNearRoot(a,b,raySphereD(a,b,p,q,s,r),r)
-rayFarSolve(a,b,p,q,s,r) = rayFarRoot(a,b,raySphereD(a,b,p,q,s,r),r)
-raySphereNear(u,v,w,p,q,s,r) = rayNearSolve(lengthSquared3(u,v,w),dot3(u,v,w,p,q,s),p,q,s,r)
-raySphereFar(u,v,w,p,q,s,r) = rayFarSolve(lengthSquared3(u,v,w),dot3(u,v,w,p,q,s),p,q,s,r)
+_raySphereD(a,b,p,q,s,r) = b^2-a*(lengthSquared3(p,q,s)-r^2)
+_rayLo(a,b,k) = (b-sqrt(max(0,k)))/a
+_rayHi(a,b,k) = (b+sqrt(max(0,k)))/a
+_rayFirst(lo,hi) = {lo>=0: lo,hi>=0: hi}
+_rayNearRoot(a,b,k,r) = {a>0: {r>0: {k>=0: _rayFirst(_rayLo(a,b,k),_rayHi(a,b,k))}}}
+_rayFarRoot(a,b,k,r) = {a>0: {r>0: {k>=0: {_rayHi(a,b,k)>=0: _rayHi(a,b,k)}}}}
+_rayNearSolve(a,b,p,q,s,r) = _rayNearRoot(a,b,_raySphereD(a,b,p,q,s,r),r)
+_rayFarSolve(a,b,p,q,s,r) = _rayFarRoot(a,b,_raySphereD(a,b,p,q,s,r),r)
+raySphereNear(u,v,w,p,q,s,r) = _rayNearSolve(lengthSquared3(u,v,w),dot3(u,v,w,p,q,s),p,q,s,r)
+raySphereFar(u,v,w,p,q,s,r) = _rayFarSolve(lengthSquared3(u,v,w),dot3(u,v,w,p,q,s),p,q,s,r)
 
 // Plane equation dot(normal, point) = offset. Parallel and behind-eye hits are
 // undefined. Use an angular tolerance so scaling either vector does not change it.
-rayPlaneRoot(b,offset,k) = {abs(b)>k: {offset/b>=0: offset/b}}
-rayPlane(u,v,w,p,q,s,offset) = rayPlaneRoot(dot3(u,v,w,p,q,s),offset,0.000000001*sqrt(lengthSquared3(u,v,w)*lengthSquared3(p,q,s)))
+_rayPlaneRoot(b,offset,k) = {abs(b)>k: {offset/b>=0: offset/b}}
+rayPlane(u,v,w,p,q,s,offset) = _rayPlaneRoot(dot3(u,v,w,p,q,s),offset,0.000000001*sqrt(lengthSquared3(u,v,w)*lengthSquared3(p,q,s)))
 
 // Fast first hit when tessellating a sphere's visible disk with unit rays.
 // rho is the fraction of the tangent cone's sine angle, 0 at center, 1 at rim.

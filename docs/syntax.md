@@ -16,7 +16,7 @@ A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without
 
 - [Lines](#lines)
 - [Math](#math) · [Scientific notation](#scientific-notation) · [Greek letters and Unicode](#greek-letters-and-unicode)
-- [Conditionals](#conditionals) · [Actions](#actions)
+- [Conditionals](#conditionals) · [Actions](#actions) · [Enums](#enums)
 - [Style tails](#style-tails)
 - [Classes](#classes)
 - [Named colours](#named-colours)
@@ -235,7 +235,24 @@ L = [0, 0, 0]
 start = reset(score, lives)
 ```
 
-Several element changes to one list in the same action (`L[1] = 0, L[3] += 2`) are merged into a single update. Desmos does every update in an action at the same time, so `score++, score += 2` adds only one of them: TMC++ warns when an action updates the same variable twice. Inside an `if` condition `=` still compares; only an action's own `=` sets.
+Several element changes to one list in the same action (`L[1] = 0, L[3] += 2`) are merged into a single update. Desmos does every update in an action at the same time, so `score++, score += 2` adds only one of them: TMC++ warns when an action updates the same variable twice. Inside an `if` condition `=` still compares; only an action's own `=` sets. Everything inside `click(...)` is an action, so `click(if m = 3 then m = 1 else m = 3)` sets `m` in both branches.
+
+## Enums
+
+An enum names the states of a variable, so you write `mode = flying` instead of remembering that 2 means flying.
+
+```js
+mode = enum(idle, flying, landed)
+y = if mode = flying then sin(x) else 0
+(0, 0) . point 12 click(mode++) label "state ${mode}"
+(2, 0) . point 12 click(if mode = landed then mode = idle else mode = landed)
+```
+
+- The variable starts at the first member. Members count from 1, like Desmos lists, so `L[mode]` picks the matching item of a list.
+- Members are numbers pasted in when compiling (`flying` becomes `2`), so they cost no Desmos variables, and work in conditions, actions, labels and math alike.
+- `mode++` and `mode--` cycle through the members and wrap around (`landed` then `idle`); `mode++ % 3` means the same.
+- A member name can only belong to one enum, and can't also be defined as a variable.
+- From graph gives every line back as written while it's untouched in Desmos.
 
 ## Style tails
 
@@ -398,6 +415,7 @@ Three ways to import it:
 See [the spring library](../examples/lib/springs.tmcpp) and [a graph that imports it](../examples/springs-import.tmcpp) for a complete example.
 
 - **Internal names stay distinct.** If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
+- **Private names.** A name starting with `_` (`_scale(x) = ...`, `component _Part(...)`, `class _faint`) works inside its library but can't be imported or reached with `ns._scale`: it's a helper, not part of what the library offers, and `tmcpp describe` leaves it out. Inside the file that imports, a `_name` is an error.
 - **Only what's used comes in.** Components, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed, hidden folder named after the library, so a helper like `wave(x) = sin(x)` never draws.
 - Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
 
@@ -636,6 +654,8 @@ Every message names the TMC++ line. Common ones:
 | `f takes 2 arguments, but this call gives 1` | Desmos would reject the call; checked across the whole file, imports included |
 | `'e' can't be a parameter of g: Desmos already defines it` | also `pi`, `tau`, `infinity`, `index` and `dt` |
 | `'let' needs a definition, like let P = (1, 2)` | `let` goes before a definition |
+| `'_scale' is private to 'x'` / `names starting with _ are private helpers of a library` | the library keeps it to itself; use what it exports |
+| `enum needs at least two members` / `'off' is already a member of a` | each enum has two or more members, each in one enum only |
 | `... is drawn as points and also used by other lines` (`check --runtime`, warning) | an unstyled helper point list that Desmos draws: add `. hidden` or use `let` |
 
 `tmcpp check --runtime` (or the MCP `check` tool with `runtime: true`) also reports, by TMC++ line, any error Desmos shows itself once the graph loads, such as `Cannot add a point and a number`, with the slider values it checked at.

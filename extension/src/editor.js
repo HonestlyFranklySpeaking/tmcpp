@@ -16,7 +16,7 @@ import { STD } from "../../src/std/index.js";
 // ---------- highlighting ----------
 
 const KEYWORDS = new Set(["component", "new", "as", "class", "color", "folder", "table", "settings", "ticker", "import",
-  "from", "if", "then", "else", "abstract", "for", "with", "click", "let"]);
+  "from", "if", "then", "else", "abstract", "for", "with", "click", "let", "enum"]);
 const STYLE = new Set(STYLE_WORDS);
 const NUMBER = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
 

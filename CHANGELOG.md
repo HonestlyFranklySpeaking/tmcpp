@@ -4,11 +4,14 @@
 
 ### Changed
 
+- Everything inside `click(...)` is an action, so `on = 1` there sets `on` even when nothing else on the line is an action shortcut.
 - The old spelling `domain: @{ min, max }` is upgraded to `domain: @{ t: @{ min, max } }` (`theta` for `r = ...`), so graphs written for 0.2 keep their curve ranges.
 - `. fraction` compiles to `fractionDisplay`, and a parametric's or polar curve's range to `domain: @{ t: @{ ... } }` (`theta` for polar), as the current Text Mode spells them.
 
 ### Added
 
+- **Enums.** `mode = enum(idle, flying, landed)`: members are numbers from 1, usable in conditions, actions and math; `mode++` and `mode--` cycle through them.
+- **Private library names.** `_name` definitions, components, classes and colours stay inside their library; the built-in libraries now keep their internal helpers private (`std/3d` ray solving, `std/color` gradient steps, `std/orbits` Kepler steps).
 - **`let`.** `let P = ...` defines a hidden helper that other lines use; From graph gives `let` back.
 - **Call checks.** Calling a function with the wrong number of arguments, or naming a parameter `e`, `pi` or `tau`, is now a compile error instead of a silent error in Desmos.
 - **`tmcpp check --runtime`.** Loads the graph in real Desmos and reports Desmos's own errors by TMC++ line, with the slider values used (`--at` sets them), plus unstyled helper point lists that get drawn by accident. `--json` for tools. The MCP `check` tool takes `runtime: true`.

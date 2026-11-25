@@ -161,6 +161,29 @@ function shadows(statements) {
 }
 
 /** Apply `fn` to the parts of `text` outside string literals. */
+/**
+ * Private library names: `_scale(x) = ...` or `component _Part(...)` can be used inside the
+ * library but not by files that import it. Desmos names can't start with "_", so each one is
+ * respelled (`scale`, or `scalePrivate` if the library already uses `scale`) before parsing.
+ * Returns the respelled source and the set of respelled names.
+ */
+function privatize(source) {
+  const taken = new Set(source.match(/(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_]*/g) ?? []);
+  const spell = new Map();
+  const text = outsideStrings(source, (s) => s.replace(/(^|[^A-Za-z0-9_.#\\])_([A-Za-z][A-Za-z0-9_]*)/g, (all, lead, n, at, whole) => {
+    // `class _faint` and `color _ink` keep their names: classes and colours may start with _.
+    if (/(?:^|\n)[ \t]*(?:class|color)[ \t]+$/.test(whole.slice(0, at + lead.length))) return all;
+    if (!spell.has(n)) {
+      let cand = n;
+      for (let k = 1; taken.has(cand); k++) cand = `${n}Private${k > 1 ? k : ""}`;
+      taken.add(cand);
+      spell.set(n, cand);
+    }
+    return lead + spell.get(n);
+  }));
+  return { text, names: new Set(spell.values()), written: new Map([...spell].map(([n, c]) => [c, "_" + n])) };
+}
+
 const outsideStrings = (text, fn) => text.split(/("(?:[^"\\]|\\.)*")/).map((part, i) => (i % 2 ? part : fn(part))).join("");
 
 export function lowerImports(statements, { libraries, std = {}, from = "", parse }, errors, warnings) {
@@ -189,14 +212,17 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
       report(isRemote(id) ? `'${id}' hasn't been fetched yet (in the extension: Library, then Fetch)` : `Can't find library '${id}'`);
       return null;
     }
-    const lib = { id, at, statements: [], imports: [], defs: Object.fromEntries(KINDS.map((k) => [k, new Map()])), internal: Object.fromEntries(KINDS.map((k) => [k, new Map()])) };
+    const priv = privatize(source);
+    const lib = { id, at, statements: [], imports: [], defs: Object.fromEntries(KINDS.map((k) => [k, new Map()])), internal: Object.fromEntries(KINDS.map((k) => [k, new Map()])),
+      // names other files can't import: respelled _names, and classes and colours named _like-this
+      isPrivate: (kind, name) => (kind === "classes" || kind === "colors" ? name.startsWith("_") : priv.names.has(name)) };
     const bad = (st, msg) => report(msg, st.line);
     const define = (kind, name, st) => {
       if (lib.defs[kind].has(name)) bad(st, `'${name}' is defined twice`);
       else lib.defs[kind].set(name, st);
     };
     let mode = null; // "comp" inside a component body, "skip" inside a rejected block
-    walk(parse(source), (st, depth) => {
+    walk(parse(priv.text), (st, depth) => {
       if (st.orphan) return;
       const t = st.text;
       if (depth > 0) { if (mode === "comp") lib.statements.push(st); return; }
@@ -285,12 +311,13 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
       if (imp.ns) {
         if (scope.ns.has(imp.ns)) reportAt(imp, `Two imports are both named '${imp.ns}'`);
         else if (mainDefs.has(imp.ns) && own === ownMain) reportAt(imp, `'${imp.ns}' is already a name in this file (line ${mainDefs.get(imp.ns)})`);
-        else scope.ns.set(imp.ns, imp.lib.internal);
+        else scope.ns.set(imp.ns, Object.fromEntries(KINDS.map((k) => [k, new Map([...imp.lib.internal[k]].filter(([n]) => !imp.lib.isPrivate(k, n)))])));
       } else if (imp.names) {
         for (const n of imp.names) {
           // .glow is only the class and #steel only the colour; a bare name brings whatever the
           // library defines under it (a component, function or constant, class, colour).
           const name = n.replace(/^[.#]/, "");
+          if (name.startsWith("_")) { reportAt(imp, `'${n}' is private to '${imp.id}': only that library can use it`); continue; }
           const kinds = n[0] === "." ? ["classes"] : n[0] === "#" ? ["colors"] : KINDS.filter((k) => imp.lib.defs[k].has(name));
           const found = kinds.filter((k) => imp.lib.defs[k].has(name));
           if (!found.length) {
@@ -298,10 +325,12 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
             reportAt(imp, `'${imp.id}' has no '${n}'${near ? ` (did you mean '${near}'?)` : ""}`);
             continue;
           }
-          for (const k of found) bring(k, name, imp.lib.internal[k].get(name), imp);
+          const open = found.filter((k) => !imp.lib.isPrivate(k, name));
+          if (!open.length) { reportAt(imp, `'${n}' is private to '${imp.id}': only that library can use it`); continue; }
+          for (const k of open) bring(k, name, imp.lib.internal[k].get(name), imp);
         }
       } else {
-        for (const k of KINDS) for (const [name, internal] of imp.lib.internal[k]) bring(k, name, internal, imp);
+        for (const k of KINDS) for (const [name, internal] of imp.lib.internal[k]) if (!imp.lib.isPrivate(k, name)) bring(k, name, internal, imp);
       }
     }
     scope.source = source;
@@ -345,6 +374,10 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     return list.map((st, i) => {
       if (st.orphan) return st;
       let head = "", text = st.text, m;
+      outsideStrings(text, (s) => {
+        for (const p of s.matchAll(/(?<![A-Za-z0-9_])([A-Za-z][A-Za-z0-9_]*)\._([A-Za-z][A-Za-z0-9_]*)/g)) if (scope.ns.has(p[1])) report(st, `'${p[0]}' is private to its library: only that library can use it`);
+        return s;
+      });
       if ((m = text.match(CLASS))) { head = `class ${pick("classes", m[1], st) ?? m[1]}`; text = text.slice(m[0].length); }
       else if ((m = text.match(COLOR))) return { ...st, text: `color ${pick("colors", m[1], st) ?? m[1]}${text.slice(m[0].length)}` };
       text = outsideStrings(text, (s) => s

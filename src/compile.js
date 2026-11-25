@@ -3,6 +3,7 @@
 
 import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
+import { lowerEnums } from "./enums.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions, checkCalls } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
 import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
@@ -534,12 +535,21 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
     return sts;
   };
   const parsed = parse(source);
+  // A leading _ marks a private library helper; Desmos can't spell it, so it means nothing here.
+  for (const st of parsed) {
+    if (st.orphan || /^import\b/.test(st.text)) continue; // the import pass words these itself
+    const bare = st.text.split(/"(?:[^"\\]|\\.)*"/).join(" ");
+    const m = bare.match(/(?:^|[^A-Za-z0-9_\\.])(_[A-Za-z][A-Za-z0-9_]*)/) ?? bare.match(/(?:^|[\s{(,:])([.#]_[A-Za-z][\w-]*)/);
+    if (m) errors.push({ line: st.line, message: `'${m[1]}': names starting with _ are private helpers of a library, and only work inside one. Rename it, or if it comes from an import, it isn't meant to be used outside that library` });
+  }
   const roundTrip = roundTripSources(source, parsed);
   // import resolves first: library definitions join the file under collision-free names.
   const imported = lowerImports(parsed, { libraries, std: STD, from, parse }, errors, warnings);
   // Action shortcuts (n++, L[i] = v, reset()) become plain updates before if and components.
   // (After if: an inline if's branches are then piecewise arms the pass can see into.)
-  const acted = lowerActions(lowerConditionals(imported.statements, errors, warnings, findTailStart), errors, warnings, findTailStart);
+  // Enum members become numbers before anything reads the math (if, actions, components).
+  const enumed = lowerEnums(imported.statements, errors);
+  const acted = lowerActions(lowerConditionals(enumed.statements, errors, warnings, findTailStart), errors, warnings, findTailStart);
   const expanded = expandComponents(acted, errors, warnings);
   // Again after expansion: an action passed as an argument (new Button(..., n++)) only reaches
   // its click(...) now. Already-lowered text passes through unchanged.

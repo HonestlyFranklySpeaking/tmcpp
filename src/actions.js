@@ -142,7 +142,8 @@ export function lowerActions(statements, errors, warnings, findTailStart) {
     const group = (text) => { const out = list(text); return splitArgs(out).length > 1 ? `(${out})` : out; };
 
     let text = st.text;
-    if (!ACTION_HINT.test(outsideStrings(text))) return st;
+    // Everything inside click(...) is an action, so `on = 1` there sets even with no ++ or += around.
+    if (!ACTION_HINT.test(outsideStrings(text)) && !/\bclick\(/.test(outsideStrings(text))) return st;
     // click(...) anywhere on the line
     for (let i = text.search(/\bclick\(/); i >= 0; i = text.indexOf("click(", i + 6)) {
       const open = i + 5, close = matchClose(text, open);

@@ -535,3 +535,35 @@ test("calls with the wrong number of arguments, and constants as parameters, are
   assert.deepEqual(errs("g(e) = e + 1"), ["1: 'e' can't be a parameter of g: Desmos already defines it. Use another name"]);
   assert.deepEqual(errs('f(x, y) = x\nL = [f(1, 2), max(1, 2)]\n(1, 1) . label "f(1)"'), []);
 });
+
+test("enums: members become numbers, ++ and -- cycle, and = sets inside click", () => {
+  const src = [
+    "mode = enum(idle, flying, landed)",
+    "y = if mode = flying then x else -x",
+    "(0, 0) . click(mode++)",
+    "(1, 0) . click(mode--)",
+    "(2, 0) . click(if mode = landed then mode = idle else mode = landed)",
+  ].join("\n");
+  const out = ok(src).split("\n");
+  assert.equal(out[0], "m_ode = 1;");
+  assert.equal(out[1], "y = {m_ode = 2: x, -x};");
+  assert.match(out[2], /onClick: m_ode -> mod\(m_ode, 3\) \+ 1/);
+  assert.match(out[3], /onClick: m_ode -> mod\(m_ode - 2, 3\) \+ 1/);
+  assert.match(out[4], /onClick: \{m_ode = 3: m_ode -> 1, m_ode -> 3\}/);
+  const errs = (s) => compile(s, { defaultSettings: {}, watermark: false }).errors.map((e) => e.message);
+  assert.match(errs("a = enum(on)")[0], /at least two members/);
+  assert.match(errs("a = enum(on, off)\nb = enum(off, gone)")[0], /'off' is already a member of a/);
+  assert.match(errs("a = enum(on, off)\non = 3")[0], /'on' is an enum member of a/);
+});
+
+test("private library names stay inside the library", () => {
+  const lib = "_k = 3\n_scale(x) = _k x\ngrow(x) = _scale(x) + 1\ncomponent _Dot(P) {\n  P . point 5\n}\ncomponent Pair(A, B) {\n  new _Dot(A)\n  new _Dot(B)\n}\nclass _faint { opacity 0.2 }\nclass line { ._faint width 2 }";
+  const run = (src) => compile(src, { defaultSettings: {}, watermark: false, libraries: { lib } });
+  const good = run('import "lib"\ny = grow(x)\nnew Pair((0, 0), (1, 1)) as p\ny = x .line');
+  assert.deepEqual(good.errors, []);
+  assert.match(good.tmc, /opacity: 0\.2, width: 2/);
+  assert.match(run('import "lib"\ny = _scale(x)').errors[0].message, /private helpers of a library/);
+  assert.match(run('import { _scale } from "lib"').errors[0].message, /'_scale' is private to 'lib'/);
+  assert.match(run('import "lib" as L\ny = L._scale(x)').errors[0].message, /'L._scale' is private/);
+  assert.match(run('import "lib"\ny = x ._faint').errors[0].message, /private helpers of a library/);
+});

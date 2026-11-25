@@ -171,6 +171,8 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 - One statement per line. A `;` at the end is optional. A string (a note or a label) may run over several lines.
 - `let P = ...` defines a helper that other lines use but that is never drawn (it compiles hidden, and From graph gives `let` back). Use it for intermediate points and lists.
+- `mode = enum(idle, flying, landed)` names a variable's states: write `mode = flying` in conditions and actions, and `mode++` cycles through them. See [enums](docs/syntax.md#enums).
+- In a library, a name starting with `_` is private: the library uses it, files that import it can't.
 - Calling a function with the wrong number of arguments, or naming a parameter `e`, `pi` or `tau`, is a compile error, because Desmos would reject it.
 - A line continues when it ends in an operator, a comma or an open bracket, when the next line is indented and starts with an operator, or when it ends in `\`.
 - `//` comments are allowed anywhere. They never reach TMC, but the extension keeps them in the graph's metadata note, so **From graph** gives them back. For text that viewers of the graph should see, use a note (`"text"`).
@@ -333,7 +335,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
 | M15 Chrome Web Store, and publishing from CI | planned |
 | M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | planned |
-| M17 language additions: `let` (done), enums, private library names | in progress |
+| M17 language additions: `let`, enums, private library names | done |
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |

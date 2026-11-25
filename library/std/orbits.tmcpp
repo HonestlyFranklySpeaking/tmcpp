@@ -14,29 +14,29 @@ wrapAngle(m) = m-2*pi*floor(m/(2*pi)+0.5)
 // Mikkola's cubic starter, followed by three Newton steps. The nonnegative
 // branch and odd symmetry handle both signs without cube roots of negatives.
 // S. Mikkola (1987), doi:10.1007/BF01235850.
-keplerAlpha(c) = (1-c)/(4*c+0.5)
-keplerBeta(m,c) = abs(m)/(8*c+1)
-keplerRoot(b,k) = (b+sqrt(b^2+k^3))^(1/3)
-keplerTerm(b,k) = keplerRoot(b,k)-k/keplerRoot(b,k)
-keplerShift(s,c) = s-0.078*s^5/(1+c)
-keplerGuess(m,c,s) = m+sign(m)*c*(3*s-4*s^3)
-keplerStart(m,c) = keplerGuess(m,c,keplerShift(keplerTerm(keplerBeta(m,c),keplerAlpha(c)),c))
-keplerStep(u,m,c) = u-(u-c*sin(u)-m)/((1-c)+2*c*sin(u/2)^2)
-keplerRefine(m,c) = keplerStep(keplerStep(keplerStep(keplerStart(m,c),m,c),m,c),m,c)
+_keplerAlpha(c) = (1-c)/(4*c+0.5)
+_keplerBeta(m,c) = abs(m)/(8*c+1)
+_keplerRoot(b,k) = (b+sqrt(b^2+k^3))^(1/3)
+_keplerTerm(b,k) = _keplerRoot(b,k)-k/_keplerRoot(b,k)
+_keplerShift(s,c) = s-0.078*s^5/(1+c)
+_keplerGuess(m,c,s) = m+sign(m)*c*(3*s-4*s^3)
+_keplerStart(m,c) = _keplerGuess(m,c,_keplerShift(_keplerTerm(_keplerBeta(m,c),_keplerAlpha(c)),c))
+_keplerStep(u,m,c) = u-(u-c*sin(u)-m)/((1-c)+2*c*sin(u/2)^2)
+_keplerRefine(m,c) = _keplerStep(_keplerStep(_keplerStep(_keplerStart(m,c),m,c),m,c),m,c)
 // Solve u - c*sin(u) = m modulo 2*pi. Returns an angle in [-pi,pi).
-eccentricAnomaly(m,c) = {0<=c: {c<1: keplerRefine(wrapAngle(m),c)}}
+eccentricAnomaly(m,c) = {0<=c: {c<1: _keplerRefine(wrapAngle(m),c)}}
 
 radius(a,c,u) = a*(1-c*cos(u))
 trueAnomaly(c,u) = arctan(sqrt(1-c^2)*sin(u),cos(u)-c)
 
 // Plane coordinates have the focus at the origin and periapsis on +X.
-planeX(a,c,u) = a*(cos(u)-c)
-planeY(a,c,u) = a*sqrt(1-c^2)*sin(u)
-nodeX(a,c,u,w) = planeX(a,c,u)*cos(w)-planeY(a,c,u)*sin(w)
-nodeY(a,c,u,w) = planeX(a,c,u)*sin(w)+planeY(a,c,u)*cos(w)
+_planeX(a,c,u) = a*(cos(u)-c)
+_planeY(a,c,u) = a*sqrt(1-c^2)*sin(u)
+_nodeX(a,c,u,w) = _planeX(a,c,u)*cos(w)-_planeY(a,c,u)*sin(w)
+_nodeY(a,c,u,w) = _planeX(a,c,u)*sin(w)+_planeY(a,c,u)*cos(w)
 // Separate coordinate functions also accept matching lists or a mix of lists and scalars.
-orbitX(a,c,u,i,n,w) = nodeX(a,c,u,w)*cos(n)-nodeY(a,c,u,w)*cos(i)*sin(n)
-orbitY(a,c,u,i,n,w) = nodeX(a,c,u,w)*sin(n)+nodeY(a,c,u,w)*cos(i)*cos(n)
-orbitZ(a,c,u,i,n,w) = nodeY(a,c,u,w)*sin(i)
+orbitX(a,c,u,i,n,w) = _nodeX(a,c,u,w)*cos(n)-_nodeY(a,c,u,w)*cos(i)*sin(n)
+orbitY(a,c,u,i,n,w) = _nodeX(a,c,u,w)*sin(n)+_nodeY(a,c,u,w)*cos(i)*cos(n)
+orbitZ(a,c,u,i,n,w) = _nodeY(a,c,u,w)*sin(i)
 // Convenience vector for one position. For a list of positions, use the columns above.
 position(a,c,u,i,n,w) = [orbitX(a,c,u,i,n,w),orbitY(a,c,u,i,n,w),orbitZ(a,c,u,i,n,w)]

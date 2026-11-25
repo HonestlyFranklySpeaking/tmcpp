@@ -341,3 +341,12 @@ test("let comes back as let", () => {
   assert.match(source, /^let P = \(1, 2\)$/m);
   assert.match(source, /^let L = \(\[1, 2\], \[3, 4\]\)  #red$/m);
 });
+
+test("enum lines come back as written", () => {
+  const src = "mode = enum(idle, flying)\ny = if mode = flying then x else -x\n(0, 0) . click(mode++)";
+  const { state, latexToText } = graph(src);
+  const { source } = decompile(state, { latexToText });
+  assert.match(source, /^mode = enum\(idle, flying\)$/m);
+  assert.match(source, /^y = if mode = flying then x else -x$/m);
+  assert.match(source, /click\(mode\+\+\)/);
+});

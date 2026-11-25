@@ -39,6 +39,7 @@ tmcpp graph.tmcpp > graph.tmc
 tmcpp check graph.tmcpp                       # compile, then validate with DesModder's parser
 tmcpp check graph.tmcpp --runtime             # ...and load it in real Desmos: what Desmos itself rejects
 tmcpp describe graph.tmcpp                    # sliders, functions, components and what imports bring in
+tmcpp fmt graph.tmcpp --write                 # tidy indentation and blank lines (--check for CI)
 tmcpp preview graph.tmcpp --out graph.png     # render in real Desmos (see below)
 ```
 
@@ -145,6 +146,9 @@ On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't 
 The panel:
 
 - the editor highlights TMC++ (classes, colours, style words, `${}` in labels, keywords), underlines compile errors and warnings while you type, and completes class names after `.`, colours after `#`, components after `new` (imported ones too, `sp.Spring`), style words in a tail, your variables, and library names inside `import "`. Ctrl+Enter compiles, Ctrl+/ comments lines, Ctrl+F searches, and Tab indents
+- hovering a name explains it: a function's or variable's definition, a component's parameters and members, an instance, a class's tokens, a colour, a style word, an enum member's value, or what an import brings in
+- after `s1.` it offers that instance's parameters and locals; after `sp.` what the import offers; after `P.` a point's `x` and `y`
+- F12 or Ctrl+click (Cmd+click on a Mac) goes to a definition; F2 renames a name everywhere it means the same thing (a component's parameter is renamed in its body, in named arguments and in `s1.coils`); Shift+Alt+F, or ⋯ > **Format**, tidies indentation and blank lines
 - the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Link to AI, Example) and **Compile**
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
@@ -161,7 +165,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ## VS Code
 
-[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp) or, for Cursor and VSCodium, [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp). To build it yourself, run `npm run build:vscode`; publishing steps are in [vscode/README.md](vscode/README.md).
+[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), hover docs, member completion after `s1.`, go to definition (into library files on disk too), rename (F2), Format Document, and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp) or, for Cursor and VSCodium, [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp). To build it yourself, run `npm run build:vscode`; publishing steps are in [vscode/README.md](vscode/README.md).
 
 ## Language
 
@@ -316,7 +320,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
-v3 is the finished product: M16, M20, the M14 eval and M21 come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+v3 is the finished product: M20, the M14 eval and M21 come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
 
 | Milestone | State |
 | --- | --- |
@@ -336,7 +340,7 @@ v3 is the finished product: M16, M20, the M14 eval and M21 come next, and then t
 | M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
 | M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
 | M15 Chrome Web Store, and publishing from CI: the v3 release | last, after the rest of v3 |
-| M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt` | next |
+| M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt`, in the panel and VS Code | done |
 | M17 language additions: `let`, enums, private library names | done |
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |

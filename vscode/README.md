@@ -6,6 +6,10 @@ This extension adds, for `.tmcpp` files:
 
 - **Syntax highlighting.**
 - **Compile errors and warnings, underlined as you type.** Imports resolve too: `./files` next to the open file, `gh:` and `https://` GitHub links, and the built-in `std/...` libraries.
+- **Hover docs.** Hover a name to see its definition: functions, variables, a component's parameters and members, instances, classes, colours, style words, enum members, and what an import brings in.
+- **Member completion.** After `s1.` you get that instance's parameters and locals; after `sp.` what the import offers.
+- **Go to Definition** (F12), into library files on disk too, and **Rename Symbol** (F2), which renames a name everywhere it means the same thing.
+- **Format Document**: tidies indentation and blank lines without changing anything else.
 - **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**, to paste into DesModder's Text Mode in Desmos.
 
 Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) for Cursor, VSCodium and Windsurf.

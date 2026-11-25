@@ -11,6 +11,8 @@
 
 ### Added
 
+- **Editor smarts (M16)**, in the panel and in VS Code: hover docs for names, classes, colours, style words, components, instances, enum members and imports; member completion after `s1.`, `sp.` and `P.`; go to definition (F12, or Ctrl/Cmd+click); rename (F2), scoped so a component's parameter changes in its body, in named arguments and in `s1.coils`; and formatting (Shift+Alt+F, ⋯ > Format, VS Code's Format Document).
+- **`tmcpp fmt`**: tidies indentation and blank lines and changes nothing else; `--write` saves, `--check` fails when a file isn't formatted.
 - **Enums.** `mode = enum(idle, flying, landed)`: members are numbers from 1, usable in conditions, actions and math; `mode++` and `mode--` cycle through them.
 - **Private library names.** `_name` definitions, components, classes and colours stay inside their library; the built-in libraries now keep their internal helpers private (`std/3d` ray solving, `std/color` gradient steps, `std/orbits` Kepler steps).
 - **`let`.** `let P = ...` defines a hidden helper that other lines use; From graph gives `let` back.

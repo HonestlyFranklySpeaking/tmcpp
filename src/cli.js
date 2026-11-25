@@ -19,6 +19,7 @@ const HELP = `tmcpp ${version()}: compile TMC++ to DesModder Text Mode (TMC)
   tmcpp check graph.tmcpp --runtime also load it in real Desmos and report what Desmos rejects
                                     (--at a=1 b=2 sets sliders first; --json for tools)
   tmcpp preview graph.tmcpp [opts]  render a PNG in real Desmos (needs playwright-core)
+  tmcpp fmt graph.tmcpp [--write]   tidy indentation and blank lines (prints, or --write saves; --check for CI)
   tmcpp describe graph.tmcpp        list sliders, functions, components, classes and imports (--json)
   tmcpp mcp                         run an MCP server on stdio (compile, check, preview tools)
   tmcpp pair                        show the code that links the browser extension to tmcpp mcp
@@ -65,6 +66,26 @@ if (cmd === "check") {
 } else if (cmd === "preview") {
   const { runPreview } = await import("./preview.js");
   await runPreview(argv.slice(1));
+} else if (cmd === "fmt") {
+  const { format } = await import("./language.js");
+  const { writeFileSync } = await import("node:fs");
+  const files = argv.slice(1).filter((a) => !a.startsWith("--"));
+  const write = argv.includes("--write"), checkOnly = argv.includes("--check");
+  if (!files.length) {
+    if (process.stdin.isTTY) { console.error("tmcpp fmt: give .tmcpp files, or pipe one in"); process.exit(1); }
+    process.stdout.write(format(decodeSource(readFileSync(0))));
+    process.exit(0);
+  }
+  let unformatted = 0;
+  for (const f of files) {
+    const text = decodeSource(readFileSync(f)), out = format(text);
+    if (out === text) continue;
+    unformatted++;
+    if (checkOnly) console.error(`${f}: not formatted`);
+    else if (write) { writeFileSync(f, out); console.error(`formatted ${f}`); }
+    else process.stdout.write(out);
+  }
+  process.exit(checkOnly && unformatted ? 1 : 0);
 } else if (cmd === "describe") {
   const { describe, describeText } = await import("./describe.js");
   const path = argv.slice(1).find((a) => !a.startsWith("--"));

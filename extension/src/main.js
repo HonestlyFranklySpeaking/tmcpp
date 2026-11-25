@@ -88,6 +88,7 @@ function mount(Calc, Desmos) {
         <hr>
         <button id="tmcpp-linkbtn" role="menuitem">Link to AI… <span>tmcpp mcp</span></button>
         <hr>
+        <button id="tmcpp-format" role="menuitem">Format <span>Shift+Alt+F</span></button>
         <button id="tmcpp-example" role="menuitem">Load example <span>replaces text</span></button>
       </div>
       <input type="file" id="tmcpp-file" accept=".tmcpp,.txt,text/plain" hidden></div>
@@ -110,6 +111,7 @@ function mount(Calc, Desmos) {
   const src = createEditor(panel.querySelector("#tmcpp-editor"), {
     run: () => run(),
     libraries: () => allLibraries(),
+    notify: (message) => report([], message),
     check: (text) => {
       try {
         const r = compile(text, { libraries: allLibraries(), from: pushed.from, watermark: false });
@@ -353,6 +355,7 @@ function mount(Calc, Desmos) {
     report([], `Saved ${name} to your downloads.`);
   };
 
+  panel.querySelector("#tmcpp-format").onclick = () => { src.format(); report([], "Formatted: indentation and spacing only, nothing else changed."); };
   panel.querySelector("#tmcpp-example").onclick = () => {
     src.value = STARTER;
     localStorage.setItem(STORE(), src.value);

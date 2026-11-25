@@ -2,7 +2,7 @@
 // squiggles, and autocomplete. createEditor returns an object shaped like the old <textarea>
 // (value, focus, setSelectionRange, addEventListener...) so the rest of the panel is unchanged.
 import { EditorState, Prec } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, hoverTooltip } from "@codemirror/view";
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, bracketMatching, indentOnInput } from "@codemirror/language";
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from "@codemirror/commands";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
@@ -12,6 +12,7 @@ import { tags as t } from "@lezer/highlight";
 import { STYLE_WORDS, NAMED_COLORS } from "../../src/compile.js";
 import { findImports, parseImport } from "../../src/imports.js";
 import { STD } from "../../src/std/index.js";
+import { hover, completeMembers, definition, rename, format } from "../../src/language.js";
 
 // ---------- highlighting ----------
 
@@ -95,7 +96,74 @@ const theme = EditorView.theme({
   ".cm-activeLineGutter": { background: "#eef4fb", color: "#5a6270" },
   ".cm-tooltip-autocomplete": { fontSize: "12px" },
   ".cm-diagnostic": { fontSize: "12px" },
+  ".cm-tooltip.tmcpp-hover": { maxWidth: "420px", padding: "6px 9px", fontSize: "12px", lineHeight: "1.45", background: "#fff", border: "1px solid #ddd", borderRadius: "6px", boxShadow: "0 3px 12px rgba(0,0,0,.12)" },
+  ".tmcpp-hover pre": { margin: "4px 0", padding: "4px 6px", background: "#f6f8fa", borderRadius: "4px", fontFamily: "ui-monospace, Consolas, monospace", whiteSpace: "pre-wrap" },
+  ".tmcpp-hover code": { fontFamily: "ui-monospace, Consolas, monospace", background: "#f1f3f5", padding: "0 3px", borderRadius: "3px" },
 });
+
+// ---------- language service glue: positions, hover, go to definition, rename, format ----------
+
+const toLC = (doc, pos) => { const l = doc.lineAt(pos); return { line: l.number - 1, col: pos - l.from }; };
+const toPos = (doc, { line, col }) => doc.line(line + 1).from + col;
+
+/** The small bit of Markdown hover text uses: ```code```, `code` and **bold**. */
+function renderMarkdown(md) {
+  const dom = document.createElement("div");
+  for (const [i, part] of md.split(/```(?:tmcpp)?\n?/).entries()) {
+    if (i % 2) { const pre = document.createElement("pre"); pre.textContent = part.replace(/\n$/, ""); dom.append(pre); continue; }
+    for (const para of part.split(/\n{2,}/)) {
+      if (!para.trim()) continue;
+      const p = document.createElement("div");
+      for (const [j, bit] of para.split(/(`[^`]+`|\*\*[^*]+\*\*)/).entries()) {
+        if (j % 2 === 0) { p.append(bit); continue; }
+        const el = document.createElement(bit.startsWith("`") ? "code" : "b");
+        el.textContent = bit.replace(/^`|`$|^\*\*|\*\*$/g, "");
+        p.append(el);
+      }
+      dom.append(p);
+    }
+  }
+  return dom;
+}
+
+function hoverDocs(getLibraries) {
+  return hoverTooltip((view, pos) => {
+    const md = hover(view.state.doc.toString(), toLC(view.state.doc, pos), { libraries: getLibraries() });
+    if (!md) return null;
+    return { pos, above: true, create: () => { const dom = renderMarkdown(md); dom.className = "tmcpp-hover"; return { dom }; } };
+  }, { hideOnChange: true, hoverTime: 350 });
+}
+
+function goToDefinition(view, pos, getLibraries, notify) {
+  const doc = view.state.doc;
+  const d = definition(doc.toString(), toLC(doc, pos), { libraries: getLibraries() });
+  if (!d) return false;
+  if (d.lib) { notify?.(`Defined in the library '${d.lib}', line ${d.line + 1}`); return true; }
+  const from = toPos(doc, { line: d.line, col: d.col }), to = toPos(doc, { line: d.line, col: d.end });
+  view.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
+  view.focus();
+  return true;
+}
+
+function renameAt(view, getLibraries, notify) {
+  const doc = view.state.doc, pos = view.state.selection.main.head;
+  const text = doc.toString();
+  const word = view.state.wordAt(pos);
+  const current = word ? doc.sliceString(word.from, word.to) : "";
+  const name = window.prompt(`Rename '${current}' to:`, current);
+  if (!name || name === current) return true;
+  const r = rename(text, toLC(doc, pos), name.trim(), { libraries: getLibraries() });
+  if (r.error) { notify?.(r.error); return true; }
+  view.dispatch({ changes: r.edits.map((e) => ({ from: toPos(doc, { line: e.line, col: e.col }), to: toPos(doc, { line: e.line, col: e.end }), insert: e.text })) });
+  notify?.(`Renamed ${r.edits.length} place${r.edits.length === 1 ? "" : "s"}`);
+  return true;
+}
+
+export function formatDoc(view) {
+  const text = view.state.doc.toString(), out = format(text).replace(/\n$/, text.endsWith("\n") ? "\n" : "");
+  if (out !== text) view.dispatch({ changes: { from: 0, to: text.length, insert: out } });
+  return true;
+}
 
 // ---------- autocomplete ----------
 
@@ -142,6 +210,11 @@ function completer(getLibraries) {
     if (imp) {
       return { from: ctx.pos - imp[1].length, options: uniq([...Object.keys(STD), ...Object.keys(libs)]).map((l) => ({ label: l, type: "namespace" })) };
     }
+    // s1.|  sp.|  -> an instance's members, or what a namespaced import offers
+    if (/(?:^|[^A-Za-z0-9_.])[A-Za-z][A-Za-z0-9_]*\.[A-Za-z0-9_]*$/.test(before)) {
+      const m = completeMembers(text, toLC(ctx.state.doc, ctx.pos), { libraries: libs });
+      if (m?.options.length) return { from: toPos(ctx.state.doc, m.from), options: m.options.map((o) => ({ label: o.label, detail: o.detail, type: o.kind })), validFor: /^[\w]*$/ };
+    }
     const c = completionsFor(text, libs);
     const after = before.match(/\bnew\s+([\w.]*)$/);
     if (after) return { from: ctx.pos - after[1].length, options: uniq(c.comps).map((n) => ({ label: n, type: "class", apply: n + "(" })) };
@@ -168,7 +241,7 @@ function completer(getLibraries) {
  * parent: where to put it. options.run(): Ctrl+Enter. options.check(text) -> [{ line, message,
  * kind: "err" | "warn" }] for squiggles. options.libraries() -> { id: source } for completions.
  */
-export function createEditor(parent, { value = "", run, check, libraries = () => ({}) }) {
+export function createEditor(parent, { value = "", run, check, libraries = () => ({}), notify }) {
   const inputs = new Set();
   let silent = false;
   const view = new EditorView({
@@ -180,6 +253,7 @@ export function createEditor(parent, { value = "", run, check, libraries = () =>
         bracketMatching(), closeBrackets(), indentOnInput(), search({ top: true }),
         tmcpp, syntaxHighlighting(highlight), theme, EditorState.tabSize.of(2),
         autocompletion({ override: [completer(libraries)], icons: false }),
+        hoverDocs(libraries),
         lintGutter(),
         linter((v) => {
           const doc = v.state.doc;
@@ -191,11 +265,24 @@ export function createEditor(parent, { value = "", run, check, libraries = () =>
         Prec.highest(keymap.of([
           { key: "Mod-Enter", run: () => { run?.(); return true; } },
           { key: "Mod-/", run: toggleComment },
+          { key: "F12", run: (v) => goToDefinition(v, v.state.selection.main.head, libraries, notify) },
+          { key: "F2", run: (v) => renameAt(v, libraries, notify) },
+          { key: "Shift-Alt-f", run: formatDoc },
         ])),
         keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...completionKeymap, indentWithTab]),
         EditorView.updateListener.of((u) => { if (u.docChanged && !silent) for (const fn of inputs) fn(new Event("input")); }),
         // A dropped file is opened by the panel, not pasted in as text.
-        EditorView.domEventHandlers({ drop: (e) => !!e.dataTransfer?.files?.length }),
+        EditorView.domEventHandlers({
+          drop: (e) => !!e.dataTransfer?.files?.length,
+          // Ctrl+click (Cmd+click on a Mac) goes to the definition.
+          mousedown: (e, v) => {
+            if (!(e.ctrlKey || e.metaKey) || e.button !== 0) return false;
+            const pos = v.posAtCoords({ x: e.clientX, y: e.clientY });
+            if (pos == null) return false;
+            e.preventDefault();
+            return goToDefinition(v, pos, libraries, notify);
+          },
+        }),
       ],
     }),
   });
@@ -213,6 +300,7 @@ export function createEditor(parent, { value = "", run, check, libraries = () =>
     get selectionStart() { return view.state.selection.main.from; },
     get selectionEnd() { return view.state.selection.main.to; },
     focus() { view.focus(); },
+    format() { formatDoc(view); },
     setSelectionRange(a, b) { view.dispatch({ selection: { anchor: a, head: b }, scrollIntoView: true }); },
     classList: view.dom.classList,
     addEventListener(type, fn) { type === "input" ? inputs.add(fn) : view.dom.addEventListener(type, fn); },

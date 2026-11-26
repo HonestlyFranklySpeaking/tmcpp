@@ -24,10 +24,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 // WebSocket to ws://127.0.0.1:PORT open and passes each request to the Desmos tab used last.
 // Desmos tabs say hello every 20s, which also wakes this worker to reconnect after a restart.
 
-let ws = null;
+// Two servers can link to the tab at once, with the same pairing code: `tmcpp mcp` (an AI app) on
+// the code's port, and the VS Code extension on the port after it.
+const SERVERS = [{ name: "tmcpp mcp", offset: 0 }, { name: "VS Code", offset: 1 }].map((s) => ({ ...s, ws: null, state: "off", retry: null, backoff: 3000 }));
 let status = { state: "off", message: "Not linked" };
-let retry = null;
-let backoff = 3000; // 3s after a drop, growing to 30s while nothing answers (each try logs an error in Chrome)
 
 const getLink = async () => (await chrome.storage.local.get("link")).link ?? null;
 const parseCode = (code) => { const m = /^(\d{2,5})-([0-9a-f]{16,})$/.exec(String(code ?? "").trim()); return m && { port: Number(m[1]), token: m[2] }; };
@@ -41,8 +41,14 @@ async function noteTab(id, alive = true, inUse = true) {
 }
 chrome.tabs.onRemoved.addListener((id) => { noteTab(id, false); });
 
-function setStatus(state, message) {
-  status = { state, message };
+/** One status for the panel, from both servers. */
+function updateStatus() {
+  const linked = SERVERS.filter((s) => s.state === "linked").map((s) => s.name);
+  const denied = SERVERS.find((s) => s.state === "denied");
+  status = linked.length ? { state: "linked", message: `Linked to ${linked.join(" and ")}`, servers: linked }
+    : denied ? { state: "denied", message: denied.deniedMessage ?? "The pairing code was refused" }
+    : SERVERS.some((s) => s.state === "waiting") ? { state: "waiting", message: "Waiting for tmcpp mcp or VS Code (is an AI app or VS Code linking?)" }
+    : { state: "off", message: "Not linked" };
   tabs().then((t) => { for (const id of Object.keys(t)) chrome.tabs.sendMessage(Number(id), { op: "link-status", status }).catch(() => {}); });
 }
 
@@ -61,39 +67,47 @@ async function toTab(req) {
   throw new Error("no Desmos tab answered: reload the Desmos tab");
 }
 
-async function ensureLink() {
-  const link = await getLink();
-  const pair = link?.enabled && parseCode(link.code);
-  if (!pair) {
-    if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    setStatus("off", link?.enabled ? "The pairing code doesn't look right" : "Not linked");
-    return;
-  }
-  if (ws && ws.readyState <= 1 && ws.pair === link.code) return; // connecting or open
-  if (ws) { ws.onclose = null; ws.close(); }
-  clearTimeout(retry);
-  const sock = new WebSocket(`ws://127.0.0.1:${pair.port}/tmcpp`);
-  sock.pair = link.code;
-  ws = sock;
-  if (status.state !== "waiting") setStatus("waiting", "Waiting for tmcpp mcp (is an AI app running it?)");
+function close(s) { if (s.ws) { s.ws.onclose = null; s.ws.close(); s.ws = null; } clearTimeout(s.retry); }
+
+function connect(s, pair, code) {
+  if (s.ws && s.ws.readyState <= 1 && s.ws.pair === code) return; // connecting or open
+  close(s);
+  const sock = new WebSocket(`ws://127.0.0.1:${pair.port + s.offset}/tmcpp`);
+  sock.pair = code;
+  s.ws = sock;
+  if (s.state !== "waiting" && s.state !== "linked") { s.state = "waiting"; updateStatus(); }
   sock.onopen = () => sock.send(JSON.stringify({ type: "hello", token: pair.token, version: chrome.runtime.getManifest().version, browser: navigator.userAgent }));
   sock.onmessage = async (e) => {
     let msg;
     try { msg = JSON.parse(e.data); } catch { return; }
-    if (msg.type === "welcome") { backoff = 3000; return setStatus("linked", "Linked to tmcpp mcp"); }
-    if (msg.type === "denied") return setStatus("denied", msg.message ?? "The pairing code was refused");
+    if (msg.type === "welcome") { s.backoff = 3000; s.state = "linked"; return updateStatus(); }
+    if (msg.type === "denied") { s.state = "denied"; s.deniedMessage = msg.message; return updateStatus(); }
     if (msg.type === "ping") return sock.send(JSON.stringify({ type: "pong" }));
     if (!msg.id) return;
     try { sock.send(JSON.stringify({ id: msg.id, ok: true, data: await toTab({ op: msg.op, args: msg.args }) })); }
     catch (err) { sock.send(JSON.stringify({ id: msg.id, ok: false, error: String(err?.message ?? err) })); }
   };
   sock.onclose = () => {
-    if (ws !== sock) return;
-    ws = null;
-    if (status.state !== "denied") setStatus("waiting", "Waiting for tmcpp mcp (is an AI app running it?)");
-    retry = setTimeout(ensureLink, backoff);
-    backoff = Math.min(backoff * 2, 30000);
+    if (s.ws !== sock) return;
+    s.ws = null;
+    if (s.state !== "denied") s.state = "waiting";
+    updateStatus();
+    // 3s after a drop, growing to 30s while nothing answers (each try logs an error in Chrome)
+    s.retry = setTimeout(ensureLink, s.backoff);
+    s.backoff = Math.min(s.backoff * 2, 30000);
   };
+}
+
+async function ensureLink() {
+  const link = await getLink();
+  const pair = link?.enabled && parseCode(link.code);
+  if (!pair) {
+    for (const s of SERVERS) { close(s); s.state = "off"; }
+    updateStatus();
+    if (link?.enabled) { status = { state: "off", message: "The pairing code doesn't look right" }; }
+    return;
+  }
+  for (const s of SERVERS) connect(s, pair, link.code);
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {

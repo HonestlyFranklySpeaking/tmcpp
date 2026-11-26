@@ -4,6 +4,7 @@ const vscode = require("vscode");
 const { compileFile, loadNode } = require("../../src/load-node.js");
 const { resolveImports } = require("../../src/imports.js");
 const lang = require("../../src/language.js");
+const { Link, pairing } = require("../../src/link.js");
 
 let diagnostics;
 const timers = new Map();
@@ -106,10 +107,84 @@ const features = (selector) => [
   }),
 ];
 
+// ---------- the Desmos link: this file, live, in your Desmos tab ----------
+// The browser extension pairs once (the code in ~/.tmcpp/link.json, shared with tmcpp mcp) and
+// connects here on the port after tmcpp mcp's. Each edit is compiled; when there are no errors the
+// tab applies it like live editing, changing only what changed. With Live Share, each person links
+// their own VS Code to their own tab, and everyone's graph follows the shared file.
+
+let link = null, linkTimer = null, statusItem = null, wasConnected = false, lastSent = "";
+const output = () => (output.ch ??= vscode.window.createOutputChannel("TMC++"));
+
+function showLinkStatus(note) {
+  if (!statusItem) return;
+  if (!link) { statusItem.hide(); return; }
+  const on = link.connected;
+  statusItem.text = on ? "$(link) Desmos" : "$(debug-disconnect) Desmos";
+  statusItem.tooltip = note ?? (on ? "TMC++ is linked to your Desmos tab: edits show up live. Click to unlink."
+    : link.busy ? `Another program holds port ${link.port}. Click to unlink.` : "Waiting for the Desmos tab: in the TMC++ panel, Link to AI with the pairing code. Click to unlink.");
+  statusItem.show();
+}
+
+async function sendLive(doc, force = false) {
+  if (!link?.connected || !doc || doc.languageId !== "tmcpp") return;
+  const text = doc.getText();
+  if (!force && text === lastSent) return;
+  const r = await compileDoc(doc);
+  if (r.errors.length) { showLinkStatus(`Not sent: ${r.errors.length} error(s) in the file`); return; }
+  const { libraries, from } = await langOpts(doc);
+  for (const id of Object.keys(libraries)) if (id.startsWith("std/")) delete libraries[id];
+  try {
+    const res = await link.request("live", { source: text, libraries, from }, 15000);
+    lastSent = text;
+    showLinkStatus(res.ok ? `Linked: ${res.message || "up to date"}` : `The tab couldn't compile it: ${res.errors?.[0]?.message ?? ""}`);
+  } catch (e) { showLinkStatus(`Couldn't reach the tab: ${e.message}`); }
+}
+
+async function toggleLink() {
+  if (link) {
+    await link.stop(); link = null; clearInterval(linkTimer); showLinkStatus();
+    vscode.window.showInformationMessage("TMC++: unlinked from Desmos.");
+    return;
+  }
+  const { port, token, code } = pairing();
+  link = new Link({ port: port + 1, token, log: (m) => output().appendLine(m) });
+  await link.start();
+  wasConnected = false;
+  linkTimer = setInterval(() => {
+    if (!link) return;
+    if (link.connected !== wasConnected) {
+      wasConnected = link.connected;
+      lastSent = "";
+      if (wasConnected) sendLive(vscode.window.activeTextEditor?.document, true);
+    }
+    showLinkStatus();
+  }, 1000);
+  showLinkStatus();
+  const pick = await vscode.window.showInformationMessage(`TMC++: linking to Desmos. If the tab isn't paired yet, paste the code ${code} in the TMC++ panel (⋯ > Link to AI).`, "Copy code");
+  if (pick) await vscode.env.clipboard.writeText(code);
+}
+
 function activate(context) {
   diagnostics = vscode.languages.createDiagnosticCollection("tmcpp");
+  statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusItem.command = "tmcpp.linkDesmos";
   context.subscriptions.push(
+    statusItem,
     ...features({ language: "tmcpp" }),
+    vscode.commands.registerCommand("tmcpp.linkDesmos", toggleLink),
+    vscode.commands.registerCommand("tmcpp.pairingCode", async () => {
+      const { code } = pairing();
+      await vscode.env.clipboard.writeText(code);
+      vscode.window.showInformationMessage(`TMC++ pairing code ${code} copied. In Desmos: TMC++ panel, ⋯ > Link to AI, paste, Link.`);
+    }),
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      if (!link || e.document !== vscode.window.activeTextEditor?.document) return;
+      clearTimeout(sendLive.timer);
+      sendLive.timer = setTimeout(() => sendLive(e.document), 500);
+    }),
+    vscode.window.onDidChangeActiveTextEditor((ed) => { if (link && ed) sendLive(ed.document); }),
+    { dispose: () => { link?.stop(); clearInterval(linkTimer); } },
     diagnostics,
     vscode.workspace.onDidOpenTextDocument(check),
     vscode.workspace.onDidChangeTextDocument((e) => soon(e.document)),

@@ -12,6 +12,7 @@
 
 ### Added
 
+- **Link VS Code to Desmos.** The VS Code command **TMC++: Link to Desmos** shows the file live in your Desmos tab, using the panel's live editing, through the same pairing code as `tmcpp mcp` (on the next port, so both can link at once). With Live Share, everyone's tab follows the shared file.
 - **Live editing (M21, first part).** A **Live** button in the panel: the graph updates as you type, once the file has no errors. Changed lines are patched in place, so dragged sliders, the view and the undo history survive; adding or removing lines reloads the graph but keeps slider values and the view. The diff logic is `src/live.js`.
 - **Editor smarts (M16)**, in the panel and in VS Code: hover docs for names, classes, colours, style words, components, instances, enum members and imports; member completion after `s1.`, `sp.` and `P.`; go to definition (F12, or Ctrl/Cmd+click); rename (F2), scoped so a component's parameter changes in its body, in named arguments and in `s1.coils`; and formatting (Shift+Alt+F, ⋯ > Format, VS Code's Format Document).
 - **`tmcpp fmt`**: tidies indentation and blank lines and changes nothing else; `--write` saves, `--check` fails when a file isn't formatted.

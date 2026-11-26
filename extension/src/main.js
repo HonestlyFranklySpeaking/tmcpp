@@ -100,7 +100,7 @@ function mount(Calc, Desmos) {
     <div id="tmcpp-lib" hidden></div>
     <div id="tmcpp-link" hidden>
       <p>Status: <span class="state">Not linked</span></p>
-      <p>Lets an AI app running <code>tmcpp mcp</code> on this computer load graphs into this tab, read them back and take screenshots. Run <code>tmcpp pair</code> for the code.</p>
+      <p>Lets an AI app running <code>tmcpp mcp</code>, or VS Code with TMC++: Link to Desmos, load graphs into this tab as you work. Run <code>tmcpp pair</code> (or TMC++: Show Pairing Code in VS Code) for the code; one code links both.</p>
       <div class="row"><input id="tmcpp-code" placeholder="pairing code, like 51324-3f9a…" spellcheck="false" autocomplete="off">
         <button id="tmcpp-linkon">Link</button><button class="ghost" id="tmcpp-linkoff">Unlink</button></div>
     </div>
@@ -486,6 +486,15 @@ function mount(Calc, Desmos) {
       return rebuild();
     },
     screenshot: async ({ width }) => ({ png: await screenshot(width) }),
+    // VS Code's live link: the file as it is now, applied like live editing (only what changed).
+    live: ({ source, libraries = {}, from = "" }) => {
+      if (typeof source !== "string") throw new Error("live needs source text");
+      pushed = { libraries, from };
+      if (src.value !== source) src.value = source;
+      liveRun();
+      const errors = lastReport.items.filter((i) => i.kind === "err"), warnings = lastReport.items.filter((i) => i.kind === "warn");
+      return { ok: errors.length === 0, message: lastReport.okText, errors, warnings };
+    },
   };
   window.addEventListener("message", async (e) => {
     const m = e.data;

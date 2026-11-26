@@ -116,7 +116,9 @@ To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then 
 
 The link is up only while the AI app is running `tmcpp mcp`. Until then the panel says "Waiting for tmcpp mcp", and Chrome's extension console shows `ERR_CONNECTION_REFUSED` now and then as the extension retries (every 3 to 30 seconds). That's expected and harmless.
 
-How it's kept safe: `tmcpp mcp` listens only on `127.0.0.1` (port 51324, or `TMCPP_LINK_PORT`), accepts only browser extensions (web pages can't connect), and drops any connection that doesn't send the pairing code within 5 seconds. **Unlink** in the panel turns it off; `TMCPP_LINK=0` starts the server without it.
+The same pairing also links VS Code: run **TMC++: Link to Desmos** there, and each edit shows up in the tab live, once the file has no errors, changing only what changed. VS Code listens on the next port (51325), so an AI app and VS Code can both be linked to the tab at once.
+
+How it's kept safe: `tmcpp mcp` listens only on `127.0.0.1` (port 51324, or `TMCPP_LINK_PORT`; VS Code on the port after it), accepts only browser extensions (web pages can't connect), and drops any connection that doesn't send the pairing code within 5 seconds. **Unlink** in the panel turns it off; `TMCPP_LINK=0` starts the server without it.
 
 Claude Code:
 
@@ -166,7 +168,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ## VS Code
 
-[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), hover docs, member completion after `s1.`, go to definition (into library files on disk too), rename (F2), Format Document, and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp) or, for Cursor and VSCodium, [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp). To build it yourself, run `npm run build:vscode`; publishing steps are in [vscode/README.md](vscode/README.md).
+[`vscode/`](vscode) is a VS Code extension for `.tmcpp` files: syntax highlighting, compile errors and warnings underlined as you type (imports resolve from disk, GitHub and `std/`), hover docs, member completion after `s1.`, go to definition (into library files on disk too), rename (F2), Format Document, **TMC++: Link to Desmos**, which shows the file live in your Desmos tab as you type (with Live Share, everyone's tab follows the shared file), and the commands **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**. Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp) or, for Cursor and VSCodium, [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp). To build it yourself, run `npm run build:vscode`; publishing steps are in [vscode/README.md](vscode/README.md).
 
 ## Language
 

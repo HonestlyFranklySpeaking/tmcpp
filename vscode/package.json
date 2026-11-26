@@ -49,6 +49,14 @@
       {
         "command": "tmcpp.copyTmc",
         "title": "TMC++: Copy compiled TMC"
+      },
+      {
+        "command": "tmcpp.linkDesmos",
+        "title": "TMC++: Link to Desmos (live)"
+      },
+      {
+        "command": "tmcpp.pairingCode",
+        "title": "TMC++: Show Pairing Code"
       }
     ]
   }

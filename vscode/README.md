@@ -10,6 +10,7 @@ This extension adds, for `.tmcpp` files:
 - **Member completion.** After `s1.` you get that instance's parameters and locals; after `sp.` what the import offers.
 - **Go to Definition** (F12), into library files on disk too, and **Rename Symbol** (F2), which renames a name everywhere it means the same thing.
 - **Format Document**: tidies indentation and blank lines without changing anything else.
+- **TMC++: Link to Desmos (live)**: your Desmos tab follows this file as you type. Once the file has no errors, the tab updates only what changed, so sliders and the view stay put. Pair once with **TMC++: Show Pairing Code** (in Desmos: the TMC++ panel, ⋯ > Link to AI). The status bar shows whether it's linked; click it to unlink. With **Live Share**, each person links their own VS Code to their own Desmos tab, and everyone's graph follows the shared file. Needs the TMC++ browser extension in Chrome.
 - **TMC++: Show compiled TMC** and **TMC++: Copy compiled TMC**, to paste into DesModder's Text Mode in Desmos.
 
 Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) for Cursor, VSCodium and Windsurf.

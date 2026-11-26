@@ -172,7 +172,7 @@ After changing the compiler, run `npm run build:ext` again and click reload on t
 
 ## Language
 
-The essentials are below. **Everything else is in the [syntax reference](docs/syntax/README.md)**, one short page per topic: [lines and math](docs/syntax/basics.md), [conditionals, actions and enums](docs/syntax/logic.md), [styles](docs/syntax/styles.md), [components](docs/syntax/components.md), [libraries](docs/syntax/libraries.md), [blocks and settings](docs/syntax/blocks.md), [From graph](docs/syntax/round-trip.md) and [errors](docs/syntax/errors.md).
+The essentials are below. **Everything else is in the [syntax reference](docs/syntax/README.md)**, one short page per topic: [lines and math](docs/syntax/basics.md), [conditionals, actions and enums](docs/syntax/logic.md), [styles](docs/syntax/styles.md), [components](docs/syntax/components.md), [lambdas, macros and loops](docs/syntax/macros.md), [libraries](docs/syntax/libraries.md), [blocks and settings](docs/syntax/blocks.md), [From graph](docs/syntax/round-trip.md) and [errors](docs/syntax/errors.md).
 
 - **One statement per line**; a `;` is optional, and a line ending in an operator, a comma or an open bracket continues on the next. `//` comments are allowed anywhere.
 - **Write math naturally**: `4p`, `k sin(x)` and `2|x|` get their `*`, and names like `score` become names Desmos accepts.
@@ -244,7 +244,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
-v3 is the finished product: M21, M20 and the M14 eval come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+v3 is the finished product: the M14 eval comes next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
 
 | Milestone | State |
 | --- | --- |
@@ -269,7 +269,7 @@ v3 is the finished product: M21, M20 and the M14 eval come next, and then the br
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |
-| M20 syntax revamp: lambdas, macros, compile-time `for` loops, `while` as a ticker | planned for v3 |
+| M20 [syntax revamp](docs/syntax/macros.md): lambdas, macros, compile-time `for` loops, `while` as a ticker | done |
 | M21 live editing (the graph updates as you type, changing only what changed) and multiuser editing in VS Code through Live Share | planned for v3, built first |
 
 ## License

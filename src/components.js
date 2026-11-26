@@ -70,8 +70,10 @@ export const closest = (w, list) => {
 };
 
 /** An argument as text that can be dropped in anywhere: bracketed unless it is one atom. */
-function wrap(arg) {
+export function wrap(arg) {
   if (/^[A-Za-z0-9_.]+$/.test(arg) || /^"(?:[^"\\]|\\.)*"$/.test(arg)) return arg;
+  // A style tail passed as an argument (#red dashed, .glow, @{ ... }) goes in as written.
+  if (/^(#[A-Za-z0-9(]|\.[A-Za-z_]|@\{)/.test(arg.trim())) return arg.trim();
   if (/^[(\[]/.test(arg) && matchClose(arg, 0) === arg.length - 1) return arg;
   return `(${arg})`;
 }

@@ -20,6 +20,7 @@ A raw `@{ ... }` is accepted wherever TMC accepts one, so any TMC option without
 | [Conditionals, actions and enums](logic.md) | inline and block `if`, action shortcuts (`n++`, `toggle`, `L.push`, `reset`), `enum` |
 | [Styles](styles.md) | style tails, classes, named colours, and every token (colour, lines and fill, points, labels, sliders, click actions, item flags) |
 | [Components](components.md) | `component`, `new`, members, abstract parameters, nesting, list instances |
+| [Lambdas, macros and loops](macros.md) | `(x) => ...` with `map`, `filter` and components; `macro`; compile-time `for`; `while` as a ticker |
 | [Libraries](libraries.md) | `import` forms, private `_names`, where libraries come from, the built-in `std/` libraries |
 | [Blocks and settings](blocks.md) | notes, folders, tables, tickers, images, `settings` |
 | [What the compiler adds, and From graph](round-trip.md) | the watermark and metadata note, and how a graph turns back into TMC++ |

@@ -58,7 +58,7 @@
           "include": "#string"
         },
         {
-          "match": "^\\s*(component|new)\\s+([A-Za-z][\\w.]*)",
+          "match": "^\\s*(component|new|macro)\\s+([A-Za-z][\\w.]*)",
           "captures": {
             "1": {
               "name": "keyword.other.tmcpp"
@@ -127,7 +127,7 @@
         },
         {
           "name": "keyword.control.tmcpp",
-          "match": "\\b(?:if|then|else|for|with|import|from|as|abstract|folder|table|settings|ticker|click|let|enum)\\b"
+          "match": "\\b(?:if|then|else|for|with|import|from|as|abstract|folder|table|settings|ticker|click|let|enum|macro|while|in)\\b"
         },
         {
           "name": "keyword.operator.action.tmcpp",

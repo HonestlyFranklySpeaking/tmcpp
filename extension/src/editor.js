@@ -17,7 +17,7 @@ import { hover, completeMembers, definition, rename, format } from "../../src/la
 // ---------- highlighting ----------
 
 const KEYWORDS = new Set(["component", "new", "as", "class", "color", "folder", "table", "settings", "ticker", "import",
-  "from", "if", "then", "else", "abstract", "for", "with", "click", "let", "enum"]);
+  "from", "if", "then", "else", "abstract", "for", "with", "click", "let", "enum", "macro", "while", "in"]);
 const STYLE = new Set(STYLE_WORDS);
 const NUMBER = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/;
 
@@ -56,7 +56,7 @@ const tmcpp = StreamLanguage.define({
     if (word) {
       const w = word[0];
       if (s.expectType) { s.expectType = false; return "type"; }
-      if (KEYWORDS.has(w)) { if (w === "component" || w === "new") s.expectType = true; return "keyword"; }
+      if (KEYWORDS.has(w)) { if (w === "component" || w === "new" || w === "macro") s.expectType = true; return "keyword"; }
       if (s.tail && STYLE.has(w)) return "style";
       if (stream.peek() === "(") return "fn";
       return /^[A-Z]/.test(w) && w.length > 1 ? "type" : "variable";

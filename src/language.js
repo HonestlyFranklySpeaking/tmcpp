@@ -37,6 +37,8 @@ export const KEYWORD_DOCS = {
   color: "`color name #rrggbb`: a named colour, used as `#name`.",
   import: "`import \"lib\"`, `import \"lib\" as ns` or `import { A, b } from \"lib\"`.",
   let: "`let P = ...`: a helper other lines use, never drawn.",
+  macro: "`macro Name(a, b) { ... }`: lines written where `Name(...)` is used, with no folder; arguments can be math or tails.",
+  while: "`while condition { actions }`: runs once per tick while the condition holds (part of the ticker).",
   enum: "`mode = enum(a, b, c)`: named states; members count from 1, `mode++` cycles.",
   if: "`if c then a else b`, or a block `if c { ... } else { ... }`.",
   click: "`click(action)`: run an action when the shape is clicked.",
@@ -50,7 +52,7 @@ const BUILTIN_COLORS = { red: "#c74440", blue: "#2d70b3", green: "#388c46", purp
 
 // ---------- the index: what a file defines, and where ----------
 
-const COMP = /^(\s*)component\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{\s*$/;
+const COMP = /^(\s*)(?:component|macro)\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{\s*$/;
 const DEF = /^(\s*)(?:let\s+)?([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^()]*)\))?\s*=(?!=)/;
 const CLASS = /^(\s*)class\s+([A-Za-z_][\w-]*)/;
 const COLOR = /^(\s*)color\s+([A-Za-z_][\w-]*)\s+(#[0-9a-fA-F]{3,6})/;
@@ -86,7 +88,7 @@ export function index(text) {
     if ((m = COMP.exec(l))) {
       const c = { name: m[2], params: params(m[3]), locals: new Map(), instances: new Map(), line, start: line, end: lines.length - 1, depth, text: t };
       out.components.set(c.name, c);
-      out.defs.push({ name: c.name, kind: "component", line, col: col(c.name, m[1].length + 9), text: t.replace(/\s*\{$/, "") });
+      out.defs.push({ name: c.name, kind: "component", line, col: col(c.name, m[1].length + 5), text: t.replace(/\s*\{$/, "") });
       comp = c;
     } else if (/^import\b/.test(t)) {
       const p = parseImport(t);

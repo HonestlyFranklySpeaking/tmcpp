@@ -9,7 +9,7 @@ import { latexToTmc } from "./latex.js";
 const math = (l) => { if (l == null || l === "") return null; try { return latexToTmc(String(l)); } catch { return String(l); } };
 
 const DEF = /^(?:let\s+)?([A-Za-z][A-Za-z0-9_]*)\(([^()]*)\)\s*=(?!=)\s*(.*)$/;
-const COMP = /^component\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/;
+const COMP = /^(?:component|macro)\s+([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/;
 const CLASS = /^class\s+([A-Za-z][\w-]*)/;
 const ENUM = /^([A-Za-z][A-Za-z0-9_]*)\s*=\s*enum\s*\(([^()]*)\)/;
 const COLOR = /^color\s+([A-Za-z][\w-]*)\s+(#[0-9a-fA-F]{3,6})\b/;

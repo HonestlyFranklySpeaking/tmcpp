@@ -112,7 +112,7 @@ const TOOLS = [
 ];
 
 // The syntax reference: docs/syntax/, one page per topic. tmcpp://docs/syntax is all of it at once.
-const SYNTAX_PAGES = ["README", "basics", "logic", "styles", "components", "libraries", "blocks", "round-trip", "errors"];
+const SYNTAX_PAGES = ["README", "basics", "logic", "styles", "components", "macros", "libraries", "blocks", "round-trip", "errors"];
 const syntaxPage = (name) => readFileSync(new URL(`../docs/syntax/${name}.md`, import.meta.url), "utf8")
   .replace(/^\[Syntax reference\]\(README\.md\).*\n\n/m, ""); // the page-to-page links mean nothing to an AI
 const pageTitle = (name) => syntaxPage(name).match(/^# (.+)$/m)?.[1] ?? name;

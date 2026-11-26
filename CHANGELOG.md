@@ -4,6 +4,8 @@
 
 ### Changed
 
+- A line ending in `n++` or `n--` no longer runs into the next line.
+- A style tail passed to a component (`new Plot(#red)`) goes in as written instead of in brackets.
 - **Docs reorganised.** The syntax reference is now a folder, `docs/syntax/`, with one short page per topic and an index with the cheat sheet; `docs/syntax.md` points there. The README keeps only the essentials. The MCP server serves the whole reference as `tmcpp://docs/syntax` and each page on its own. A test now compiles every example in the README and the reference.
 - A component defined inside another component is one clear error at the inner definition, in a file or a library, instead of a confusing "Unmatched '}'" (or no error at all when the library's component went unused).
 - Everything inside `click(...)` is an action, so `on = 1` there sets `on` even when nothing else on the line is an action shortcut.
@@ -12,6 +14,7 @@
 
 ### Added
 
+- **M20 syntax revamp.** Lambdas (`map(L, (x) => x^2)`, `filter(L, (v) => v > 0)`, and lambdas passed to components); `macro Name(...) { ... }`, templates written where they're used, taking math or style tails; `for i in [1...5] { ... }`, written once per value with `_{i}` in names; and `while condition { ... }`, which joins the ticker. From graph gives each back as written. See `docs/syntax/macros.md`.
 - **Link VS Code to Desmos.** The VS Code command **TMC++: Link to Desmos** shows the file live in your Desmos tab, using the panel's live editing, through the same pairing code as `tmcpp mcp` (on the next port, so both can link at once). With Live Share, everyone's tab follows the shared file.
 - **Live editing (M21, first part).** A **Live** button in the panel: the graph updates as you type, once the file has no errors. Changed lines are patched in place, so dragged sliders, the view and the undo history survive; adding or removing lines reloads the graph but keeps slider values and the view. The diff logic is `src/live.js`.
 - **Editor smarts (M16)**, in the panel and in VS Code: hover docs for names, classes, colours, style words, components, instances, enum members and imports; member completion after `s1.`, `sp.` and `P.`; go to definition (F12, or Ctrl/Cmd+click); rename (F2), scoped so a component's parameter changes in its body, in named arguments and in `s1.coils`; and formatting (Shift+Alt+F, ⋯ > Format, VS Code's Format Document).

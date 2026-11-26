@@ -4,6 +4,8 @@
 import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { lowerEnums } from "./enums.js";
+import { lowerMacros, lowerWhiles } from "./macros.js";
+import { lowerLambdas } from "./lambdas.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions, checkCalls } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
 import { lowerConditionals, isConditionalHeader } from "./conditionals.js";
@@ -111,8 +113,10 @@ function splitTopLevelCommas(s) {
 // `component` and near-misses of it (compoment, componet) open a block; the misspelling is
 // reported by the component pass rather than gluing the whole body into one statement.
 const COMPONENT_HEAD = /^(component|compoment|componet|compnent|componnet|comp)\s+[A-Za-z]\w*\s*\(/;
-const isHeader = (s) => /^(folder|class|table)\b/.test(s) || COMPONENT_HEAD.test(s) || isConditionalHeader(s);
-const endsWithOperator = (s) => /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
+const LOOP_HEAD = /^(macro\s+[A-Za-z]\w*\s*\(|for\s+[A-Za-z]\w*\s+in\b|while\b)/;
+const isHeader = (s) => /^(folder|class|table)\b/.test(s) || COMPONENT_HEAD.test(s) || LOOP_HEAD.test(s) || isConditionalHeader(s);
+// n++ and n-- (action shortcuts) end a line; a single trailing + or - continues it.
+const endsWithOperator = (s) => !/[A-Za-z0-9_\])](\+\+|--)\s*$/.test(s) && /([+\-*/^=,<>]|\\le|\\ge)\s*$/.test(s);
 
 // ---------- pass 1: join physical lines into logical statements ----------
 
@@ -192,7 +196,7 @@ function toStatements(source) {
     t = t.replace(/;+\s*$/, "").trimEnd(); // optional CSS-style semicolon
     cur.text = t;
 
-    const folderOpen = (/^(folder|table)\b/.test(t) || COMPONENT_HEAD.test(t)) && t.endsWith("{");
+    const folderOpen = (/^(folder|table)\b/.test(t) || COMPONENT_HEAD.test(t) || LOOP_HEAD.test(t)) && t.endsWith("{");
     const classUnclosed = /^class\b/.test(t) && bracketDepth(t) > 0;
     const exprUnclosed = !isHeader(t) && bracketDepth(t) > 0;
     cur.open = explicit || classUnclosed ||
@@ -439,7 +443,7 @@ function roundTripSources(source, parsed) {
     if (st.orphan) continue;
     if (st.text.startsWith("}")) depth--;
     if (comp && depth === comp.depth && st.text === "}") { out.components.push(blockSource(source, comp.line, st.end)); comp = null; }
-    else if (!comp && depth === 0 && COMPONENT_HEAD.test(st.text)) comp = { line: st.line, depth };
+    else if (!comp && depth === 0 && (COMPONENT_HEAD.test(st.text) || /^macro\s/.test(st.text))) comp = { line: st.line, depth };
     else if (!comp && depth === 0 && /^import\b/.test(st.text)) out.imports.push(blockSource(source, st.line, st.end));
     else if (!comp && /^new\b/.test(st.text)) out.instances.set(st.line, blockSource(source, st.line, st.end));
     if (st.text.endsWith("{")) depth++;
@@ -549,11 +553,22 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   // (After if: an inline if's branches are then piecewise arms the pass can see into.)
   // Enum members become numbers before anything reads the math (if, actions, components).
   const enumed = lowerEnums(imported.statements, errors);
-  const acted = lowerActions(lowerConditionals(enumed.statements, errors, warnings, findTailStart), errors, warnings, findTailStart);
+  // Macros and for loops are written out, and while loops join the ticker, before anything else
+  // reads the lines (M20).
+  const macroed = lowerMacros(enumed.statements, errors, warnings);
+  const looped = lowerWhiles(macroed.statements, macroed.whiles, source, blockSource, findTailStart);
+  const acted = lowerActions(lowerConditionals(looped, errors, warnings, findTailStart), errors, warnings, findTailStart);
   const expanded = expandComponents(acted, errors, warnings);
   // Again after expansion: an action passed as an argument (new Button(..., n++)) only reaches
   // its click(...) now. Already-lowered text passes through unchanged.
   expanded.statements = lowerActions(expanded.statements, errors, warnings, findTailStart);
+  // Lambdas last: a lambda passed to a component is only called once the body is expanded.
+  expanded.statements = expanded.statements.map((st) => {
+    if (st.orphan) return st;
+    const r = lowerLambdas(st.text);
+    if (r.error) errors.push({ line: st.line, message: r.error });
+    return r.text === st.text ? st : { ...st, text: r.text };
+  });
   const statements = expanded.statements;
   const classes = new Map();
 
@@ -692,7 +707,7 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
 
     // Ticker: ticker <action> [play] [2s] [@{ }]
     if (/^ticker\b/.test(text)) {
-      tickerSource = text;
+      tickerSource = st.tickerSrc ?? text;
       let body = text.replace(/^ticker\b/, "").trim(), tail = "";
       const tts = findTailStart(" " + body);
       if (tts !== -1) { tail = body.slice(tts - 1).trim(); body = body.slice(0, tts - 1).trim(); }

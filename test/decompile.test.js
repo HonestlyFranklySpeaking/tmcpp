@@ -350,3 +350,11 @@ test("enum lines come back as written", () => {
   assert.match(source, /^y = if mode = flying then x else -x$/m);
   assert.match(source, /click\(mode\+\+\)/);
 });
+
+test("macros, for loops, while loops and lambdas come back as written", () => {
+  const src = "macro Glow(shape, look) {\n  shape  look opacity 0\n}\nGlow(x^2 + y^2 < 4, #fa7e19 fill 0.3)\nfor i in [1...2] {\n  P_{i} = (i, 0)\n}\nn = 0\nwhile n < 3 {\n  n++\n}\nM = map([1, 2], (x) => x^2)";
+  const { state, latexToText } = graph(src);
+  const { source, warnings } = decompile(state, { latexToText });
+  assert.deepEqual(warnings, []);
+  for (const part of ["macro Glow(shape, look) {", "Glow(x^2 + y^2 < 4, #fa7e19 fill 0.3)", "for i in [1...2] {", "while n < 3 {", "M = map([1, 2], (x) => x^2)"]) assert.ok(source.includes(part), part);
+});

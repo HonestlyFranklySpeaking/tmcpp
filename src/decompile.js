@@ -262,6 +262,8 @@ export function decompile(state, { latexToText: fromLatex, itemToTmc = null }) {
     if (!intact.get(key)) {
       warnOnce(key, key.startsWith("i:")
         ? `'${key.slice(2)}' was edited in Desmos, so it comes back as plain lines instead of its new line`
+        : key.startsWith("m:") ? `the macro used on line ${key.slice(2)} was edited in Desmos, so it comes back as its lines`
+        : key.startsWith("f:") ? `the for loop on line ${key.slice(2)} was edited in Desmos, so it comes back as its lines`
         : `the if block on line ${key.slice(2)} was edited in Desmos, so it comes back as piecewise lines`);
       return null;
     }

@@ -26,8 +26,10 @@ From the repository root:
 ```sh
 npm run build:vscode                  # bundles the compiler into vscode/dist/extension.js
 cd vscode
-npx @vscode/vsce publish              # VS Code Marketplace (needs vsce login)
-npx ovsx publish -p <token>           # Open VSX
+npx @vscode/vsce publish              # VS Code Marketplace (token in VSCE_PAT, or vsce login)
+npx ovsx publish                      # Open VSX (token in OVSX_PAT)
 ```
+
+Don't type a token after `-p`: it stays in your shell history. Fill the variable from the clipboard instead, for example `$env:OVSX_PAT = Get-Clipboard` in PowerShell.
 
 Raise `version` in `vscode/package.json` first; each store rejects a version it already has. To try changes without publishing, open the `vscode` folder in VS Code and press F5, or install a local build with `npx @vscode/vsce package` and then `code --install-extension tmcpp-<version>.vsix`. On macOS, `code` is only on the PATH after **Shell Command: Install 'code' command in PATH** in VS Code's command palette.

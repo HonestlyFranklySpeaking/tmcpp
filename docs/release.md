@@ -12,7 +12,15 @@ A release ships four things from one tag: the npm package, the browser extension
    gh release create v0.3.0 release/tmcpp-extension-0.3.0.zip vscode/tmcpp-0.3.0.vsix --title "v3 (0.3.0)" --notes-file <notes>
    ```
 
-   With the workflow below in place, publishing the release publishes everywhere else. Without it, publish by hand: `npm publish`, `cd vscode && npx @vscode/vsce publish && npx ovsx publish -p <token>`, and upload the zip in the Chrome Web Store dashboard.
+   With the workflow below in place, publishing the release publishes everywhere else. Without it, publish by hand: `npm publish` (after `npm login`), the VS Code extension from `vscode/` as below, and the zip in the Chrome Web Store dashboard.
+
+   Never type a token on the command line: it stays in your shell history. Both tools read it from an environment variable, which you can fill from the clipboard (PowerShell shown; in bash, `VSCE_PAT=$(pbpaste) npx @vscode/vsce publish` on a Mac):
+
+   ```powershell
+   cd vscode
+   $env:VSCE_PAT = Get-Clipboard; npx @vscode/vsce publish; Remove-Item Env:VSCE_PAT
+   $env:OVSX_PAT = Get-Clipboard; npx ovsx publish; Remove-Item Env:OVSX_PAT
+   ```
 
 Store images and icons: `node tools/store-assets.js` (after `npm run build:ext`). The listing text is in `store/listing.md`.
 
@@ -79,8 +87,8 @@ jobs:
       - name: VS Code Marketplace and Open VSX
         working-directory: vscode
         run: |
-          npx --yes @vscode/vsce publish --packagePath tmcpp-${GITHUB_REF_NAME#v}.vsix -p "$VSCE_PAT"
-          npx --yes ovsx publish tmcpp-${GITHUB_REF_NAME#v}.vsix -p "$OVSX_PAT"
+          npx --yes @vscode/vsce publish --packagePath tmcpp-${GITHUB_REF_NAME#v}.vsix
+          npx --yes ovsx publish tmcpp-${GITHUB_REF_NAME#v}.vsix
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}

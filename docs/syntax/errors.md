@@ -21,6 +21,7 @@ Every message names the TMC++ line. Common ones:
 | `Missing argument 'B' for Spring` / `Spring takes 3 arguments, got 4` | check the call against the definition |
 | `s1 (a Spring) has no member 'dd'` | `s1.dd`: no local or parameter of that name |
 | `A uses B uses A: a component can't contain itself` | components may nest, but not in a loop |
+| `A component can't be defined inside another component; ...` | define it at the top level and use `new` inside the other one |
 | `Unknown keyword 'compoment' (did you mean 'component'?)` | misspelt keyword |
 | `Can't find library 'x'` / `'gh:...' hasn't been fetched yet` | not saved, not on disk, or not fetched yet |
 | `In 'x' line 3: A library can only define components, classes, colours, functions and constants` | a library line that would draw |
@@ -33,6 +34,12 @@ Every message names the TMC++ line. Common ones:
 | `'let' needs a definition, like let P = (1, 2)` | `let` goes before a definition |
 | `'_scale' is private to 'x'` / `names starting with _ are private helpers of a library` | the library keeps it to itself; use what it exports |
 | `enum needs at least two members` / `'off' is already a member of a` | each enum has two or more members, each in one enum only |
+| `a lambda only works where it's used straight away: ...` | a lambda stored in a variable; write a function, `g(x) = x^2`, instead |
+| `map(list, (x) => ...) takes a list and a one-parameter lambda` / `this lambda takes 1 argument, but is called with 2` | check the lambda's parameters (also `filter`) |
+| `Glow takes 2 arguments, but this gives 1` / `macro Glow is defined twice` / `macro is never closed` | check the macro's use against its definition |
+| `for ... in needs a list written out here, like [1...5] or [red, green]` | the list must be written in the loop, not a variable |
+| `the range [1, 0 ... 5] never reaches its end` / `a for loop over more than 500 values ...` | fix the step, or use a list comprehension or `new ... for` |
+| `the macro used on line N was edited in Desmos, so it comes back as its lines` (From graph, warning) | also for `for` loops: an edit in Desmos turns the use into plain lines |
 | `... is drawn as points and also used by other lines` (`check --runtime`, warning) | an unstyled helper point list that Desmos draws: add `. hidden` or use `let` |
 
 `tmcpp check --runtime` (or the MCP `check` tool with `runtime: true`) also reports, by TMC++ line, any error Desmos shows itself once the graph loads, such as `Cannot add a point and a number`, with the slider values it checked at.

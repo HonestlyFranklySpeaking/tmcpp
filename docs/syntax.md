@@ -6,6 +6,7 @@ The syntax reference is now a folder of short pages: **[docs/syntax](syntax/READ
 - [Conditionals, actions and enums](syntax/logic.md)
 - [Styles: tails, classes, colours and tokens](syntax/styles.md)
 - [Components](syntax/components.md)
+- [Lambdas, macros and loops](syntax/macros.md)
 - [Libraries](syntax/libraries.md)
 - [Blocks and settings](syntax/blocks.md)
 - [What the compiler adds, and From graph](syntax/round-trip.md)

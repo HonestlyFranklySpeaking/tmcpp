@@ -26,6 +26,10 @@ The extension's **From graph** button turns a graph back into TMC++, using the m
 | an instance with an edited or deleted line | **detached**: its folder as plain lines, with a warning; other instances still come back as `new` lines |
 | a line you added to an instance's folder | that line, right after the `new` line |
 | an untouched `if` block | the block, as written; edited, its piecewise lines with a warning |
+| a `let` helper | its `let` line |
+| an untouched macro use or `for` loop | the use or the loop, as written; edited, its lines with a warning |
+| a `while` loop | the loop, as written, while the ticker is untouched |
+| a line with a lambda you haven't touched | the lambda, as written |
 | items from an imported library | nothing: the `import` line brings them back. An edit to one is dropped, with a warning: change the library instead |
 | a table, image or value TMC++ can't convert | skipped with a warning and a `// (left out: ...)` comment, never failing the whole rebuild |
 

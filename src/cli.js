@@ -21,7 +21,7 @@ const HELP = `tmcpp ${version()}: compile TMC++ to DesModder Text Mode (TMC)
   tmcpp preview graph.tmcpp [opts]  render a PNG in real Desmos (needs playwright-core)
   tmcpp fmt graph.tmcpp [--write]   tidy indentation and blank lines (prints, or --write saves; --check for CI)
   tmcpp describe graph.tmcpp        list sliders, functions, components, classes and imports (--json)
-  tmcpp mcp                         run an MCP server on stdio (compile, check, preview tools)
+  tmcpp mcp                         run an MCP server on stdio (compile, check, describe, preview, and the Desmos link)
   tmcpp pair                        show the code that links the browser extension to tmcpp mcp
   tmcpp --version
 

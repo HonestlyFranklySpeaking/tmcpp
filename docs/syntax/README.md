@@ -65,4 +65,23 @@ new Dot((2, 1)) as d1
 new Dot((4, 1), n = 5) as d2  . #red
 total_clicks = d1.n + d2.n
 new Dot((i, -3)) for i = [1...5] as row   // five dots in one folder of lists, each with its own n
+
+// helpers and enums
+let M = (2, 2)                              // used by other lines, never drawn
+phase = enum(idle, running)
+M . point 10 click(phase++)
+
+// lambdas, macros and loops (all worked out when compiling)
+sq = map([1...5], (v) => v^2)
+macro Ring(r, look) {
+  x^2 + y^2 = r^2  look
+}
+Ring(3, #blue dashed)
+for j in [1...3] {
+  b_{j} = j [0 : 5]
+}
+steps = 0
+while steps < 10 {
+  steps++
+}
 ```

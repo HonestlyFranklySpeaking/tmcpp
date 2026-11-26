@@ -49,7 +49,7 @@ Preview and `check --runtime` need `playwright-core`, an optional extra that dri
 
 Needs Node 20 or newer. In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
 
-`check`, `preview`, `mcp` and `pair` arrive in 0.3.0. Until that version is on npm, run them from a checkout (below).
+`check`, `preview`, `describe`, `fmt`, `mcp` and `pair` arrive in 0.3.0. Until that version is on npm, run them from a checkout (below).
 
 | Where | Get it |
 | --- | --- |
@@ -88,7 +88,7 @@ Paste the printed TMC into DesModder's Text Mode (the T button above the express
 
 ## MCP server
 
-`tmcpp mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdio, so an AI app such as Claude Code, Claude Desktop or Cursor can write TMC++, check it and see what it made. It offers three tools and some reading material:
+`tmcpp mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdio, so an AI app such as Claude Code, Claude Desktop or Cursor can write TMC++, check it and see what it made. It offers four tools and some reading material:
 
 | | |
 | --- | --- |
@@ -204,6 +204,13 @@ import "std/ui" as ui                        // libraries: files, GitHub, or the
 folder "Controls" collapsed {                // folders, tables, tickers, settings
   k = 2 [1 : 5 : 1]
 }
+macro Glow(shape, look) {                    // macros, for and while: worked out when compiling
+  shape  look opacity 0
+}
+Glow(x^2 + y^2 < 4, #fa7e19 fill 0.3)
+for i in [1...3] {
+  P_{i} = (i, k) . point 8
+}
 ```
 
 ## Examples
@@ -234,7 +241,9 @@ Imports are resolved first: from disk and GitHub in Node (`src/load-node.js`), f
 
 Going back, `src/decompile.js` rebuilds TMC++ from a graph state using the metadata note, recompiling each tail to compare it with what Desmos holds, and `src/latex.js` turns Desmos LaTeX back into TMC math.
 
-The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some math syntax, including implicit multiplication and restrictions, before text-mode-core parses the generated TMC. Components, `if` blocks, actions and imports are separate passes (`src/components.js`, `src/conditionals.js`, `src/actions.js`, `src/imports.js`). In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
+The compiler (`src/compile.js`) is a line-based preprocessor. It rewrites some math syntax, including implicit multiplication and restrictions, before text-mode-core parses the generated TMC. Imports, enums, macros and loops, `if` blocks, actions, components and lambdas are separate passes (`src/imports.js`, `src/enums.js`, `src/macros.js`, `src/conditionals.js`, `src/actions.js`, `src/components.js`, `src/lambdas.js`), and `src/rewrite.js` checks every call's argument count at the end. In the extension, items then get stable ids (`t1`, `t2`, ...) and a secret metadata note records what Desmos can't hold (`src/meta.js`).
+
+The editor features in the panel and VS Code (hover, completion, go to definition, rename, format) come from one file, `src/language.js`, and live editing's diff from `src/live.js`.
 
 The MCP server (`src/mcp.js`) and its link to the extension (`src/link.js`, a small WebSocket server on 127.0.0.1) use no outside libraries.
 
@@ -270,7 +279,7 @@ v3 is the finished product: the M14 eval comes next, and then the browser extens
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |
 | M20 [syntax revamp](docs/syntax/macros.md): lambdas, macros, compile-time `for` loops, `while` as a ticker | done |
-| M21 live editing (the graph updates as you type, changing only what changed) and multiuser editing in VS Code through Live Share | planned for v3, built first |
+| M21 live editing (the graph updates as you type, changing only what changed), and VS Code linked to the tab, so with Live Share everyone's graph follows the shared file | done; multiuser editing inside the panel comes after v3 |
 
 ## License
 

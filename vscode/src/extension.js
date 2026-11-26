@@ -122,7 +122,7 @@ function showLinkStatus(note) {
   const on = link.connected;
   statusItem.text = on ? "$(link) Desmos" : "$(debug-disconnect) Desmos";
   statusItem.tooltip = note ?? (on ? "TMC++ is linked to your Desmos tab: edits show up live. Click to unlink."
-    : link.busy ? `Another program holds port ${link.port}. Click to unlink.` : "Waiting for the Desmos tab: in the TMC++ panel, Link to AI with the pairing code. Click to unlink.");
+    : link.busy ? `Another program holds port ${link.port}. Click to unlink.` : "Waiting for the Desmos tab: in the TMC++ panel, ⋯ > Link AI or VS Code, with the pairing code. Click to unlink.");
   statusItem.show();
 }
 
@@ -161,7 +161,7 @@ async function toggleLink() {
     showLinkStatus();
   }, 1000);
   showLinkStatus();
-  const pick = await vscode.window.showInformationMessage(`TMC++: linking to Desmos. If the tab isn't paired yet, paste the code ${code} in the TMC++ panel (⋯ > Link to AI).`, "Copy code");
+  const pick = await vscode.window.showInformationMessage(`TMC++: linking to Desmos. If the tab isn't paired yet, paste the code ${code} in the TMC++ panel (⋯ > Link AI or VS Code).`, "Copy code");
   if (pick) await vscode.env.clipboard.writeText(code);
 }
 
@@ -176,7 +176,7 @@ function activate(context) {
     vscode.commands.registerCommand("tmcpp.pairingCode", async () => {
       const { code } = pairing();
       await vscode.env.clipboard.writeText(code);
-      vscode.window.showInformationMessage(`TMC++ pairing code ${code} copied. In Desmos: TMC++ panel, ⋯ > Link to AI, paste, Link.`);
+      vscode.window.showInformationMessage(`TMC++ pairing code ${code} copied. In Desmos: TMC++ panel, ⋯ > Link AI or VS Code, paste, Link.`);
     }),
     vscode.workspace.onDidChangeTextDocument((e) => {
       if (!link || e.document !== vscode.window.activeTextEditor?.document) return;

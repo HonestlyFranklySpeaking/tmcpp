@@ -46,9 +46,10 @@ TMC++ is an independent project, not affiliated with Desmos or DesModder.
 
 | Field | File |
 | --- | --- |
-| Store icon (128×128) | `extension/icons/icon-128.png` |
+| Store icon (128×128) | `store-icon-128.png` (the tile at 96 px with transparent padding, as the store asks) |
 | Screenshots (1280×800) | `screenshot-solar-system.png`, `screenshot-event-horizon.png`, `screenshot-night-net.png` |
 | Small promo tile (440×280) | `promo-440x280.png` |
+| Marquee promo tile (1400×560, optional) | `marquee-1400x560.png` |
 
 **Homepage URL:** https://github.com/IkeaSourPatches/tmcpp
 **Support URL:** https://github.com/IkeaSourPatches/tmcpp/issues

@@ -90,7 +90,7 @@ function mount(Calc, Desmos) {
         <button id="tmcpp-save" role="menuitem">Save as .tmcpp</button>
         <button id="tmcpp-tmc" role="menuitem">Copy compiled TMC</button>
         <hr>
-        <button id="tmcpp-linkbtn" role="menuitem">Link to AI… <span>tmcpp mcp</span></button>
+        <button id="tmcpp-linkbtn" role="menuitem">Link AI or VS Code… <span>pairing code</span></button>
         <hr>
         <button id="tmcpp-format" role="menuitem">Format <span>Shift+Alt+F</span></button>
         <button id="tmcpp-example" role="menuitem">Load example <span>replaces text</span></button>

@@ -195,6 +195,6 @@ export class Link {
 
   notLinkedMessage() {
     if (this.busy) return `another tmcpp mcp is using the link port ${this.port}; close it, or set TMCPP_LINK_PORT for this one (and pair again)`;
-    return "the browser extension isn't linked. In Desmos, open the TMC++ panel, choose ⋯ > Link to AI, and paste the pairing code (run `tmcpp pair` to see it)";
+    return "the browser extension isn't linked. In Desmos, open the TMC++ panel, choose ⋯ > Link AI or VS Code, and paste the pairing code (run `tmcpp pair` to see it)";
   }
 }

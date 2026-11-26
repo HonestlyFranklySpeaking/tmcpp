@@ -98,7 +98,7 @@ if (cmd === "check") {
 } else if (cmd === "pair") {
   const { pairing } = await import("./link.js");
   const { code, file } = pairing();
-  console.log(`${code}\n\nIn Desmos: open the TMC++ panel, choose ⋯ > Link to AI, paste the code, press Link.\nThe code is kept in ${file}; delete that file to make a new one.`);
+  console.log(`${code}\n\nIn Desmos: open the TMC++ panel, choose ⋯ > Link AI or VS Code, paste the code, press Link.\nThe code is kept in ${file}; delete that file to make a new one.`);
 } else if (cmd === "compile") {
   process.exit(await compileCmd(argv[1]));
 } else if (cmd?.startsWith("-")) {

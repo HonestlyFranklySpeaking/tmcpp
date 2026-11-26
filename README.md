@@ -117,7 +117,7 @@ With the browser extension linked, the AI can also work in the Desmos tab you ha
 | `pull` | TMC++ rebuilt from the graph as it is now, edits you made in Desmos included, or the panel's text |
 | `screenshot` | a PNG of the tab as it is right now |
 
-To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked (**VS Code** when VS Code is linked). Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
+To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link AI or VS Code**, paste the code and press **Link**. A green **AI** badge shows while it's linked (**VS Code** when VS Code is linked). Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
 
 The link is up only while the AI app is running `tmcpp mcp`. Until then the panel says "Waiting for tmcpp mcp", and Chrome's extension console shows `ERR_CONNECTION_REFUSED` now and then as the extension retries (every 3 to 30 seconds). That's expected and harmless.
 
@@ -162,12 +162,12 @@ The panel:
 - hovering a name explains it: a function's or variable's definition, a component's parameters and members, an instance, a class's tokens, a colour, a style word, an enum member's value, or what an import brings in
 - after `s1.` it offers that instance's parameters and locals; after `sp.` what the import offers; after `P.` a point's `x` and `y`
 - F12 or Ctrl+click (Cmd+click on a Mac) goes to a definition; F2 renames a name everywhere it means the same thing (a component's parameter is renamed in its body, in named arguments and in `s1.coils`); Shift+Alt+F, or ⋯ > **Format**, tidies indentation and blank lines
-- the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Link to AI, Example) and **Compile**
+- the header has **From graph**, **Library** (with a count of saved libraries, orange when an import needs fetching), a **⋯** menu (Open, Save, Copy TMC, Link AI or VS Code, Example) and **Compile**
 - lists errors by TMC++ line, from both the compiler and the TMC parser; click one to jump to it
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
 - **Library** saves definition-only source for reuse, inserts imports, and fetches GitHub libraries for offline use
-- **Link to AI** pairs the tab with `tmcpp mcp` (see [Linking your Desmos tab](#linking-your-desmos-tab)); a green badge in the header (**AI**, **VS Code**, or both), and the same on the toggle button, shows what's linked
+- **Link AI or VS Code** pairs the tab with `tmcpp mcp` or VS Code (see [Linking your Desmos tab](#linking-your-desmos-tab)); a green badge in the header (**AI**, **VS Code**, or both), and the same on the toggle button, shows what's linked
 - saves your source per graph in the browser and follows you when you switch graphs
 - **From graph** rebuilds TMC++ from the graph as it is now. Untouched lines come back exactly as you wrote them; lines you restyled in Desmos come back as their classes plus only the changed tokens (`.curve width 5`); math edited in Desmos is converted back; component instances, `if` blocks and imports come back as written while untouched; items added in Desmos appear without their automatic colour. Opening a TMC++ graph this browser has no source for rebuilds it automatically.
 - watermarks the graph: its hidden `randomSeed` starts with `544d432b2b`, which is "TMC++" in ASCII hex, and is kept across recompiles so `random()` doesn't reshuffle (a seed you set in `settings` always wins)

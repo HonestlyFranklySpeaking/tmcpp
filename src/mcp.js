@@ -163,7 +163,7 @@ async function callTool(name, args = {}) {
     }
     if (link.busy) return { content: [text(link.notLinkedMessage())], isError: true };
     const { code } = pairing({ port: link.port });
-    return { content: [text(`Not linked. Pairing code: ${code}\nAsk the user to open desmos.com/calculator, open the TMC++ panel, choose ⋯ > Link to AI, paste the code and press Link.`)] };
+    return { content: [text(`Not linked. Pairing code: ${code}\nAsk the user to open desmos.com/calculator, open the TMC++ panel, choose ⋯ > Link AI or VS Code, paste the code and press Link.`)] };
   }
   if (name === "pull" || name === "screenshot") {
     if (!link) throw new Error("the browser link is off in this server (TMCPP_LINK=0)");

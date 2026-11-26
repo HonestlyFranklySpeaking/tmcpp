@@ -1,5 +1,6 @@
 node_modules/
 tools/_*
+__pycache__/
 extension/dist/
 
 vscode/dist/

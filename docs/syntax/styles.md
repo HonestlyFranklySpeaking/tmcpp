@@ -91,6 +91,19 @@ x^2 + y^2 < 4  .glow
 | `open` `cross` | `points: @{ style: "OPEN" }` |
 | `drag x` `y` `xy` `none` `auto` | `points: @{ drag: "X" }` etc. |
 
+A point in a variable is drawn by the line that defines it, so the style goes there:
+
+```js
+Q = (5, 3) . drag xy                 // one item: styled and draggable
+R = (1, 2)
+R . #red point 12 drag xy            // wrong: R = (1, 2) already draws a point,
+                                     // in Desmos's own colour, alongside this one
+```
+
+The second form is easy to reach for when a point needs two looks (a dot inside a
+ring). Draw the extra one as a shape instead, or keep it a point and accept that
+both are drawn.
+
 ### Labels
 
 | Token | TMC |

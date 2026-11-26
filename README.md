@@ -142,6 +142,7 @@ On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't 
 2. In Chrome open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the `extension` folder.
 3. Open desmos.com/calculator and click **TMC++** (bottom right) or press Alt+T.
 4. Write TMC++ and press Ctrl+Enter. The whole graph is replaced; Ctrl+Z in Desmos undoes it (two presses). Inside the editor, Ctrl+Z undoes your typing as usual.
+5. Or press **Live** in the panel's header: the graph then updates as you type, a moment after you stop, whenever the file has no errors. Only the lines you changed are updated, so sliders you've dragged keep their values and the view stays where you panned it; adding or removing lines reloads the graph but keeps both. Live updates don't fill Desmos's undo history.
 
 The panel:
 
@@ -241,7 +242,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
-v3 is the finished product: M20, the M14 eval and M21 come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+v3 is the finished product: M21, M20 and the M14 eval come next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
 
 | Milestone | State |
 | --- | --- |
@@ -266,8 +267,8 @@ v3 is the finished product: M20, the M14 eval and M21 come next, and then the br
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |
 | M18 current Text Mode, bundled: `\|x\|`, regressions, `id` | done |
 | M19 `fill 0` stays clickable | done |
-| M20 syntax revamp: lambdas, macros, compile-time `for` loops, `while` loops (as recursion or a ticker), maybe pointers | planned for v3 |
-| M21 live editing (the graph updates as you type, Desmos edits flow back) and multiuser editing | planned for v3 |
+| M20 syntax revamp: lambdas, macros, compile-time `for` loops, `while` as a ticker | planned for v3 |
+| M21 live editing (the graph updates as you type, changing only what changed) and multiuser editing in VS Code through Live Share | planned for v3, built first |
 
 ## License
 

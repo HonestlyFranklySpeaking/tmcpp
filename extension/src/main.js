@@ -8,6 +8,7 @@ import { restoreGreek } from "../../src/greek.js";
 import { assignIds, buildMeta, metaItem, metaText, readMeta, META_ID } from "../../src/meta.js";
 import { createLibrary, libraryCss, ask } from "./library.js";
 import { createEditor } from "./editor.js";
+import { planUpdate, keepUserState, snapshot } from "../../src/live.js";
 
 const STORE = () => `tmcpp:source:${location.pathname}`;
 import STARTER from "../../examples/hello.tmcpp";
@@ -31,6 +32,8 @@ const css = `
 #tmcpp-libbtn .badge { display: inline-block; min-width: 14px; margin-left: 4px; padding: 0 4px; border-radius: 7px;
   background: #e7f1fb; color: #2d70b3; font-size: 10px; line-height: 14px; text-align: center; }
 #tmcpp-libbtn.on { background: #e7f1fb; }
+#tmcpp-live.on { background: #e5f4e4 !important; border-color: #388c46 !important; color: #2d6e38 !important; }
+#tmcpp-live.on::before { content: "● "; color: #388c46; }
 #tmcpp-libbtn.pending .badge { background: #f5a623; color: #fff; }
 #tmcpp-more { padding: 5px 9px !important; font-size: 14px !important; line-height: 1; }
 #tmcpp-menu { position: absolute; right: 10px; top: 40px; z-index: 2; min-width: 190px; padding: 4px; background: #fff;
@@ -80,6 +83,7 @@ function mount(Calc, Desmos) {
       <button class="ghost" id="tmcpp-fromgraph" title="Rebuild TMC++ from the graph as it is now, including edits made in Desmos">From graph</button>
       <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library<span class="badge" hidden></span></button>
       <button class="ghost" id="tmcpp-more" title="Open, save, copy and the example" aria-haspopup="true">⋯</button>
+      <button class="ghost" id="tmcpp-live" title="Live editing: the graph updates as you type, changing only what changed (sliders you drag keep their values)" aria-pressed="false">Live</button>
       <button id="tmcpp-run" title="Compile into the graph (Ctrl+Enter)">Compile<kbd>⌃↵</kbd></button>
       <div id="tmcpp-menu" role="menu" hidden>
         <button id="tmcpp-open" role="menuitem">Open file… <span>or drop on editor</span></button>
@@ -211,7 +215,8 @@ function mount(Calc, Desmos) {
   document.addEventListener("click", (e) => { if (!menu.hidden && !menu.contains(e.target) && e.target !== more) closeMenu(); });
   panel.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) { e.stopPropagation(); closeMenu(); more.focus(); } });
 
-  function run() {
+  /** Compile the editor into a graph state, reporting problems. Returns null if it can't be loaded. */
+  function build() {
     localStorage.setItem(STORE(), src.value);
     hasLocalSource = true;
     // Keep this graph's TMC++ seed so random() results don't reshuffle on every compile.
@@ -221,7 +226,7 @@ function mount(Calc, Desmos) {
     const notes = r.warnings.map((w) => ({ ...w, kind: "warn" }));
     if (r.errors.length) {
       report([...r.errors.map((e) => ({ ...e, kind: "err" })), ...notes], "");
-      return;
+      return null;
     }
     lastTmc = r.tmc;
     let analysis, state;
@@ -230,7 +235,7 @@ function mount(Calc, Desmos) {
       restoreGreek(state); // placeholder names -> \gamma, \lambda... (see src/greek.js)
     } catch (e) {
       report([{ line: 1, kind: "err", message: `Text Mode failed: ${e.message}` }], "");
-      return;
+      return null;
     }
     // Map TMC parser positions back to TMC++ source lines.
     const tmcLineOf = (pos) => r.tmc.slice(0, pos).split("\n").length;
@@ -244,15 +249,17 @@ function mount(Calc, Desmos) {
     }
     if (tmcErrors.some((e) => e.kind === "err") || !state) {
       report([...tmcErrors, ...notes], "");
-      return;
+      return null;
     }
-    // Stable ids + a placeholder metadata note, then load the graph.
+    // Stable ids + a placeholder metadata note.
     const pairs = assignIds(state, r.items);
     if (pairs) state.expressions.list.unshift(metaItem({ v: 1 }));
     else notes.push({ line: 1, kind: "warn", message: "Could not match graph items to source lines; metadata note skipped" });
-    Calc.setState(state, { allowUndo: true });
+    return { r, state, pairs, notes: [...tmcErrors, ...notes] };
+  }
 
-    // Hash what Desmos actually holds (it drops defaults on load), then fill in the note.
+  /** After loading: hash what Desmos actually holds (it drops defaults), fill in the note, report. */
+  function finish({ r, state, pairs, notes }, message) {
     let saved = "";
     if (pairs) {
       const loaded = Calc.getState().expressions;
@@ -262,9 +269,57 @@ function mount(Calc, Desmos) {
       saved = ` Metadata note saved (${(text.length / 1024).toFixed(1)} KB).`;
     }
     const n = state.expressions.list.length - (pairs ? 1 : 0);
-    report([...tmcErrors, ...notes], `Compiled ${n} item(s) into the graph.${saved}`);
+    report(notes, (message ?? `Compiled ${n} item(s) into the graph.`) + (message ? "" : saved));
     showGraphInfo();
   }
+
+  // What the last compile loaded, for live editing to compare against (src/live.js).
+  let lastCompiled = null;
+
+  function run() {
+    const b = build();
+    if (!b) return;
+    Calc.setState(b.state, { allowUndo: true });
+    lastCompiled = b.pairs ? snapshot(b.state, META_ID) : null;
+    finish(b);
+  }
+
+  // ---- live editing (M21): recompile after a pause, changing only what changed ----
+  const liveBtn = panel.querySelector("#tmcpp-live");
+  let live = localStorage.getItem("tmcpp:live") === "1", liveTimer = null;
+  const showLive = () => { liveBtn.classList.toggle("on", live); liveBtn.setAttribute("aria-pressed", String(live)); };
+  function liveRun() {
+    const b = build();
+    if (!b) return; // the problems are listed; the graph stays as it was
+    const next = snapshot(b.state, META_ID);
+    const plan = b.pairs ? planUpdate(lastCompiled, next) : { kind: "reload", reason: "no stable ids" };
+    if (plan.kind === "none") { report(b.notes, "Live: up to date."); return; }
+    if (plan.kind === "patch") {
+      Calc.setExpressions(plan.updates);
+      lastCompiled = next;
+      finish(b, `Live: updated ${plan.updates.length} line${plan.updates.length === 1 ? "" : "s"}.`);
+      return;
+    }
+    // A reload, keeping dragged sliders and the view; not added to Desmos's undo history.
+    // The first load replaces whatever graph was there, so that one can be undone in Desmos.
+    keepUserState(b.state, Calc.getState(), lastCompiled);
+    Calc.setState(b.state, { allowUndo: !lastCompiled });
+    lastCompiled = b.pairs ? next : null;
+    finish(b, lastCompiled && plan.reason !== "first compile" ? `Live: reloaded the graph (${plan.reason}); sliders and view kept.` : undefined);
+  }
+  liveBtn.onclick = () => {
+    live = !live;
+    localStorage.setItem("tmcpp:live", live ? "1" : "0");
+    showLive();
+    if (live) liveRun();
+    else report([], "Live editing off: Ctrl+Enter compiles.");
+  };
+  src.addEventListener("input", () => {
+    if (!live) return;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(liveRun, 600);
+  });
+  showLive();
 
   panel.querySelector("#tmcpp-run").onclick = run;
   // ---- graph -> TMC++ (M4) ----
@@ -453,6 +508,7 @@ function mount(Calc, Desmos) {
     if (location.pathname !== lastPath) {
       const from = lastPath;
       lastPath = location.pathname;
+      lastCompiled = null; // another graph: live editing starts over with a full load
       // Saving a new graph moves it from /calculator to /calculator/<hash>: keep its source.
       if (from === "/calculator" && localStorage.getItem(STORE()) === null) {
         localStorage.setItem(STORE(), src.value);

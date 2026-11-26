@@ -42,6 +42,10 @@ A few rules that keep components clean in Desmos:
 - **Don't define a local in terms of `x` or `y`.** Desmos plots it as a curve. Write the expression inline instead.
 - **Give drawn lines an explicit colour,** so they don't get Desmos's rotating default colours. An instance tail still overrides it.
 
+## Releases
+
+The release steps, the first Chrome Web Store upload and the CI publishing workflow are in [docs/release.md](docs/release.md).
+
 ## Pull requests
 
 Keep them focused on one thing and fill in the template. Small pull requests get reviewed faster.

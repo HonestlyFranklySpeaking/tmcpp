@@ -22,12 +22,12 @@ function whenReady(fn) {
 const css = `
 #tmcpp-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 10000; font: 600 13px system-ui, sans-serif;
   padding: 8px 12px; border-radius: 8px; border: 1px solid #2d70b3; background: #fff; color: #2d70b3; cursor: pointer; }
-#tmcpp-panel { position: fixed; top: 56px; right: 16px; bottom: 64px; width: 460px; z-index: 10000; display: none;
+#tmcpp-panel { position: fixed; top: 56px; right: 16px; bottom: 64px; width: min(540px, calc(100vw - 32px)); z-index: 10000; display: none;
   flex-direction: column; background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
   font: 13px system-ui, sans-serif; overflow: hidden; }
 #tmcpp-panel.open { display: flex; }
 #tmcpp-head { position: relative; display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid #eee; }
-#tmcpp-head b { flex: 1; font-size: 14px; letter-spacing: .02em; }
+#tmcpp-head b { flex: 1 0 auto; display: flex; align-items: center; gap: 6px; font-size: 14px; letter-spacing: .02em; white-space: nowrap; margin-right: 4px; }
 #tmcpp-head kbd { font: 10px ui-monospace, Consolas, monospace; opacity: .75; margin-left: 4px; }
 #tmcpp-libbtn .badge { display: inline-block; min-width: 14px; margin-left: 4px; padding: 0 4px; border-radius: 7px;
   background: #e7f1fb; color: #2d70b3; font-size: 10px; line-height: 14px; text-align: center; }
@@ -44,7 +44,7 @@ const css = `
 #tmcpp-menu button:hover { background: #f0f5fb !important; }
 #tmcpp-menu button span { color: #888; font-size: 11px; }
 #tmcpp-menu hr { border: 0; border-top: 1px solid #eee; margin: 4px 2px; }
-#tmcpp-head button { font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 6px; border: 1px solid #2d70b3;
+#tmcpp-head button { flex: none; white-space: nowrap; font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 6px; border: 1px solid #2d70b3;
   background: #2d70b3; color: #fff; cursor: pointer; }
 #tmcpp-head button.ghost { background: #fff; color: #2d70b3; }
 #tmcpp-src.drop { outline: 2px dashed #2d70b3; outline-offset: -6px; background: #f3f8fd; }
@@ -66,7 +66,7 @@ const css = `
 #tmcpp-link button.ghost { background: #fff; color: #2d70b3; }
 #tmcpp-link .state { font-weight: 600; }
 #tmcpp-link .state.linked { color: #388c46; } #tmcpp-link .state.denied { color: #c74440; } #tmcpp-link .state.waiting { color: #b06d00; }
-#tmcpp-ai { display: none; font: 700 10px system-ui, sans-serif; color: #fff; background: #388c46; border-radius: 4px; padding: 2px 5px; cursor: pointer; }
+#tmcpp-ai { display: none; font: 700 10px/14px system-ui, sans-serif; letter-spacing: .03em; color: #fff; background: #388c46; border-radius: 7px; padding: 1px 7px; cursor: pointer; }
 #tmcpp-ai.on { display: inline-block; }
 `;
 
@@ -79,7 +79,7 @@ function mount(Calc, Desmos) {
   const panel = document.createElement("div");
   panel.id = "tmcpp-panel";
   panel.innerHTML = `
-    <div id="tmcpp-head"><b>TMC++ <span id="tmcpp-ai" title="An AI app is linked through tmcpp mcp and can load graphs here">AI</span></b>
+    <div id="tmcpp-head"><b>TMC++ <span id="tmcpp-ai"></span></b>
       <button class="ghost" id="tmcpp-fromgraph" title="Rebuild TMC++ from the graph as it is now, including edits made in Desmos">From graph</button>
       <button class="ghost" id="tmcpp-libbtn" title="Libraries you can import: save this file as one, fetch GitHub ones">Library<span class="badge" hidden></span></button>
       <button class="ghost" id="tmcpp-more" title="Open, save, copy and the example" aria-haspopup="true">⋯</button>
@@ -433,8 +433,12 @@ function mount(Calc, Desmos) {
     if (!st) return;
     stateEl.textContent = st.message;
     stateEl.className = `state ${st.state}`;
-    aiBadge.classList.toggle("on", st.state === "linked");
-    toggle.textContent = st.state === "linked" ? "TMC++ · AI" : "TMC++";
+    // Name who is linked: an AI app (tmcpp mcp), VS Code, or both.
+    const who = st.state === "linked" ? (st.servers ?? ["tmcpp mcp"]).map((n) => (n === "VS Code" ? "VS Code" : "AI")) : [];
+    aiBadge.classList.toggle("on", who.length > 0);
+    aiBadge.textContent = who.join(" + ");
+    aiBadge.title = who.length ? `${st.message}: ${who.includes("AI") ? "an AI app can load graphs here" : ""}${who.length > 1 ? " and " : ""}${who.includes("VS Code") ? "this tab follows the file open in VS Code" : ""}` : "";
+    toggle.textContent = who.length ? `TMC++ · ${who.join(" + ")}` : "TMC++";
   };
   const refreshLink = async () => {
     try {

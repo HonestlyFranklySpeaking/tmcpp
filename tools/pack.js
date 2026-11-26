@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Package the browser extension for sharing: npm run pack
-// Builds it, then writes release/tmcpp-extension-<version>.zip (manifest + dist), which can be
+// Builds it, then writes release/tmcpp-extension-<version>.zip (manifest, dist and icons), which can be
 // unzipped and loaded with "Load unpacked", or uploaded to the Chrome Web Store.
 // The zip is written here with Node's zlib, so it works the same on Windows, macOS and Linux.
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
@@ -23,6 +23,7 @@ const walk = (dir) => {
 };
 files.push(join(ext, "manifest.json"));
 walk(join(ext, "dist"));
+for (const name of readdirSync(join(ext, "icons"))) if (name.endsWith(".png")) files.push(join(ext, "icons", name));
 
 // CRC-32 (the zip format's checksum)
 const table = Array.from({ length: 256 }, (_, n) => {

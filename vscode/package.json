@@ -2,7 +2,8 @@
   "name": "tmcpp",
   "displayName": "TMC++",
   "description": "TMC with Classes: syntax highlighting, live compile errors and compiled TMC for .tmcpp files (Desmos graphs as code, via DesModder Text Mode).",
-  "version": "0.2.0",
+  "version": "0.3.0",
+  "icon": "icon.png",
   "publisher": "IkeaSourPatches",
   "license": "MIT",
   "repository": {

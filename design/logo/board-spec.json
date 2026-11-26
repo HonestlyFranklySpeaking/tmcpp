@@ -1,0 +1,30 @@
+{
+  "brand": "TMC++",
+  "tagline": "Desmos graphs as code, with classes",
+  "brief": "A preprocessor for DesModder's Text Mode: you write text, Desmos draws the graph. The mark should say TMC first, feel calculated rather than hand-drawn, and work as a 16 px browser-toolbar icon.",
+  "adjectives": ["precise", "mathematical", "code-first", "friendly"],
+  "criteria": "Shows TMC, reads as a graph without explanation, holds up at 16 px, keeps the navy from the old icon.",
+  "industry": "software",
+  "brand_color": "#1d3557",
+  "greyscale": false,
+  "final": true,
+  "designer": "IkeaSourPatches",
+  "concepts": [
+    {
+      "name": "Tmc++",
+      "symbol": "kit/svg/tmcpp-icon.svg",
+      "lockup": "kit/svg/tmcpp-wordmark.svg",
+      "symbol_on_tile": "kit/svg/tmcpp-stacked-reversed.svg",
+      "symbol_on_dark": "kit/svg/tmcpp-stacked-reversed.svg",
+      "lockup_on_dark": "kit/svg/tmcpp-wordmark-reversed.svg",
+      "idea": "The m of TMC is two periods of a cosine on a Desmos grid, ending in a draggable point.",
+      "rationale": [
+        "Text that is also a graph: the whole product in one letter",
+        "Exact construction: the grid pitch is half a period, so peaks, troughs and the axes all line up",
+        "A small-size cut keeps Tmc legible in the 16 px Chrome toolbar"
+      ]
+    }
+  ],
+  "recommendation": "Use the tile icon wherever a square is needed, the wordmark in headers and READMEs.",
+  "next_steps": ["Swap the extension and VS Code icons", "Refresh the Chrome Web Store promo tile", "Use the wordmark in the README header"]
+}

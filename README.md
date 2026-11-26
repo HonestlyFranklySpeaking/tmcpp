@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="design/logo/kit/svg/tmcpp-wordmark-reversed.svg">
+    <img src="design/logo/kit/svg/tmcpp-wordmark.svg" alt="TMC++" width="320">
+  </picture>
+</p>
+
 # TMC with Classes (TMC++)
 
 **Desmos graphs as code, with classes.** TMC++ is a preprocessor for [DesModder](https://www.desmodder.com/)'s Text Mode (TMC): it adds CSS-style classes, one-word styles, labels, slider shorthand, reusable components, conditionals, action shortcuts and libraries, then compiles to plain TMC. A browser extension compiles it live inside desmos.com, a VS Code extension checks it as you type, and an [MCP server](#mcp-server) lets AI apps write graphs straight into your Desmos tab.
@@ -49,14 +56,12 @@ Preview and `check --runtime` need `playwright-core`, an optional extra that dri
 
 Needs Node 20 or newer. In code: `import { compile } from "@ikeasourpatches/tmcpp"`.
 
-`check`, `preview`, `describe`, `fmt`, `mcp` and `pair` arrive in 0.3.0. Until that version is on npm, run them from a checkout (below).
-
 | Where | Get it |
 | --- | --- |
 | Command line and Node | [npm: `@ikeasourpatches/tmcpp`](https://www.npmjs.com/package/@ikeasourpatches/tmcpp) |
 | VS Code | [VS Code Marketplace: TMC++](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or search "TMC++" in the Extensions view |
 | Cursor, VSCodium, Windsurf | [Open VSX: TMC++](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) |
-| Desmos in Chrome | the [browser extension](#browser-extension), loaded unpacked for now |
+| Desmos in Chrome | the [browser extension](#browser-extension) from the Chrome Web Store, or the zip on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases) |
 
 ## Quick start
 
@@ -112,7 +117,7 @@ With the browser extension linked, the AI can also work in the Desmos tab you ha
 | `pull` | TMC++ rebuilt from the graph as it is now, edits you made in Desmos included, or the panel's text |
 | `screenshot` | a PNG of the tab as it is right now |
 
-To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked. Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
+To pair, run `tmcpp pair` in a terminal (or ask the AI for `link_status`), then in Desmos open the TMC++ panel, choose ⋯ > **Link to AI**, paste the code and press **Link**. A green **AI** badge shows while it's linked (**VS Code** when VS Code is linked). Pairing is done once: the code is kept in `~/.tmcpp/link.json`, and the extension remembers it.
 
 The link is up only while the AI app is running `tmcpp mcp`. Until then the panel says "Waiting for tmcpp mcp", and Chrome's extension console shows `ERR_CONNECTION_REFUSED` now and then as the extension retries (every 3 to 30 seconds). That's expected and harmless.
 
@@ -140,8 +145,13 @@ On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't 
 
 ## Browser extension
 
-1. `npm install`, then `npm run build:ext` (writes `extension/dist/tmcpp.js`).
-2. In Chrome open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the `extension` folder.
+Install **TMC with Classes (TMC++)** from the Chrome Web Store; it updates itself. To run a build of your own instead:
+
+1. `npm install`, then `npm run build:ext` (writes `extension/dist/`, which a fresh clone doesn't have), or unzip the zip from the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+2. In Chrome open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the `extension` folder (or the unzipped one).
+
+Then:
+
 3. Open desmos.com/calculator and click **TMC++** (bottom right) or press Alt+T.
 4. Write TMC++ and press Ctrl+Enter. The whole graph is replaced; Ctrl+Z in Desmos undoes it (two presses). Inside the editor, Ctrl+Z undoes your typing as usual.
 5. Or press **Live** in the panel's header: the graph then updates as you type, a moment after you stop, whenever the file has no errors. Only the lines you changed are updated, so sliders you've dragged keep their values and the view stays where you panned it; adding or removing lines reloads the graph but keeps both. Live updates don't fill Desmos's undo history.
@@ -157,7 +167,7 @@ The panel:
 - **Open** loads a `.tmcpp` file and compiles it (or drop the file onto the editor); **Save** downloads the editor text as `<graph-title>.tmcpp`
 - **Example** loads a hello-world that writes itself; **Copy TMC** copies the compiled TMC
 - **Library** saves definition-only source for reuse, inserts imports, and fetches GitHub libraries for offline use
-- **Link to AI** pairs the tab with `tmcpp mcp` (see [Linking your Desmos tab](#linking-your-desmos-tab)); a green **AI** badge in the header, and **TMC++ · AI** on the toggle button, show it's linked
+- **Link to AI** pairs the tab with `tmcpp mcp` (see [Linking your Desmos tab](#linking-your-desmos-tab)); a green badge in the header (**AI**, **VS Code**, or both), and the same on the toggle button, shows what's linked
 - saves your source per graph in the browser and follows you when you switch graphs
 - **From graph** rebuilds TMC++ from the graph as it is now. Untouched lines come back exactly as you wrote them; lines you restyled in Desmos come back as their classes plus only the changed tokens (`.curve width 5`); math edited in Desmos is converted back; component instances, `if` blocks and imports come back as written while untouched; items added in Desmos appear without their automatic colour. Opening a TMC++ graph this browser has no source for rebuilds it automatically.
 - watermarks the graph: its hidden `randomSeed` starts with `544d432b2b`, which is "TMC++" in ASCII hex, and is kept across recompiles so `random()` doesn't reshuffle (a seed you set in `settings` always wins)
@@ -253,7 +263,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
-v3 is the finished product: the M14 eval comes next, and then the browser extension goes on the Chrome Web Store (M15). Until then, a dev build of the extension is on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
+v3 (0.3.0) is the finished product, and the browser extension is on the Chrome Web Store. After v3: multiuser editing inside the panel, and a Desmos preview inside VS Code.
 
 | Milestone | State |
 | --- | --- |
@@ -271,8 +281,8 @@ v3 is the finished product: the M14 eval comes next, and then the browser extens
 | M11 ship v2: version 0.2.0, changelog, packaged extension and VS Code extension | done |
 | M12 [libraries](docs/syntax/libraries.md): `import`, the Library panel, GitHub imports, built-in `std/styles`, `std/ui`, `std/shapes`, `std/easing`, `std/3d`, `std/color`, `std/orbits` | done |
 | M13 npm CLI: `tmcpp check`, `tmcpp preview` | done |
-| M14 [MCP server](#mcp-server) with the Desmos tab link | done; an eval of how well AI models write TMC++ is next |
-| M15 Chrome Web Store, and publishing from CI: the v3 release | last, after the rest of v3 |
+| M14 [MCP server](#mcp-server) with the Desmos tab link | done (the eval of how well AI models write it is shelved) |
+| M15 Chrome Web Store, and publishing from CI: the v3 release, 0.3.0 | done |
 | M16 editor smarts: hover docs, member completion, go to definition, rename, `tmcpp fmt`, in the panel and VS Code | done |
 | M17 language additions: `let`, enums, private library names | done |
 | Checks: wrong argument counts and constant parameters at compile time, `check --runtime` in real Desmos, `describe` | done |

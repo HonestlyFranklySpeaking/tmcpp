@@ -1,6 +1,6 @@
 {
   "name": "@ikeasourpatches/tmcpp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TMC with Classes: a preprocessor for DesModder's Text Mode for Desmos, with classes, one-word styles, components, conditionals, actions and libraries. Includes a CLI that compiles, checks and previews, and an MCP server for AI apps.",
   "keywords": [
     "desmos",

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TMC with Classes (TMC++)",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Write Desmos graphs in TMC++ (DesModder Text Mode with classes), compile them live, and let an AI app load graphs through tmcpp mcp.",
   "content_scripts": [
     {
@@ -24,6 +24,19 @@
       "run_at": "document_start"
     }
   ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "TMC++: open desmos.com/calculator and click TMC++ (Alt+T)",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
   "homepage_url": "https://github.com/IkeaSourPatches/tmcpp",
   "permissions": [
     "storage"

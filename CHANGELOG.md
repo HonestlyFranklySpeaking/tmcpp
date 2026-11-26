@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-26): v3
+
+v3 makes TMC++ something you work in, not just compile with: an AI can write into your Desmos tab, the graph follows your typing live, editors understand the language, and the syntax gains lambdas, macros, loops, enums and `let`. The browser extension goes on the Chrome Web Store.
 
 ### Changed
 
+- **The panel is roomier:** wider (up to 540 px), header buttons no longer squeeze, and the link badge sits beside the title and says who is linked: **AI**, **VS Code**, or both.
 - A line ending in `n++` or `n--` no longer runs into the next line.
 - A style tail passed to a component (`new Plot(#red)`) goes in as written instead of in brackets.
 - **Docs reorganised.** The syntax reference is now a folder, `docs/syntax/`, with one short page per topic and an index with the cheat sheet; `docs/syntax.md` points there. The README keeps only the essentials. The MCP server serves the whole reference as `tmcpp://docs/syntax` and each page on its own. A test now compiles every example in the README and the reference.
@@ -14,6 +17,8 @@
 
 ### Added
 
+- **Chrome Web Store.** The browser extension is published there, with icons and a privacy policy (`PRIVACY.md`), so it updates itself.
+- **A logo.** The m in Tmc is two periods of a cosine on a Desmos grid, ending in a draggable point. The kit, with its guidelines and the script that builds it, is in `design/logo`; the extension, VS Code and the store use it.
 - **M20 syntax revamp.** Lambdas (`map(L, (x) => x^2)`, `filter(L, (v) => v > 0)`, and lambdas passed to components); `macro Name(...) { ... }`, templates written where they're used, taking math or style tails; `for i in [1...5] { ... }`, written once per value with `_{i}` in names; and `while condition { ... }`, which joins the ticker. From graph gives each back as written. See `docs/syntax/macros.md`.
 - **Link VS Code to Desmos.** The VS Code command **TMC++: Link to Desmos** shows the file live in your Desmos tab, using the panel's live editing, through the same pairing code as `tmcpp mcp` (on the next port, so both can link at once). With Live Share, everyone's tab follows the shared file.
 - **Live editing (M21).** A **Live** button in the panel: the graph updates as you type, once the file has no errors. Changed lines are patched in place, so dragged sliders, the view and the undo history survive; adding or removing lines reloads the graph but keeps slider values and the view. The diff logic is `src/live.js`.

@@ -1,0 +1,91 @@
+// EVENT HORIZON · a moving deep-field poster for TMC++ 0.3
+// Analytic images of a thin accretion disk. The lens and color are artistic approximations.
+settings x [-12 : 12] y [-7.5 : 7.5] radians no-grid @{ showXAxis: false, showYAxis: false }
+class surface { fill 1 opacity 0 }
+class type { point 0 no-outline }
+folder "Flight controls" {
+  a = 0.7 [0 : 2pi : 0.01] . play loop 32s
+  b = 0.185 [0.10 : 0.32 : 0.005]
+  "a · orbital phase     b · apparent disk tilt"
+}
+folder "Optics and emission" collapsed hidden {
+  H(n) = mod(43758.5453*sin(12.9898*n+4.1414),1)
+  R(h) = 2.56+6.86*h
+  V(u,v) = (0.18+0.981*u-0.194*v,-0.17+0.194*u+0.981*v)
+  L(k,h) = {k=1:2.57+1.65*h,k=2:2.48+0.55*h,2.56}
+  U(k,h,z) = cos(z)*(L(k,h)+(R(h)-L(k,h))*cos(z)^10)
+  D(k,h,z) = {k=0:-b*R(h)*sin(z),k=3:b*R(h)*sin(z),k=1:(L(k,h)+0.45*(b-0.185))*sin(z),-L(k,h)*sin(z)}
+  P(k,h,z) = V({k=0:R(h)*cos(z),k=3:R(h)*cos(z),U(k,h,z)},D(k,h,z))
+  W(h,z) = h+0.023*sin(pi*h)*(sin(3*z+12*h)+0.5*sin(7*z-21*h)+0.24*cos(11*z+27*h))
+  B(h,z) = (0.22+0.85*(1-e^(-20*h)))*e^(-2.25*h)*(1-h^3)^1.5*(0.92-0.36*cos(z))*(1+0.10*sin(94*h+2*z+1.8*sin(3*z+10*h))+0.065*cos(167*h-4*z+1.4*sin(5*z-16*h))+0.045*sin(271*h+6*z))
+  G(n) = 0.014+0.975*H(n+83)^1.32
+  A(n) = 2*pi*H(n+1307)-a*(1+floor(3*(1-G(n))^2))
+  M(h,z) = 0.008*sin(4*z+18*h)+0.004*sin(11*z-35*h)
+  K(h,z) = e^(-35*(h-0.27)^2-3*(1-cos(z+2*a-8*h)))
+  T(s) = rgb(min(255,14+310*s^0.63),min(250,9+220*s^1.35),min(238,17+166*s^2.15))
+}
+// Each surface uses one list of colored quadrilaterals. The two echo images reuse the gas geometry.
+component DiskImage(k,rows,cols,exposure) {
+  let I = [0 ... (rows*cols-1)]
+  let h = floor(I/cols)/rows
+  let z = pi*mod(I,cols)/cols
+  let j = min(1,h+1.06/rows)
+  let w = min(pi,z+1.025*pi/cols)
+  let C = T(exposure*B(h+0.5/rows,z+pi/(2*cols)))
+  polygon(P(k,W(h,z),z),P(k,W(j,z),z),P(k,W(j,w),w),P(k,W(h,w),w)) .surface #(C) @{ fill: min(1,9*(1-h)) }
+}
+folder "Deep field" collapsed {
+  y > -100 .surface #050710
+  let N = [1...510]
+  let S = (-12+24*H(N),-7.5+15*H(N+901))
+  S #a5bacf point 1.35 point-opacity 0.52
+  S[1...76] #ede2ce point 2.2 point-opacity 0.68
+  S[1...11] #c1d6ef point 4.8 point-opacity 0.16
+  S[1...11] #eff2ef point 2.2 point-opacity 0.94
+}
+folder "Scattered light" collapsed {
+  Q(x,y) = sqrt(((0.981*(x-0.18)+0.194*(y+0.17))/9)^2+((-0.194*(x-0.18)+0.981*(y+0.17))/2.7)^2)
+  for i in [1...10] {
+    Q(x,y) < 0.56+0.084*i .surface #ab523b fill 0.023
+  }
+  for i in [1...6] {
+    (x-0.18)^2+(y+0.17)^2 < (2.58+0.22*i)^2 .surface #e97640 fill 0.026
+  }
+}
+new DiskImage(2,32,64,0.49) as lower_echo
+new DiskImage(1,90,90,0.94) as upper_echo
+new DiskImage(3,52,72,1.17) as far_disk
+folder "Capture shadow and photon ring" collapsed {
+  (x-0.18)^2+(y+0.17)^2 < 2.465^2 .surface #05060b
+  for i in [1...4] {
+    (x-0.18)^2+(y+0.17)^2 = (2.42+0.012*i)^2 #fa984b width 2.1 opacity 0.17
+  }
+  (x-0.18)^2+(y+0.17)^2 = 2.446^2 #ffe1a1 width 1.15 opacity 0.9
+}
+new DiskImage(0,94,90,1.19) as foreground
+// Inner gas completes more revolutions; integer speeds bring every tracer home at 2π.
+macro Streak(k,ids,angle,look) {
+  P(k,G(ids)+M(G(ids),angle+0.12*t),angle+(0.016+0.095*H(ids+62))*t) look width 1.05 opacity 0.58
+}
+folder "Orbiting plasma" collapsed {
+  let J = [1...3200]
+  let F = filter(J, (n) => sin(A(n)) < 0)
+  let E = filter(J, (n) => sin(A(n)) >= 0)
+  let G_front = P(0,G(F),-A(F))
+  let G_echo = P(1,G(E),A(E))
+  let C_front = T(0.17+(1.20+0.48*K(G(F),A(F)))*B(G(F),-A(F)))
+  let C_echo = T(0.12+(1.06+0.38*K(G(E),A(E)))*B(G(E),A(E)))
+  let F_short = F[1...320]
+  let E_short = E[1...320]
+  Streak(0,F_short,-A(F_short),#(C_front[1...320]))
+  Streak(1,E_short,A(E_short),#(C_echo[1...320]))
+  G_echo . #(C_echo) point 1.5 point-opacity 0.68
+  G_front . #(C_front) point 1.8 point-opacity 0.9
+}
+folder "Observation plate" collapsed {
+  (-10.8,6.34) .type #fff1df label "E V E N T   H O R I Z O N" right label-size 2.15
+  (-10.8,5.68) .type #afbdcc label "DEEP FIELD   /   01      ·      THE LIGHT THAT COULD NOT LEAVE" right label-size 0.78
+  (-10.8+4.4*t,5.21) #c1946c width 1 opacity 0.55
+  (-10.8,-6.34) .type #c4cbd3 label "Rendered with mathematics. Escaping is left as an exercise." right label-size 0.82
+  (10.8,-6.34) .type #d0b89b label "TMC++   /   SPACE OBSERVATORY" left label-size 0.78
+}

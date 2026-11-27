@@ -11,9 +11,9 @@
 
 The name is a nod to C++, which started life as "C with Classes".
 
-[![EVENT HORIZON: a black hole poster drawn entirely with equations in TMC++, embers orbiting the disk](docs/event-horizon.gif)](docs/event-horizon.png)
+[![EVENT HORIZON: a black hole poster drawn entirely with equations in TMC++, plasma orbiting a lensed accretion disk](docs/event-horizon-2.gif)](docs/event-horizon-2.webp)
 
-*`examples/event-horizon.tmcpp`, written by ChatGPT in TMC++: a tilted accretion disk, lensed light, orbiting embers and poster typography, all equations. 104 lines, 71 Desmos items. Click for the full-resolution still.* [See Desmos graph.](https://www.desmos.com/calculator/91wpdzmsmn)
+*`examples/event-horizon-2.tmcpp`, written by ChatGPT in TMC++ 0.3, in 91 lines. One `DiskImage` component draws each image of the disk as a grid of coloured polygons (about 22,000 in all); a `Streak` macro and two `filter` lambdas put orbiting plasma in front of and behind the shadow; `for` loops stack the scattered light. Click for the full-resolution still. It is heavy: about a second per frame in Desmos.* [See Desmos graph.](https://www.desmos.com/calculator/fit9zkoyov)
 
 [![The solar system in 3D, drawn with equations in TMC++: the Sun with a corona, eight planets on their real orbits, Saturn's rings and the main asteroid belt](docs/solar-system.png)](docs/solar-system.png)
 
@@ -229,7 +229,8 @@ for i in [1...3] {
 | --- | --- |
 | `examples/night-net.tmcpp` | NIGHT NET, a playable game: drag the net to catch falling gold stars and let the red meteors drop. A ticker runs the game loop, a clickable PLAY button (`@{ onClick: start }`) resets it, and it tracks lives, score and best score |
 | `examples/glass-choir.tmcpp` | THE GLASS CHOIR (by ChatGPT): a deep-sea dive with a sonar ping, 13 lanternfish that light up as the echo passes, a glass jelly and a submarine; uses a 19-colour `color` palette, one list inequality for 24 water bands, and `segment()` for the coral (232 items) |
-| `examples/event-horizon.tmcpp` | EVENT HORIZON (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
+| `examples/event-horizon-2.tmcpp` | EVENT HORIZON, the 0.3 version (by ChatGPT): an accretion disk as four lensed images from one component, 3,200 orbiting plasma tracers split front and back with `filter`, streaks from a macro, and glow from `for` loops. Slow to render (about a second per frame) |
+| `examples/event-horizon.tmcpp` | EVENT HORIZON, the original (by ChatGPT): a black hole poster with a lensed photon ring, a disk that passes in front of the shadow (`max(..., v) < 0`), 12 glowing embers on one slider, and label typography |
 | `examples/solar-system.tmcpp` | the solar system in 3D (by ChatGPT, through the MCP server): real orbits from JPL's elements for any year from 1800 to 2050, ray-cast shaded planets, Saturn's rings and shadow, the asteroid belt, and a camera you can orbit, fly and roll with sliders |
 | `examples/hello.tmcpp` | HELLO WORLD written stroke by stroke from 46 segments and one parametric expression (the extension's starter) |
 | `examples/daycycle.tmcpp` | a looping 24-hour day over the sea: the sun and moon on opposite arcs, stars, dawn and dusk glow |

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **A component's for loop can count over a parameter.** `component Row(n) { for i in [1...n] { ... } }` with `new Row(4) as r`: each different number gets its own copy of the component (`src/specialize.js`), nested components included. A slider, variable, `abstract` parameter or list instance there is one clear error.
+- **Ranges take arithmetic on numbers:** `for i in [1...2*3]`.
+
+### Fixed
+
+- A loop variable in a style tail is filled in: `for c in [red, #2d70b3] { y = 1 . #c }` colours each line, and `.c` picks a class, as the loops page always said.
+- A `for` range with a variable or a function call (`[0...n]`, `[0...id(n)]`) is a clear error instead of nonsense names or a confusing Text Mode error.
+
 ## 0.3.0 (2026-11-26): v3
 
 v3 makes TMC++ something you work in, not just compile with: an AI can write into your Desmos tab, the graph follows your typing live, editors understand the language, and the syntax gains lambdas, macros, loops, enums and `let`. The browser extension goes on the Chrome Web Store.

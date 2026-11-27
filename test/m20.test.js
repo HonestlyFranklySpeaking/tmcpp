@@ -44,3 +44,14 @@ test("while loops join the ticker", () => {
 test("a line ending in n++ or n-- doesn't swallow the next line", () => {
   assert.deepEqual(ok("n = 0\nstep = n++\ny = x"), ["n = 0;", "s_tep = n -> n + 1;", "y = x;"]);
 });
+
+test("a for loop's range must be numbers, with a clear error otherwise", () => {
+  assert.match(errs("n = 3\nfor i in [0...n] {\n  a_{i} = i\n}")[0], /needs numbers in its range/);
+  assert.match(errs("n = 3\nfor i in [0...id(n)] {\n  a_{i} = i\n}")[0], /list comprehension/);
+  assert.deepEqual(errs("for v in [1, 4] {\n  y = v x\n}"), []);
+});
+
+test("a loop variable in a style tail: #c takes a colour, .c a class", () => {
+  const t = ok("class thick { width 5 }\nfor c in [red, #2d70b3] {\n  y = 1 . #c\n}\nfor k in [thick] {\n  y = 2 .k\n}\nP = (1, 2)\nfor q in [3] {\n  y = P.x + q . #red\n}");
+  assert.deepEqual(t, ["y = 1 @{ color: RED };", 'y = 1 @{ color: "#2d70b3" };', "y = 2 @{ lines: @{ width: 5 } };", "P = (1, 2);", "y = P.x + 3 @{ color: RED };"]);
+});

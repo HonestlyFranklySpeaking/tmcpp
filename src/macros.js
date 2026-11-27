@@ -40,14 +40,31 @@ function blockAt(statements, i) {
 /** An argument as it goes into a template: tails and strings as written, math bracketed if needed. */
 const asArg = (a) => (/^(#|\.|@\{|label\b|click\(|")/.test(a.trim()) ? a.trim() : wrap(a.trim()));
 
-/** Values of a compile-time list: [1...5], [0, 2 ... 10], or [a, "b", 3]. */
+/** A number known when compiling: 4, -2.5, or arithmetic on numbers like 2*3 + 1 or (4). */
+export function constant(text) {
+  const t = text.trim();
+  if (!/^[\d.\s+\-*/()]+$/.test(t) || !/\d/.test(t) || /\.\./.test(t)) return null;
+  try {
+    const v = Function(`"use strict"; return (${t});`)();
+    return Number.isFinite(v) ? +v.toFixed(10) : null;
+  } catch { return null; }
+}
+
+/** Values of a compile-time list: [1...5], [0, 2 ... 10], [1...2*3], or [a, "b", 3]. */
 function listValues(text, report) {
   const t = text.trim();
   if (!(t.startsWith("[") && matchClose(t, 0) === t.length - 1)) { report("for ... in needs a list written out here, like [1...5] or [red, green]"); return null; }
   const inner = t.slice(1, -1).trim();
-  let m;
-  if ((m = inner.match(/^(-?\d+(?:\.\d+)?)\s*(?:,\s*(-?\d+(?:\.\d+)?)\s*)?\.\.\.\s*(-?\d+(?:\.\d+)?)$/))) {
-    const a = Number(m[1]), b = Number(m[3]), step = m[2] !== undefined ? Number(m[2]) - a : (b >= a ? 1 : -1);
+  const dots = inner.indexOf("...");
+  if (dots !== -1) {
+    const first = splitArgs(inner.slice(0, dots)).map((s) => s.trim());
+    const ends = [...first, inner.slice(dots + 3)].map(constant);
+    // A range has to be numbers: the loop is written out when compiling, before any slider has a value.
+    if (first.length > 2 || ends.some((v) => v === null)) {
+      report(`for ... in needs numbers in its range, like [0...5]: the loop is written out when compiling, so ${t} can't use variables or functions. For a list that follows a slider while the graph runs, use a list comprehension, like [(i, 0) for i = ${t}]`);
+      return null;
+    }
+    const a = ends[0], b = ends[ends.length - 1], step = ends.length === 3 ? ends[1] - a : (b >= a ? 1 : -1);
     if (!step || Math.sign(b - a) * Math.sign(step) < 0) { report(`the range ${t} never reaches its end`); return null; }
     const out = [];
     for (let v = a; step > 0 ? v <= b + 1e-9 : v >= b - 1e-9; v += step) { out.push(String(+v.toFixed(10))); if (out.length > 500) { report("a for loop over more than 500 values writes too many lines; use a list comprehension or new ... for ... instead"); return null; } }
@@ -63,6 +80,15 @@ function instantiate(body, values, line, extra) {
     for (const [name, value] of Object.entries(values)) {
       text = text.replace(new RegExp(`_\\{${name}\\}`, "g"), () => (/^-?[A-Za-z0-9.]+$/.test(value) ? "_" + value.replace(/^-/, "m").replace(".", "p") : `_{${name}}`));
     }
+    // In a style tail, #c takes a colour (red, #ff0000) and .c a class name, like a list of colours
+    // for c in [red, blue]. A space comes first, so members like P.c stay as they are.
+    text = text.replace(/(^|\s)([#.])([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_\-(])/g, (all, pre, mark, n) => {
+      if (!(n in values)) return all;
+      const v = values[n].trim();
+      if (mark === "#" && /^#?[A-Za-z0-9]+$/.test(v)) return `${pre}#${v.replace(/^#/, "")}`;
+      if (mark === "." && /^[A-Za-z][\w-]*$/.test(v)) return `${pre}.${v}`;
+      return all;
+    });
     text = substitute(text, (n) => (n in values ? asArg(values[n]) : undefined));
     return { ...st, text, line, ...extra };
   });

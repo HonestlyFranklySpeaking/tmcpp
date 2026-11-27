@@ -38,6 +38,8 @@ Every message names the TMC++ line. Common ones:
 | `map(list, (x) => ...) takes a list and a one-parameter lambda` / `this lambda takes 1 argument, but is called with 2` | check the lambda's parameters (also `filter`) |
 | `Glow takes 2 arguments, but this gives 1` / `macro Glow is defined twice` / `macro is never closed` | check the macro's use against its definition |
 | `for ... in needs a list written out here, like [1...5] or [red, green]` | the list must be written in the loop, not a variable |
+| `for ... in needs numbers in its range ...` | a range like `[0...n]` with a variable or slider: a loop is written out when compiling. Write the number, or use a list comprehension |
+| `Row uses 'n' to count a for loop, so 'n' has to be a number here` | pass a number to that parameter in the `new` line (`new Row(4)`), not a slider, variable or list |
 | `the range [1, 0 ... 5] never reaches its end` / `a for loop over more than 500 values ...` | fix the step, or use a list comprehension or `new ... for` |
 | `the macro used on line N was edited in Desmos, so it comes back as its lines` (From graph, warning) | also for `for` loops: an edit in Desmos turns the use into plain lines |
 | `... is drawn as points and also used by other lines` (`check --runtime`, warning) | an unstyled helper point list that Desmos draws: add `. hidden` or use `let` |

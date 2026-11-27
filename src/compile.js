@@ -5,6 +5,7 @@ import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { lowerEnums } from "./enums.js";
 import { lowerMacros, lowerWhiles } from "./macros.js";
+import { specializeLoops } from "./specialize.js";
 import { lowerLambdas } from "./lambdas.js";
 import { rewriteDoubleInequality, rewriteRedefinition, rewriteSegments, functionDefs, rewriteRestrictions, bracketComprehensions, checkCalls } from "./rewrite.js";
 import { fnv1a } from "./meta.js";
@@ -555,10 +556,16 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
   const enumed = lowerEnums(imported.statements, errors);
   // Macros and for loops are written out, and while loops join the ticker, before anything else
   // reads the lines (M20).
-  const macroed = lowerMacros(enumed.statements, errors, warnings);
+  // A component that counts a for loop with a parameter gets a copy per value used (new Row(4)).
+  const specialized = specializeLoops(enumed.statements, errors);
+  const macroed = lowerMacros(specialized.statements, errors, warnings);
   const looped = lowerWhiles(macroed.statements, macroed.whiles, source, blockSource, findTailStart);
   const acted = lowerActions(lowerConditionals(looped, errors, warnings, findTailStart), errors, warnings, findTailStart);
   const expanded = expandComponents(acted, errors, warnings);
+  // Messages name the component as written, not its specialised copy (Grid, not Grid_2_3).
+  for (const [spec, of] of specialized.names) {
+    for (const m of [...errors, ...warnings]) m.message = m.message.replace(new RegExp(`\\b${spec}\\b`, "g"), of);
+  }
   // Again after expansion: an action passed as an argument (new Button(..., n++)) only reaches
   // its click(...) now. Already-lowered text passes through unchanged.
   expanded.statements = lowerActions(expanded.statements, errors, warnings, findTailStart);

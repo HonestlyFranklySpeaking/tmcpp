@@ -1,0 +1,22 @@
+component Grad(f) {
+  grad(x, y) = ((d/d x) f(x, y), (d/d y) f(x, y))
+}
+
+
+component Jac(f) {
+  new Grad((x, y) => f(x, y).x) as gGrad
+  new Grad((x, y) => f(x, y).y) as hGrad
+
+
+  jac(x, y, i, j) = (gGrad.grad(x, y).x * i + gGrad.grad(x, y).y * j, hGrad.grad(x, y).x * i + hGrad.grad(x, y).y * j)
+}
+
+
+component DivCurl(f) {
+  new Grad((x, y) => f(x, y).x) as gGrad
+  new Grad((x, y) => f(x, y).y) as hGrad
+
+
+  div(x, y) = gGrad.grad(x, y).x + hGrad.grad(x, y).y
+  curl(x, y) = hGrad.grad(x, y).x - gGrad.grad(x, y).y
+}

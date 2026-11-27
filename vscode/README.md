@@ -15,7 +15,7 @@ This extension adds, for `.tmcpp` files:
 
 Install it from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or [Open VSX](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) for Cursor, VSCodium and Windsurf.
 
-The language reference is in the [syntax guide](https://github.com/IkeaSourPatches/tmcpp/tree/main/docs/syntax). To edit a graph live in Desmos, use the TMC++ browser extension from the same repository. To have an AI assistant in VS Code (or Cursor) write graphs, add the [TMC++ MCP server](https://github.com/IkeaSourPatches/tmcpp#mcp-server).
+The language reference is in the [syntax guide](https://github.com/IkeaSourPatches/tmcpp/tree/main/docs/syntax). To edit a graph live in Desmos, use the [TMC++ browser extension](https://chromewebstore.google.com/detail/nhnlifghhhlmngmkmcgmhedacocnfhkn) from the Chrome Web Store. To have an AI assistant in VS Code (or Cursor) write graphs, add the [TMC++ MCP server](https://github.com/IkeaSourPatches/tmcpp#mcp-server).
 
 The compiler inside is the same one the command line and the browser extension use, with DesModder's current Text Mode bundled, so `|x|` and regressions are understood.
 

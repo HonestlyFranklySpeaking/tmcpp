@@ -61,7 +61,7 @@ Needs Node 20 or newer. In code: `import { compile } from "@ikeasourpatches/tmcp
 | Command line and Node | [npm: `@ikeasourpatches/tmcpp`](https://www.npmjs.com/package/@ikeasourpatches/tmcpp) |
 | VS Code | [VS Code Marketplace: TMC++](https://marketplace.visualstudio.com/items?itemName=IkeaSourPatches.tmcpp), or search "TMC++" in the Extensions view |
 | Cursor, VSCodium, Windsurf | [Open VSX: TMC++](https://open-vsx.org/extension/IkeaSourPatches/tmcpp) |
-| Desmos in Chrome | the [browser extension](#browser-extension) from the Chrome Web Store, or the zip on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases) |
+| Desmos in Chrome | [Chrome Web Store: TMC with Classes (TMC++)](https://chromewebstore.google.com/detail/nhnlifghhhlmngmkmcgmhedacocnfhkn), or the zip on the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases) |
 
 ## Quick start
 
@@ -145,7 +145,7 @@ On Windows, use `"command": "cmd", "args": ["/c", "npx", ...]` if the app can't 
 
 ## Browser extension
 
-Install **TMC with Classes (TMC++)** from the Chrome Web Store; it updates itself. To run a build of your own instead:
+Install **[TMC with Classes (TMC++)](https://chromewebstore.google.com/detail/nhnlifghhhlmngmkmcgmhedacocnfhkn)** from the Chrome Web Store; it updates itself. To run a build of your own instead:
 
 1. `npm install`, then `npm run build:ext` (writes `extension/dist/`, which a fresh clone doesn't have), or unzip the zip from the [releases page](https://github.com/IkeaSourPatches/tmcpp/releases).
 2. In Chrome open `chrome://extensions`, turn on Developer mode, click **Load unpacked** and pick the `extension` folder (or the unzipped one).
@@ -264,7 +264,7 @@ TMC++ bundles its own build of DesModder's Text Mode library (`vendor/text-mode-
 
 ## Roadmap
 
-v3 (0.3.0) is the finished product, and the browser extension is on the Chrome Web Store. After v3: multiuser editing inside the panel, and a Desmos preview inside VS Code.
+v3 (0.3.0) is the finished product, and the browser extension is on the [Chrome Web Store](https://chromewebstore.google.com/detail/nhnlifghhhlmngmkmcgmhedacocnfhkn). After v3: multiuser editing inside the panel, and a Desmos preview inside VS Code.
 
 | Milestone | State |
 | --- | --- |

@@ -60,3 +60,11 @@ test("a variable or parameter can't be named after a word Text Mode reads itself
   for (const src of ["for = 3", "f(with) = with^2", "let sum = 2", "index = 1"]) assert.match(errs(src)[0] ?? "", /is a word Text Mode or Desmos already uses/, src);
   assert.deepEqual(errs("forest = 3\ny = forest x\nL = [1, 2]\nM = [x for x = L]"), []);
 });
+
+test("a number pasted after a number stays a factor: 2i with i = 1 is 2 * 1, not 21", () => {
+  assert.deepEqual(ok("for i in [1...2] {\n  y_{i} = 2i\n}"), ["y_1 = 2 * (1);", "y_2 = 2 * (2);"]);
+  assert.deepEqual(ok("macro Sc(k) {\n  y = 3k x\n}\nSc(4)"), ["y = 3 * (4) * x;"]);
+  assert.deepEqual(ok("y = ((v) => 2v)(3)"), ["y = (2 * (3));"]);
+  assert.ok(ok("component C(k) {\n  y = 2k x\n}\nnew C(5) as c").includes("y = 2 * (5) * x;"));
+  assert.ok(ok("component N(f) {\n  for i in [1...2] {\n    L_{i} = f(i)\n  }\n}\nnew N((x) => [x, 2x]) as n").includes("L_1n = [1, 2 * (1)];"));
+});

@@ -86,6 +86,12 @@ export function wrap(arg) {
 /** A string parameter used inside another string, "${text}: ${v}", is spliced in as its text. */
 const spliceStrings = (text) => text.replace(/\$\{\s*"((?:[^"\\]|\\.)*)"\s*\}/g, (all, body) => body.replace(/\\"/g, '"'));
 
+/**
+ * A value pasted right after a number keeps its own meaning: 2i with i = 1 is 2(1), which reads as
+ * 2 * 1, not the number 21. Only a value that starts with a digit or a point needs the brackets.
+ */
+const glued = (prev, value) => (prev && /[0-9.]/.test(prev) && /^[0-9.]/.test(value) ? `(${value})` : value);
+
 export function substitute(text, lookup, member = null) {
   let out = "";
   for (let i = 0; i < text.length;) {
@@ -115,11 +121,11 @@ export function substitute(text, lookup, member = null) {
         const mm = text.slice(i).match(/^([A-Za-z][A-Za-z0-9_]*)((?:\.[A-Za-z][A-Za-z0-9_]*)+)/);
         if (mm) {
           const r = member(mm[1], mm[2].slice(1).split("."));
-          if (r !== undefined) { out += r; i += mm[0].length; continue; }
+          if (r !== undefined) { out += glued(prev, r); i += mm[0].length; continue; }
         }
       }
       const r = lookup(name);
-      out += r === undefined ? name : r;
+      out += r === undefined ? name : glued(prev, r);
       i += name.length;
       continue;
     }

@@ -113,8 +113,10 @@ const TOOLS = [
 
 // The syntax reference: docs/syntax/, one page per topic. tmcpp://docs/syntax is all of it at once.
 const SYNTAX_PAGES = ["README", "basics", "logic", "styles", "components", "macros", "libraries", "blocks", "round-trip", "errors"];
-const syntaxPage = (name) => readFileSync(new URL(`../docs/syntax/${name}.md`, import.meta.url), "utf8")
-  .replace(/^\[Syntax reference\]\(README\.md\).*\n\n/m, ""); // the page-to-page links mean nothing to an AI
+// A page as an AI reads it: LF line endings (a Windows checkout has CRLF), without the line of
+// page-to-page links, which means nothing outside GitHub.
+const cleanPage = (text) => text.replace(/\r\n?/g, "\n").replace(/^\[Syntax reference\]\(README\.md\).*\n\n/m, "");
+const syntaxPage = (name) => cleanPage(readFileSync(new URL(`../docs/syntax/${name}.md`, import.meta.url), "utf8"));
 const pageTitle = (name) => syntaxPage(name).match(/^# (.+)$/m)?.[1] ?? name;
 
 function resources() {
@@ -284,7 +286,7 @@ function extensionBehind() {
 }
 
 /** For tests: run a tool against a given link. */
-export const _test = { callTool, useLink: (l) => { link = l; } };
+export const _test = { callTool, cleanPage, useLink: (l) => { link = l; } };
 
 export async function runMcp() {
   // stdout carries the protocol; anything else printed would corrupt it.

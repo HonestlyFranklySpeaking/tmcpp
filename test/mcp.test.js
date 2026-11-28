@@ -133,3 +133,10 @@ test("mcp: the syntax reference is served whole and page by page", async () => {
   const all = r[4].result.contents[0].text;
   for (const h of ["# Lines and math", "# Components", "# Libraries", "## Cheat sheet", "# Errors and warnings"]) assert.ok(all.includes(h), h);
 });
+
+test("mcp: a page checked out with CRLF line endings (Windows) is served the same as with LF", () => {
+  const page = "# Components\n\n[Syntax reference](README.md) · [Styles](styles.md) · **Components**\n\n## Components\n\nText.\n";
+  const crlf = _test.cleanPage(page.replace(/\n/g, "\r\n"));
+  assert.equal(crlf, _test.cleanPage(page));
+  assert.equal(crlf, "# Components\n\n## Components\n\nText.\n");
+});

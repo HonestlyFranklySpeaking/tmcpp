@@ -14,6 +14,7 @@
 
 ### Fixed
 
+- On a Windows checkout (CRLF line endings), the MCP server served each syntax page with its line of page-to-page links still in; the pages are read with LF endings now.
 - **A number pasted after a number was glued on.** `2i` in a `for` loop with `i = 1` became `21`, and the same in macros (`3k` with 4 gave `34`), components and lambdas. The pasted number is now bracketed, so `2i` is `2 * (1)`.
 - A variable or parameter named after a word Text Mode reads itself (`for = 3`, `f(with) = ...`, `sum`, `index`) is a clear error instead of Text Mode parse errors.
 - A loop variable in a style tail is filled in: `for c in [red, #2d70b3] { y = 1 . #c }` colours each line, and `.c` picks a class, as the loops page always said.

@@ -1,7 +1,7 @@
 // TMC++ v1 compiler: TMC++ source -> DesModder Text Mode (TMC) text.
 // Covers spec milestones M1 (lines, notes, folders, sliders) and M2 (classes, inline styles).
 
-import { implicitMultiply as implicitMultiplyRaw, desmosNames } from "./implicit.js";
+import { implicitMultiply as implicitMultiplyRaw, desmosNames, RESERVED_NAMES } from "./implicit.js";
 import { parseTmcObject, mergeTmc, writeTmcObject } from "./tmcobject.js";
 import { lowerEnums } from "./enums.js";
 import { lowerMacros, lowerWhiles } from "./macros.js";
@@ -535,6 +535,13 @@ export function compile(source, { defaultSettings = DEFAULT_SETTINGS, randomSeed
         const at = findTailStart(body);
         st.text = at === -1 ? `${body} . hidden` : `${body.slice(0, at).trimEnd()} . hidden ${body.slice(at)}`;
         st.let = true;
+      }
+      // `for = 3`, `f(with) = ...`: Text Mode reads these words itself, so the line can't parse.
+      const def = /^([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^()]*)\))?\s*=(?!=)/.exec(st.text);
+      if (def && !st.orphan) {
+        for (const n of [def[1], ...(def[2] ?? "").split(",").map((p) => p.trim())]) {
+          if (RESERVED_NAMES.has(n)) { errors.push({ line: st.line, message: `'${n}' is a word Text Mode or Desmos already uses, so it can't name a variable or parameter; pick another name` }); break; }
+        }
       }
     }
     return sts;

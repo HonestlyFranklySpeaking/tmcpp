@@ -55,3 +55,8 @@ test("a loop variable in a style tail: #c takes a colour, .c a class", () => {
   const t = ok("class thick { width 5 }\nfor c in [red, #2d70b3] {\n  y = 1 . #c\n}\nfor k in [thick] {\n  y = 2 .k\n}\nP = (1, 2)\nfor q in [3] {\n  y = P.x + q . #red\n}");
   assert.deepEqual(t, ["y = 1 @{ color: RED };", 'y = 1 @{ color: "#2d70b3" };', "y = 2 @{ lines: @{ width: 5 } };", "P = (1, 2);", "y = P.x + 3 @{ color: RED };"]);
 });
+
+test("a variable or parameter can't be named after a word Text Mode reads itself", () => {
+  for (const src of ["for = 3", "f(with) = with^2", "let sum = 2", "index = 1"]) assert.match(errs(src)[0] ?? "", /is a word Text Mode or Desmos already uses/, src);
+  assert.deepEqual(errs("forest = 3\ny = forest x\nL = [1, 2]\nM = [x for x = L]"), []);
+});

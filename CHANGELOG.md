@@ -9,6 +9,7 @@
 
 ### Fixed
 
+- A variable or parameter named after a word Text Mode reads itself (`for = 3`, `f(with) = ...`, `sum`, `index`) is a clear error instead of Text Mode parse errors.
 - A loop variable in a style tail is filled in: `for c in [red, #2d70b3] { y = 1 . #c }` colours each line, and `.c` picks a class, as the loops page always said.
 - A `for` range with a variable or a function call (`[0...n]`, `[0...id(n)]`) is a clear error instead of nonsense names or a confusing Text Mode error.
 

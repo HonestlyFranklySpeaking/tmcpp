@@ -31,6 +31,7 @@ Every message names the TMC++ line. Common ones:
 | `TMC: ...` (extension) | DesModder's parser rejected the compiled line |
 | `f takes 2 arguments, but this call gives 1` | Desmos would reject the call; checked across the whole file, imports included |
 | `'e' can't be a parameter of g: Desmos already defines it` | also `pi`, `tau`, `infinity`, `index` and `dt` |
+| `'for' is a word Text Mode or Desmos already uses ...` | also `with`, `in`, `of`, `to`, `from`, `if`, `else`, `and`, `or`, `true`, `false`, `sum`, `product`, `integral`, `index`, `dt`: rename the variable or parameter |
 | `'let' needs a definition, like let P = (1, 2)` | `let` goes before a definition |
 | `'_scale' is private to 'x'` / `names starting with _ are private helpers of a library` | the library keeps it to itself; use what it exports |
 | `enum needs at least two members` / `'off' is already a member of a` | each enum has two or more members, each in one enum only |

@@ -1,0 +1,5 @@
+component NestedList(outerSize, initializerFunction=(x)=>[]) {
+  for i in [0...outerSize] {
+    list_{i} = initializerFunction(i)
+  }
+}

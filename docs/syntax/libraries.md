@@ -28,13 +28,27 @@ Three ways to import it:
 
 See [the spring library](../../examples/lib/springs.tmcpp) and [a graph that imports it](../../examples/springs-import.tmcpp) for a complete example.
 
-- **Internal names stay distinct.** If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
-- **Macros** come in like components: `Glow(...)`, `g.Glow(...)` after `import ... as g`, or `import { Glow } from ...`. A macro's lines are written where it's used, and the library's own names inside it (`glowAlpha`, a private `_ring`) come along under their imported names. From graph gives back each use as written.
-- **Private names.** A name starting with `_` (`_scale(x) = ...`, `component _Part(...)`, `class _faint`) works inside its library but can't be imported or reached with `ns._scale`: it's a helper, not part of what the library offers, and `tmcpp describe` leaves it out. Inside the file that imports, a `_name` is an error.
-- **Only what's used comes in.** Components, macros, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed, hidden folder named after the library, so a helper like `wave(x) = sin(x)` never draws.
-- Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
+### Internal names stay distinct
 
-**Where libraries come from:**
+If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
+
+### Macros in libraries
+
+Macros come in like components: `Glow(...)`, `g.Glow(...)` after `import ... as g`, or `import { Glow } from ...`. A macro's lines are written where it's used, and the library's own names inside it (`glowAlpha`, a private `_ring`) come along under their imported names. From graph gives back each use as written.
+
+### Private names
+
+A name starting with `_` (`_scale(x) = ...`, `component _Part(...)`, `class _faint`) works inside its library but can't be imported or reached with `ns._scale`: it's a helper, not part of what the library offers, and `tmcpp describe` leaves it out. Inside the file that imports, a `_name` is an error.
+
+### Only what's used comes in
+
+Components, macros, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed, hidden folder named after the library, so a helper like `wave(x) = sin(x)` never draws.
+
+### Libraries that import libraries
+
+Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
+
+## Where libraries come from
 
 | Import | Where it works |
 | --- | --- |
@@ -45,9 +59,15 @@ See [the spring library](../../examples/lib/springs.tmcpp) and [a graph that imp
 | `"https://github.com/user/repo/blob/main/path.tmcpp"`, a GitHub page link as copied from the browser | imports the raw file it shows, wherever raw GitHub URLs work |
 | `"std/*"`: the built-in libraries | everywhere, offline; nothing to fetch |
 
-The built-in libraries are the files in [`library/std`](../../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…), `std/easing` (easing curves), `std/3d` (camera, projection and rays), `std/color` (RGB gradients and lighting), and `std/orbits` (elliptical two-body motion). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
+Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
 
-**3D geometry in the 2D calculator.** Use radians, with positive X pointing right, Y up and Z towards the viewer. `rotateX(p,a)`, `rotateY(p,a)` and `rotateZ(p,a)` each rotate one vertex stored as a three-number list. `ortho(p)` returns its drawable 2D point. For a mesh, store X, Y and Z in separate, equal-length lists.
+## Built-in libraries
+
+The built-in libraries are the files in [`library/std`](../../library/std): `std/styles` (colours and classes such as `.axis`, `.handle`, `.primary`), `std/ui` (Button, Toggle, Stepper, ProgressBar…), `std/shapes` (Arrow, Box, Arc, RegularPolygon…), `std/easing` (easing curves), `std/3d` (camera, projection and rays), `std/color` (RGB gradients and lighting), `std/orbits` (elliptical two-body motion), and `std/mvc` (gradients, Jacobian–vector products, divergence and curl). They come with the compiler and change only with a TMC++ update; for a version that never changes, import the file from GitHub pinned to a commit instead.
+
+### std/3d: 3D geometry in the 2D calculator
+
+Use radians, with positive X pointing right, Y up and Z towards the viewer. `rotateX(p,a)`, `rotateY(p,a)` and `rotateZ(p,a)` each rotate one vertex stored as a three-number list. `ortho(p)` returns its drawable 2D point. For a mesh, store X, Y and Z in separate, equal-length lists.
 
 ```js
 import { WireCube, projectOrtho } from "std/3d"
@@ -66,13 +86,17 @@ For a moving camera, subtract the target from each world coordinate first. Rotat
 - For both, ray origin is zero. Subtract the origin from the sphere center or plane point when working in another frame. The hit parameter multiplies the ray direction, so it is a distance if that direction has unit length. The helpers accept scalars or coordinate columns.
 - `sphereRayDepth(rho,distance,radius)` gives the near distance of a unit ray aimed into a sphere's visible disk. Use `rho = sin(angleFromCenter) / (radius/distance)`, from 0 at the center to 1 at the rim. The eye must be outside the sphere.
 
-**Computed color.** `std/color` returns Desmos colors for `#(...)` style tails. `rgbClamped(r,g,b)` clamps channels to 0–255; `mixRgb(A,B,t)` blends two `[R,G,B]` triples, and `gradientRgb(R,G,B,t)` samples a palette from equally long, nonempty channel lists. Values of `t` outside 0–1 use the nearest end. Color blends are linear in RGB channel values. `shadeRgb(r,g,b,light)` scales and clamps channels. `diffuseLight(cosine,ambient,response)` takes the dot product of the unit surface normal and unit light direction. Use `response = 1` for Lambert lighting, or a positive value below 1 for a softer terminator.
+### std/color: computed colour
 
-**Kepler orbits.** In `std/orbits`, `period(a,mu)` uses consistent units of length and time and `periodAU(a,mass)` uses AU, total solar masses and Julian years. Use `meanAt(epochAngle,elapsed,period)` and `eccentricAnomaly(mean,eccentricity)` to advance an ellipse in time. Angles are in radians and eccentricity must be in `[0,1)`. The solver wraps the result around zero. `radius(a,eccentricity,anomaly)` and `trueAnomaly(eccentricity,anomaly)` take eccentric anomaly as input. `orbitX/Y/Z(a,eccentricity,anomaly,inclination,node,periapsis)` return coordinate columns in a frame with +Z north. `position(...)` returns one three-number position. Pass `(orbitX, orbitZ, -orbitY)` to a Y-up camera. See all three libraries together in [the solar-system example](../../examples/solar-system.tmcpp).
+`std/color` returns Desmos colors for `#(...)` style tails. `rgbClamped(r,g,b)` clamps channels to 0–255; `mixRgb(A,B,t)` blends two `[R,G,B]` triples, and `gradientRgb(R,G,B,t)` samples a palette from equally long, nonempty channel lists. Values of `t` outside 0–1 use the nearest end. Color blends are linear in RGB channel values. `shadeRgb(r,g,b,light)` scales and clamps channels. `diffuseLight(cosine,ambient,response)` takes the dot product of the unit surface normal and unit light direction. Use `response = 1` for Lambert lighting, or a positive value below 1 for a softer terminator.
 
-Pin GitHub imports to a commit (`@3f2a9c1`) so a library can't change under your graph.
+### std/orbits: Kepler orbits
 
-**In the extension**, the **Library** button opens the panel:
+In `std/orbits`, `period(a,mu)` uses consistent units of length and time and `periodAU(a,mass)` uses AU, total solar masses and Julian years. Use `meanAt(epochAngle,elapsed,period)` and `eccentricAnomaly(mean,eccentricity)` to advance an ellipse in time. Angles are in radians and eccentricity must be in `[0,1)`. The solver wraps the result around zero. `radius(a,eccentricity,anomaly)` and `trueAnomaly(eccentricity,anomaly)` take eccentric anomaly as input. `orbitX/Y/Z(a,eccentricity,anomaly,inclination,node,periapsis)` return coordinate columns in a frame with +Z north. `position(...)` returns one three-number position. Pass `(orbitX, orbitZ, -orbitY)` to a Y-up camera. See all three libraries together in [the solar-system example](../../examples/solar-system.tmcpp).
+
+## The Library panel
+
+In the extension, the **Library** button opens the panel:
 
 - **Save as library** checks the editor's file as a library and stores it under the name you type, in the browser (`chrome.storage.local`, 10 MB). Nothing is saved if the check fails; the problems are listed as usual.
 - **Import** adds `import "name"` to the top of the file. **Delete** asks once more before removing a library.

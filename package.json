@@ -47,6 +47,7 @@
     "test": "node --test test/*.test.js",
     "build:ext": "node tools/build-ext.js",
     "build:std": "node tools/build-std.js",
+    "build:docs": "node tools/syntax-contents.js",
     "build:vscode": "node tools/build-vscode.js",
     "pack": "node tools/pack.js",
     "preview": "node tools/preview.js"

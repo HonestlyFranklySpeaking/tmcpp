@@ -8,6 +8,10 @@
 - **A component's for loop can count over a parameter.** `component Row(n) { for i in [1...n] { ... } }` with `new Row(4) as r`: each different number gets its own copy of the component (`src/specialize.js`), nested components included. A slider, variable, `abstract` parameter or list instance there is one clear error.
 - **Ranges take arithmetic on numbers:** `for i in [1...2*3]`.
 
+### Docs
+
+- Every topic in the syntax reference has its own heading, and `docs/syntax/README.md` lists them all with links (`npm run build:docs` writes the list; a test keeps it and every `#heading` link correct). `let` has its own section, and the built-in libraries list `std/mvc`.
+
 ### Fixed
 
 - A variable or parameter named after a word Text Mode reads itself (`for = 3`, `f(with) = ...`, `sum`, `index`) is a clear error instead of Text Mode parse errors.

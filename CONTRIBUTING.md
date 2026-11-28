@@ -29,7 +29,7 @@ The README explains how to load the extension in Chrome. After rebuilding it, re
 
 - **Keep the v1 promise.** Plain TMC and older TMC++ must compile exactly as before. If a change alters what existing source means, say so in the pull request and in `CHANGELOG.md`.
 - **Add a test** in `test/` for every fix or feature, and run `npm test` before opening the pull request. Tests compile the source and run the result through DesModder's parser, so they catch output Desmos would reject.
-- **Update the syntax reference** in `docs/syntax/` (one page per topic) when you add or change syntax, and the README only if it changes the essentials. Every `js` code block in them should compile and pass `tmcpp check`. Note user-facing changes under "Unreleased" in `CHANGELOG.md`.
+- **Update the syntax reference** in `docs/syntax/` (one page per topic) when you add or change syntax, and the README only if it changes the essentials. Every `js` code block in them should compile and pass `tmcpp check`. Give each topic its own heading, so it can be linked, then run `npm run build:docs` to update the contents list in `docs/syntax/README.md`; a test fails if you forget, or if a `#heading` link points nowhere. Note user-facing changes under "Unreleased" in `CHANGELOG.md`.
 - **Error messages** name the TMC++ line, say what's wrong in plain words, and suggest a fix where there is one, like `Unknown class '.curv' (did you mean '.curve'?)`.
 
 ## The std libraries

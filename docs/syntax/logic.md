@@ -4,6 +4,8 @@
 
 ## Conditionals
 
+### Inline if
+
 Use `if condition then value else fallback` wherever you need a piecewise value or action.
 An inline `if` needs both arms. Chain alternatives with `else if`, or use parentheses
 to put a conditional inside a larger expression.
@@ -12,6 +14,8 @@ to put a conditional inside a larger expression.
 y = if x < 0 then -x else if x < 2 then x else 2
 (0, 0) . click(if m = 0 then m -> 1 else m -> 0)
 ```
+
+### Block if
 
 A block can guard several math statements, including inside a component:
 
@@ -37,6 +41,8 @@ go inside an `if` block: define the slider outside and use it inside.
 “From graph” gives an `if` block back as written while its lines are untouched in Desmos; after an edit it comes back as the piecewise lines, with a warning. An inline `if` comes back as written until its line is edited.
 
 ## Actions
+
+### Action shortcuts
 
 Desmos writes every update as `n -> n + 1`. TMC++ also takes the short forms, wherever an action goes: `click(...)`, the `ticker`, a named action (`step = (n++, m += 2)`), a line that is only an action, and both branches of an inline `if`.
 

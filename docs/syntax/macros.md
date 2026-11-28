@@ -59,21 +59,24 @@ for c in [0, 0.5 ... 2] {
 ```
 
 - The list has to be written out: a range like `[1...5]` or `[0, 0.5 ... 2]`, or values like `[red, blue]`, used in a style tail as `#c` for a colour or `.c` for a class. A range's ends can be arithmetic on numbers (`[1...2*3]`), but not variables or sliders. At most 500 values.
-- Inside a component, a range can use a parameter, as long as each `new` line passes a number for it. Each different number gets its own copy of the component, the way a C++ template does:
-
-  ```js
-  component Row(n, h = 0) {
-    for i in [1...n] {
-      P_{i} = (i, h) . point 6
-    }
-  }
-  new Row(3) as r                // three points
-  new Row(5, h = 1) as s         // five points
-  y = s.P_5.x
-  ```
-
-  That number can be passed on to a component used inside (`new Row(w) as row_{j}`). A slider, a variable, an `abstract` parameter or a list instance can't set it: those change while the graph runs, after the loop has been written out.
 - For the same line repeated over values *inside Desmos*, use a list comprehension (`[(i, 0) for i = [1...5]]`) or a [list instance](components.md) (`new Cell(i) for i = [1...9] as cells`): they're one graph item, and the list can change while the graph runs.
+
+### Loops that count over a component parameter
+
+Inside a component, a range can use a parameter, as long as each `new` line passes a number for it. Each different number gets its own copy of the component, the way a C++ template does:
+
+```js
+component Row(n, h = 0) {
+  for i in [1...n] {
+    P_{i} = (i, h) . point 6
+  }
+}
+new Row(3) as r                // three points
+new Row(5, h = 1) as s         // five points
+y = s.P_5.x
+```
+
+That number can be passed on to a component used inside (`new Row(w) as row_{j}`). A slider, a variable, an `abstract` parameter or a list instance can't set it: those change while the graph runs, after the loop has been written out.
 
 ## While loops
 

@@ -11,19 +11,16 @@ a = 1
 b = 2;          // a trailing ; is allowed and ignored
 ```
 
+Not carried over from TMC: one-line blocks such as `folder "A" { y = x; }`. Put each statement on its own line.
+
+### Continuation lines
+
 A statement continues onto the next line when the line:
 
 - ends in an operator (`+ - * / ^ = < >`) or a comma,
 - has an unclosed `(`, `[` or `{`,
 - ends in `\`, or
 - is followed by a line that is indented deeper and starts with an operator.
-
-A string can also run over several lines: a note or label whose closing `"` comes on a later line keeps its line breaks.
-
-```js
-"Line one of a note
-line two"
-```
 
 ```js
 f(x) = (x^2 +
@@ -34,7 +31,22 @@ h(x) = sin(x) \
   + cos(x)
 ```
 
-**Helpers with `let`.** `let P = ...` defines something other lines use without drawing it: it compiles to `P = ... . hidden`, and From graph gives back `let`. It works for points, lists, numbers and functions, in a file or inside a component, and a tail still applies (`let L = ... #red`, so it shows in that colour if you unhide it). Use it for intermediate points and point lists, which Desmos would otherwise draw as stray dots.
+### Multi-line strings
+
+A string can also run over several lines: a note or label whose closing `"` comes on a later line keeps its line breaks.
+
+```js
+"Line one of a note
+line two"
+```
+
+### Comments
+
+`//` starts a comment anywhere outside a string. Comments never reach TMC; the extension stores them in the graph's metadata note.
+
+## Helpers with `let`
+
+`let P = ...` defines something other lines use without drawing it: it compiles to `P = ... . hidden`, and From graph gives back `let`. It works for points, lists, numbers and functions, in a file or inside a component, and a tail still applies (`let L = ... #red`, so it shows in that colour if you unhide it). Use it for intermediate points and point lists, which Desmos would otherwise draw as stray dots.
 
 ```js
 let A = (0, 0)
@@ -44,15 +56,13 @@ segment(A, B)  #blue width 3
 mid . point 10
 ```
 
-`//` starts a comment anywhere outside a string. Comments never reach TMC; the extension stores them in the graph's metadata note.
-
-Not carried over from TMC: one-line blocks such as `folder "A" { y = x; }`. Put each statement on its own line.
-
 ## Math
 
 Math is TMC math with a few conveniences.
 
-**Juxtaposition.** TMC requires an explicit `*`; TMC++ inserts it.
+### Implicit multiplication
+
+TMC requires an explicit `*`; TMC++ inserts it.
 
 | You write | TMC gets |
 | --- | --- |
@@ -64,7 +74,9 @@ Math is TMC math with a few conveniences.
 
 Function calls `f(x)` are kept as calls, and keywords such as `for` are not treated as factors. After the bounds of `sum`, `product` or `integral`, the body is not multiplied by the closing `)`; multiplication *inside* the body is still inserted where needed. For example, `product n=(1...5) 2n` becomes `product n=(1...5) 2 * n`. The expression after `(d/d x)` is likewise not multiplied by the derivative operator. Multi-letter names are handled by the name conversion below.
 
-**Variable names.** Desmos only accepts one-letter names with an optional subscript (`a`, `X_1`, `s_{core}`). TMC++ lets you write real names and renames them consistently everywhere (math, slider bounds, style values, tickers and `${...}` in labels):
+### Variable names
+
+Desmos only accepts one-letter names with an optional subscript (`a`, `X_1`, `s_{core}`). TMC++ lets you write real names and renames them consistently everywhere (math, slider bounds, style values, tickers and `${...}` in labels):
 
 | You write | Desmos gets |
 | --- | --- |
@@ -77,7 +89,9 @@ Function calls `f(x)` are kept as calls, and keywords such as `for` are not trea
 
 Two names that end up the same (`hello_world` and `helloworld`) get a warning. Interpolation already written in Desmos's form, like `${s_{core}}`, is left alone.
 
-**Double inequalities.** Desmos only draws `a < f < b` when `f` is `x` or `y`. TMC++ rewrites the rest:
+### Double inequalities
+
+Desmos only draws `a < f < b` when `f` is `x` or `y`. TMC++ rewrites the rest:
 
 ```js
 r(x,y) = sqrt(x^2 + y^2)
@@ -88,14 +102,18 @@ r(x,y) = sqrt(x^2 + y^2)
 
 The bounds can be any math, including piecewise. Both comparisons must point the same way.
 
-**Level curves of your own functions.** After `q(x,y) = ...`, writing `q(x,y) = [0.5, 0.6]` would redefine `q` in Desmos. TMC++ draws the curves instead, as `q(x,y) - ([0.5, 0.6]) = 0`, and warns you.
+### Level curves of your own functions
+
+After `q(x,y) = ...`, writing `q(x,y) = [0.5, 0.6]` would redefine `q` in Desmos. TMC++ draws the curves instead, as `q(x,y) - ([0.5, 0.6]) = 0`, and warns you.
 
 ```js
 q(x,y) = x^2 + 4y^2
 q(x,y) = [1, 4, 9]
 ```
 
-**Segments and paths.** Desmos's graphing calculator has no `segment()` (only its Geometry calculator does). TMC++ adds two helpers, used as a whole statement:
+### Segments and paths
+
+Desmos's graphing calculator has no `segment()` (only its Geometry calculator does). TMC++ adds two helpers, used as a whole statement:
 
 ```js
 segment((0, 0), (3, 2))  #red width 4
@@ -110,7 +128,9 @@ path(C)  #blue width 3                     // joins the points in order
 - The line is drawn with the parameter `t`, so the points themselves can't use `t`.
 - Use them for anything drawn as strokes: lettering, branches, constellations, rigging.
 
-**Restrictions.** Desmos's `{...}` restrictions work, and can be stacked:
+### Restrictions
+
+Desmos's `{...}` restrictions work, and can be stacked:
 
 ```js
 y = 2x {0 < x < 1}
@@ -120,13 +140,21 @@ x^2 + y^2 < 4 {y > 0}{x > 0}
 
 The parser TMC++ uses can't read restrictions, so each becomes a piecewise around the right-hand side (`y = {0 < x < 1: 2x}`), which draws the same thing. A `{...}` with a `:` in it is a piecewise value and is left alone.
 
-**Absolute value.** `|x - 1|` and `abs(x - 1)` both work, and bars multiply like brackets: `2|x|` becomes `2 * |x|`, `|x||y|` becomes `|x| * |y|`. A bar closes the one opened at the same bracket depth when it follows a value; otherwise it opens a new one, so `||x| - 1|` nests as you'd expect. From graph writes absolute values as `abs(...)`.
+### Absolute value
 
-**Regressions** are plain TMC: `Y1 ~ m * X1 + b`, with starting values as `#{ m = 1, b = 2 }` after it.
+`|x - 1|` and `abs(x - 1)` both work, and bars multiply like brackets: `2|x|` becomes `2 * |x|`, `|x||y|` becomes `|x| * |y|`. A bar closes the one opened at the same bracket depth when it follows a value; otherwise it opens a new one, so `||x| - 1|` nests as you'd expect. From graph writes absolute values as `abs(...)`.
 
-**List comprehensions without brackets.** Desmos accepts `L = f(i) for i = [1...5]` and `join(g(a) for a = [1, 2])`; TMC++ adds the brackets TMC needs.
+### Regressions
 
-**Expressions in style values and slider bounds.** Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number, an expression written without spaces (`fill 0.8*(1-t)^2`), or an expression in brackets, which may contain spaces (`opacity (a pi)`). A number may skip its leading zero: `fill .95`.
+Regressions are plain TMC: `Y1 ~ m * X1 + b`, with starting values as `#{ m = 1, b = 2 }` after it.
+
+### List comprehensions without brackets
+
+Desmos accepts `L = f(i) for i = [1...5]` and `join(g(a) for a = [1, 2])`; TMC++ adds the brackets TMC needs.
+
+### Expressions in style values and slider bounds
+
+Slider bounds are math (`[0 : 2pi]`). `fill`, `opacity`, `width`, `point-opacity` and `label-size` take a number, an expression written without spaces (`fill 0.8*(1-t)^2`), or an expression in brackets, which may contain spaces (`opacity (a pi)`). A number may skip its leading zero: `fill .95`.
 
 ### Scientific notation
 

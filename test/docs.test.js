@@ -21,3 +21,28 @@ test("docs: every page of the syntax reference is linked from its index", () => 
   const index = readFileSync("docs/syntax/README.md", "utf8");
   for (const f of readdirSync("docs/syntax")) if (f !== "README.md") assert.ok(index.includes(`](${f})`), f);
 });
+
+// The contents list in docs/syntax/README.md, and every #anchor link in the docs.
+import { readFileSync as readDoc, existsSync } from "node:fs";
+import { dirname, join, normalize } from "node:path";
+import { contents, headings } from "../tools/syntax-contents.js";
+
+test("docs/syntax/README.md lists every section (run npm run build:docs after adding a heading)", () => {
+  const readme = readDoc("docs/syntax/README.md", "utf8").replace(/\r\n/g, "\n");
+  const list = readme.slice(readme.indexOf("<!-- contents:start -->") + 23, readme.indexOf("<!-- contents:end -->")).trim();
+  assert.equal(list, contents());
+});
+
+test("every link to a #heading in the docs lands on one", () => {
+  const files = ["README.md", "CONTRIBUTING.md", "vscode/README.md", ...["README", "basics", "logic", "styles", "components", "macros", "libraries", "blocks", "round-trip", "errors"].map((p) => `docs/syntax/${p}.md`)];
+  const broken = [];
+  for (const file of files) {
+    const text = readDoc(file, "utf8");
+    for (const [, target, anchor] of text.matchAll(/\]\(([^)#\s]*\.md|)#([^)\s]+)\)/g)) {
+      const to = target ? normalize(join(dirname(file), target)) : file;
+      if (!existsSync(to)) { broken.push(`${file}: ${target} doesn't exist`); continue; }
+      if (!headings(readDoc(to, "utf8")).some((h) => h.anchor === anchor)) broken.push(`${file}: ${target || "(itself)"}#${anchor}`);
+    }
+  }
+  assert.deepEqual(broken, []);
+});

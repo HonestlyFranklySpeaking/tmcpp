@@ -4,7 +4,7 @@
 
 ## Libraries
 
-A library is a `.tmcpp` file of definitions that other files `import`. The compiler resolves imports itself; nothing is pasted in. A library may only define **components, classes, colours, functions and constants**. A line that draws or a slider is an error there, since it would have nowhere to go: wrap it in a component, and the importing file decides where it appears with `new`.
+A library is a `.tmcpp` file of definitions that other files `import`. The compiler resolves imports itself; nothing is pasted in. A library may only define **components, macros, classes, colours, functions and constants**. A line that draws or a slider is an error there, since it would have nowhere to go: wrap it in a component, and the importing file decides where it appears with `new`.
 
 ```js
 // springs: a library
@@ -29,8 +29,9 @@ Three ways to import it:
 See [the spring library](../../examples/lib/springs.tmcpp) and [a graph that imports it](../../examples/springs-import.tmcpp) for a complete example.
 
 - **Internal names stay distinct.** If the file (or another library) already uses a Desmos name, the library's copy gets another one (`lerp` becomes `lerp2`) and its uses are rewritten. An unprefixed import that conflicts with a name defined in the file is still a source-level error; use `as` to keep the names separate. Parameters, function arguments and `for` variables are never rewritten.
+- **Macros** come in like components: `Glow(...)`, `g.Glow(...)` after `import ... as g`, or `import { Glow } from ...`. A macro's lines are written where it's used, and the library's own names inside it (`glowAlpha`, a private `_ring`) come along under their imported names. From graph gives back each use as written.
 - **Private names.** A name starting with `_` (`_scale(x) = ...`, `component _Part(...)`, `class _faint`) works inside its library but can't be imported or reached with `ns._scale`: it's a helper, not part of what the library offers, and `tmcpp describe` leaves it out. Inside the file that imports, a `_name` is an error.
-- **Only what's used comes in.** Components, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed, hidden folder named after the library, so a helper like `wave(x) = sin(x)` never draws.
+- **Only what's used comes in.** Components, macros, classes, colours, functions and constants are kept only if something uses them, with whatever they use in turn, so the metadata note lists just those. Functions and constants go in one collapsed, hidden folder named after the library, so a helper like `wave(x) = sin(x)` never draws.
 - Libraries can import other libraries. Each library is emitted once however many files import it. A name brought in by two plain imports is an error where it's used: import one of them with `as`.
 
 **Where libraries come from:**

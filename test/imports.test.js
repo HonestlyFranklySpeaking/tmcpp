@@ -145,3 +145,25 @@ test("a file without imports compiles exactly as before", () => {
   const source = "a = 1\ny = a x";
   assert.equal(compile(source, { libraries: { springs: SPRINGS } }).tmc, compile(source).tmc);
 });
+
+const GLOWS = `glowAlpha = 0.3
+_ring(r) = r^2
+macro Glow(shape, look) {
+  shape  look fill glowAlpha opacity 0
+}
+macro Ring(r, look) {
+  x^2 + y^2 = _ring(r)  look
+}
+macro Unused(a) {
+  y = a
+}`;
+
+test("a library can define macros: every import form, its own names inside, unused ones left out", () => {
+  const plain = clean(build('import "glows"\nGlow(x^2 + y^2 < 4, #red)\nRing(2, #blue)', { glows: GLOWS })).tmc;
+  assert.match(plain, /^\(x\^2 \+ y\^2 < 4\) @\{ color: RED, fill: g_lowAlpha, lines: @\{ opacity: 0 \} \};$/m);
+  assert.match(plain, /^x\^2 \+ y\^2 = r_ing\(2\) @\{ color: BLUE \};$/m);
+  assert.doesNotMatch(plain, /y = a/);
+  assert.match(clean(build('import "glows" as g\ng.Glow(y < x, #red)', { glows: GLOWS })).tmc, /^\(y < x\) @\{ color: RED/m);
+  assert.match(clean(build('import { Ring } from "glows"\nr = 9\nRing(3, #red)', { glows: GLOWS })).tmc, /^x\^2 \+ y\^2 = r_ing\(3\)/m);
+  assert.match(errorsOf('import { Ring } from "glows"\nRing = 5', { glows: GLOWS })[0], /defined in this file and also imported/);
+});

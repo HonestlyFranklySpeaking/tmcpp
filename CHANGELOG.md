@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Libraries can define macros.** A library's `macro` comes in like a component (`Glow(...)`, `g.Glow(...)`, `import { Glow }`), with the library's own names inside it, and is left out when unused. From graph gives each use back as written.
 - **A component's for loop can count over a parameter.** `component Row(n) { for i in [1...n] { ... } }` with `new Row(4) as r`: each different number gets its own copy of the component (`src/specialize.js`), nested components included. A slider, variable, `abstract` parameter or list instance there is one clear error.
 - **Ranges take arithmetic on numbers:** `for i in [1...2*3]`.
 

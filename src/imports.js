@@ -17,6 +17,9 @@ const PLAIN = new RegExp(`^import\\s+(${STR.source})$`);
 const AS = new RegExp(`^import\\s+(${STR.source})\\s+as\\s+(${NAME})$`);
 const SELECT = new RegExp(`^import\\s*\\{([^}]*)\\}\\s*from\\s+(${STR.source})$`);
 const COMPONENT = /^component\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*\{$/;
+// A definition with a body: a component, or a macro, which a library shares the same way (named,
+// renamed to stay clear of the file's names, and left out when nothing uses it).
+const DEF = /^(?:component|macro)\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*\{$/;
 const CLASS = /^class\s+([A-Za-z_][\w-]*)/;
 const COLOR = /^color\s+([A-Za-z_][\w-]*)/;
 const SLIDER = /\[[^\[\]]*:[^\[\]]*\]\s*$/;
@@ -140,7 +143,7 @@ const paramNames = (text) => text.split(",").map((p) => p.replace(/^\s*abstract\
 function shadows(statements) {
   const out = statements.map(() => new Set());
   for (let i = 0; i < statements.length; i++) {
-    const m = statements[i].text.match(COMPONENT);
+    const m = statements[i].text.match(DEF);
     if (!m) continue;
     const names = new Set(paramNames(m[2]));
     let depth = 1, j = i + 1;
@@ -238,7 +241,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
         return;
       }
       let m;
-      if ((m = t.match(COMPONENT))) { define("comps", m[1], st); mode = "comp"; lib.statements.push(st); return; }
+      if ((m = t.match(DEF))) { define("comps", m[1], st); mode = "comp"; lib.statements.push(st); return; }
       if ((m = t.match(CLASS))) { define("classes", m[1], st); lib.statements.push(st); return; }
       if ((m = t.match(COLOR))) { define("colors", m[1], st); lib.statements.push(st); return; }
       const a = assigned(t);
@@ -248,7 +251,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
         return;
       }
       if (t.endsWith("{")) mode = "skip";
-      bad(st, "A library can only define components, classes, colours, functions and constants; this line would draw something. Wrap it in a component");
+      bad(st, "A library can only define components, macros, classes, colours, functions and constants; this line would draw something. Wrap it in a component");
     });
     loading.push(id);
     for (const imp of lib.imports) imp.lib = load(imp.id, at, [...via, id]);
@@ -273,7 +276,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     const a = assigned(st.text);
     if (a) mainDefs.set(a.name, st.line);
     let m;
-    if ((m = st.text.match(COMPONENT))) mainDefs.set(m[1], st.line);
+    if ((m = st.text.match(DEF))) mainDefs.set(m[1], st.line);
     if ((m = st.text.match(/\bas\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\.|$)/)) && /^new\b/.test(st.text)) mainDefs.set(m[1], st.line);
     if ((m = st.text.match(CLASS))) reserved.classes.add(m[1]);
     if ((m = st.text.match(COLOR))) reserved.colors.add(m[1]);
@@ -417,7 +420,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     for (const st of lib.out) {
       if (current) { current.push(st); if (st.text === "}") current = null; continue; }
       let m;
-      if ((m = st.text.match(COMPONENT))) { current = [st]; compBodies.set(m[1], current); }
+      if ((m = st.text.match(DEF))) { current = [st]; compBodies.set(m[1], current); }
       else if ((m = st.text.match(CLASS))) classDefs.set(m[1], st);
       else if ((m = st.text.match(COLOR))) colorDefs.set(m[1], st);
       else if (st.value) valueDefs.set(assigned(st.text).name, st);
@@ -444,7 +447,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
   }
   const keep = (st) => {
     let m;
-    if ((m = st.text.match(COMPONENT))) return used.ident.has(m[1]);
+    if ((m = st.text.match(DEF))) return used.ident.has(m[1]);
     if ((m = st.text.match(CLASS))) return used.classes.has(m[1]);
     if ((m = st.text.match(COLOR))) return used.colors.has(m[1]);
     return true;
@@ -459,7 +462,7 @@ export function lowerImports(statements, { libraries, std = {}, from = "", parse
     for (const st of lib.out) {
       // An unused component is left out whole, nested blocks and all.
       if (skipping) { if (st.text.startsWith("}")) skipping--; else if (st.text.endsWith("{")) skipping++; continue; }
-      if (COMPONENT.test(st.text) && !keep(st)) { skipping = 1; continue; }
+      if (DEF.test(st.text) && !keep(st)) { skipping = 1; continue; }
       if (st.value) { if (used.ident.has(assigned(st.text).name)) helpers.push(st); }
       else if (keep(st)) out.push(st);
     }

@@ -24,7 +24,7 @@ Every message names the TMC++ line. Common ones:
 | `A component can't be defined inside another component; ...` | define it at the top level and use `new` inside the other one |
 | `Unknown keyword 'compoment' (did you mean 'component'?)` | misspelt keyword |
 | `Can't find library 'x'` / `'gh:...' hasn't been fetched yet` | not saved, not on disk, or not fetched yet |
-| `In 'x' line 3: A library can only define components, classes, colours, functions and constants` | a library line that would draw |
+| `In 'x' line 3: A library can only define components, macros, classes, colours, functions and constants` | a library line that would draw |
 | `'v' is imported from both 'p' and 'q'` | two plain imports bring the same name; use `as` |
 | `'lerp' is defined in this file and also imported from 'x'` | rename yours, or import with `as` |
 | `Import cycle: a imports b imports a` | libraries can't import each other in a loop |

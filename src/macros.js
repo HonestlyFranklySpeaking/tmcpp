@@ -142,7 +142,8 @@ export function lowerMacros(statements, errors, warnings) {
         if (args.length !== mac.params.length) { report(st.line, `${c[1]} takes ${mac.params.length} argument${mac.params.length === 1 ? "" : "s"}, but this gives ${args.length}`); changed = true; continue; }
         const values = Object.fromEntries(mac.params.map((p, k) => [p, args[k]]));
         const key = st.cond?.key ?? `m:${st.line}`;
-        out.push(...instantiate(mac.body, values, st.line, { cond: st.cond ?? { key, line: st.line, end: st.end }, macro: c[1] }));
+        // The lines belong where the macro is used, not to the library that defined it.
+        out.push(...instantiate(mac.body, values, st.line, { cond: st.cond ?? { key, line: st.line, end: st.end }, macro: c[1], lib: st.lib, libLine: st.libLine, value: undefined }));
         changed = true; continue;
       }
       out.push(st);

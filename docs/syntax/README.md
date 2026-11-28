@@ -94,6 +94,7 @@ Every section of the reference. Looking for one keyword? Search this page (Ctrl+
     - [std/3d: 3D geometry in the 2D calculator](libraries.md#std3d-3d-geometry-in-the-2d-calculator)
     - [std/color: computed colour](libraries.md#stdcolor-computed-colour)
     - [std/orbits: Kepler orbits](libraries.md#stdorbits-kepler-orbits)
+    - [std/nested_lists: Nested Lists](libraries.md#stdnested_lists-nested-lists)
   - [The Library panel](libraries.md#the-library-panel)
 - [Blocks and settings](blocks.md)
   - [Blocks](blocks.md#blocks)

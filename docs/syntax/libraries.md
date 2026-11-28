@@ -94,6 +94,11 @@ For a moving camera, subtract the target from each world coordinate first. Rotat
 
 In `std/orbits`, `period(a,mu)` uses consistent units of length and time and `periodAU(a,mass)` uses AU, total solar masses and Julian years. Use `meanAt(epochAngle,elapsed,period)` and `eccentricAnomaly(mean,eccentricity)` to advance an ellipse in time. Angles are in radians and eccentricity must be in `[0,1)`. The solver wraps the result around zero. `radius(a,eccentricity,anomaly)` and `trueAnomaly(eccentricity,anomaly)` take eccentric anomaly as input. `orbitX/Y/Z(a,eccentricity,anomaly,inclination,node,periapsis)` return coordinate columns in a frame with +Z north. `position(...)` returns one three-number position. Pass `(orbitX, orbitZ, -orbitY)` to a Y-up camera. See all three libraries together in [the solar-system example](../../examples/solar-system.tmcpp).
 
+### std/nested_lists: Nested Lists
+
+In `std/nested_lists` create a list of lists with `new NestedList(size, initFuncion(x)) as name` and access elements with `name.list_1[1]`.
+
+
 ## The Library panel
 
 In the extension, the **Library** button opens the panel:
